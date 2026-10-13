@@ -1,6 +1,7 @@
 import {
   createCipheriv,
   createECDH,
+  createHash,
   createPrivateKey,
   generateKeyPairSync,
   hkdfSync,
@@ -9,7 +10,7 @@ import {
   type KeyObject,
 } from 'node:crypto';
 import { badRequest } from '../../kernel/errors.js';
-import { guardedRequest, readBody } from '../../kernel/net.js';
+import { type NetPolicy, guardedRequest, readBody } from '../../kernel/net.js';
 
 /**
  * Web Push, implemented against the standards with the standard library:
@@ -73,8 +74,18 @@ function vapidPrivateKey(keys: VapidKeys): KeyObject {
   });
 }
 
-/** Checks a subscription's shape and that its endpoint is a push service we are willing to contact. */
-export function validateSubscription(subscription: PushSubscription, allowedHosts: readonly string[] = PUSH_SERVICE_HOSTS): URL {
+/**
+ * Checks a subscription's shape and that its endpoint is a push service we are willing to contact.
+ *
+ * `policy` exists for tests that put a stand-in push service on this machine:
+ * `allowHttp` accepts a plain-http endpoint. Production callers leave it out,
+ * and then only https endpoints of the listed services pass.
+ */
+export function validateSubscription(
+  subscription: PushSubscription,
+  allowedHosts: readonly string[] = PUSH_SERVICE_HOSTS,
+  policy: NetPolicy = {},
+): URL {
   let url: URL;
   try {
     url = new URL(subscription.endpoint);
@@ -83,7 +94,8 @@ export function validateSubscription(subscription: PushSubscription, allowedHost
   }
   const host = url.hostname.toLowerCase();
   const known = allowedHosts.some((allowed) => host === allowed || host.endsWith(`.${allowed}`));
-  if (url.protocol !== 'https:' || url.username || url.password || !known) {
+  const schemeAccepted = url.protocol === 'https:' || (url.protocol === 'http:' && policy.allowHttp === true);
+  if (!schemeAccepted || url.username || url.password || !known) {
     throw badRequest('That browser\'s push service is not supported.', undefined, 'unsupported_push_service');
   }
   if (Buffer.from(subscription.p256dh, 'base64url').length !== 65 || Buffer.from(subscription.auth, 'base64url').length !== 16) {
@@ -148,13 +160,30 @@ export interface PushMessage {
   readonly topic?: string;
 }
 
+export interface PushSendOptions {
+  /** Push services that may be contacted. Defaults to {@link PUSH_SERVICE_HOSTS}. */
+  readonly allowedHosts?: readonly string[];
+  readonly timeoutMs?: number;
+  /**
+   * For tests only: lets a stand-in push service on this machine be reached
+   * (plain http, a loopback address). Left out — as every production caller
+   * must — the request goes to a public address over https or not at all.
+   */
+  readonly policy?: NetPolicy;
+}
+
+/** The topic a message is sent under so that it replaces an undelivered one with the same key: at most 32 URL-safe characters. */
+export function pushTopic(key: string): string {
+  return createHash('sha256').update(key).digest('base64url').slice(0, 32);
+}
+
 export async function sendPush(
   subscription: PushSubscription,
   message: PushMessage,
   vapid: { readonly keys: VapidKeys; readonly subject: string },
-  options: { readonly allowedHosts?: readonly string[]; readonly timeoutMs?: number } = {},
+  options: PushSendOptions = {},
 ): Promise<PushOutcome> {
-  const url = validateSubscription(subscription, options.allowedHosts);
+  const url = validateSubscription(subscription, options.allowedHosts, options.policy);
   const body = encryptPayload(subscription, Buffer.from(JSON.stringify(message.payload), 'utf8'));
   const headers: Record<string, string> = {
     'content-type': 'application/octet-stream',
@@ -167,7 +196,13 @@ export async function sendPush(
   if (message.topic && /^[A-Za-z0-9_-]{1,32}$/.test(message.topic)) headers.topic = message.topic;
 
   try {
-    const response = await guardedRequest(url.toString(), { method: 'POST', headers, body, timeoutMs: options.timeoutMs ?? 15_000 });
+    const response = await guardedRequest(url.toString(), {
+      method: 'POST',
+      headers,
+      body,
+      timeoutMs: options.timeoutMs ?? 15_000,
+      ...(options.policy ? { policy: options.policy } : {}),
+    });
     await readBody(response.body, 64 * 1024).catch(() => undefined);
     if (response.status >= 200 && response.status < 300) return { status: 'sent' };
     if (response.status === 404 || response.status === 410) return { status: 'gone' };

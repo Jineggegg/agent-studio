@@ -1,6 +1,7 @@
 import { createDecipheriv, createECDH, createPublicKey, hkdfSync, randomBytes, verify } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { MAX_PUSH_PAYLOAD_BYTES, encryptPayload, generateVapidKeys, sendPush, validateSubscription, vapidAuthorization } from './webpush.js';
+import { PushStandIn } from './testing/push-stand-in.js';
+import { MAX_PUSH_PAYLOAD_BYTES, encryptPayload, generateVapidKeys, pushTopic, sendPush, validateSubscription, vapidAuthorization } from './webpush.js';
 
 /** What a browser does with a received push message (RFC 8291 §3.4, RFC 8188 §2). */
 function decryptAsBrowser(body: Buffer, browser: { privateKey: Buffer; publicKey: Buffer; auth: Buffer }): Buffer {
@@ -146,5 +147,74 @@ describe('where pushes may be sent', () => {
       { allowedHosts: ['localhost'], timeoutMs: 2000 },
     );
     expect(outcome.status).toBe('unreachable');
+  });
+});
+
+describe('a stand-in push service, for tests', () => {
+  const vapid = { keys: generateVapidKeys(), subject: 'mailto:owner@example.com' };
+
+  it('is reachable only when the caller hands in both the host and the policy', async () => {
+    const service = await PushStandIn.start();
+    try {
+      const browser = service.browser();
+      const subscription = { endpoint: browser.endpoint, ...(browser.subscription().keys as { p256dh: string; auth: string }) };
+      // The default: a loopback address over plain http is not a push service.
+      expect(() => validateSubscription(subscription)).toThrow();
+      expect(() => validateSubscription(subscription, service.allowedHosts)).toThrow();
+      expect(() => validateSubscription(subscription, undefined, service.policy)).toThrow();
+      expect((await sendPush(subscription, { payload: { title: 't' } }, vapid).catch((error: unknown) => error)) instanceof Error).toBe(true);
+      expect((await sendPush(subscription, { payload: { title: 't' } }, vapid, { allowedHosts: service.allowedHosts }).catch((error: unknown) => error)) instanceof Error).toBe(true);
+      expect(service.received).toEqual([]);
+
+      // With both, a message arrives — encrypted, identified, and with the headers that govern delivery.
+      expect(validateSubscription(subscription, service.allowedHosts, service.policy).href).toBe(browser.endpoint);
+      const payload = { title: 'Release prep', body: 'Claude Code finished its reply', tag: 'reply-finished:s1', url: '/inbox' };
+      const outcome = await sendPush(subscription, { payload, ttlSeconds: 600, urgency: 'high', topic: pushTopic('user-1\nreply-finished:s1') }, vapid, { allowedHosts: service.allowedHosts, policy: service.policy });
+      expect(outcome).toEqual({ status: 'sent' });
+      const [received] = service.to(browser);
+      expect(received!.headers).toMatchObject({ 'content-encoding': 'aes128gcm', 'content-type': 'application/octet-stream', ttl: '600', urgency: 'high', topic: pushTopic('user-1\nreply-finished:s1') });
+      expect(received!.headers.authorization).toMatch(/^vapid t=[\w-]+\.[\w-]+\.[\w-]+, k=[\w-]+$/);
+      expect(received!.body.includes(Buffer.from('Release prep'))).toBe(false);
+      expect(browser.decrypt(received!.body)).toEqual(payload);
+      // Another browser cannot read it.
+      expect(() => service.browser().decrypt(received!.body)).toThrow();
+    } finally {
+      await service.close();
+    }
+  });
+
+  it('reports what the service answers: gone, refused, unreachable', async () => {
+    const service = await PushStandIn.start();
+    const browser = service.browser();
+    const subscription = { endpoint: browser.endpoint, ...(browser.subscription().keys as { p256dh: string; auth: string }) };
+    const options = { allowedHosts: service.allowedHosts, policy: service.policy, timeoutMs: 2000 };
+    const send = () => sendPush(subscription, { payload: { title: 't' } }, vapid, options);
+    try {
+      service.answer(browser, 410);
+      expect(await send()).toEqual({ status: 'gone' });
+      service.answer(browser, 404);
+      expect(await send()).toEqual({ status: 'gone' });
+      service.answer(browser, 413);
+      expect(await send()).toEqual({ status: 'rejected', httpStatus: 413 });
+      service.answer(browser, 500);
+      expect(await send()).toEqual({ status: 'rejected', httpStatus: 500 });
+      service.answer(browser, 204);
+      expect(await send()).toEqual({ status: 'sent' });
+    } finally {
+      await service.close();
+    }
+    // Nobody is listening any more: said as such, not thrown.
+    expect(await send()).toMatchObject({ status: 'unreachable' });
+  });
+});
+
+describe('replacement topics', () => {
+  it('are stable, URL-safe, at most 32 characters, and different for different keys', () => {
+    const topic = pushTopic('user-1\nreply-finished:session-1');
+    expect(topic).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(pushTopic('user-1\nreply-finished:session-1')).toBe(topic);
+    expect(pushTopic('user-2\nreply-finished:session-1')).not.toBe(topic);
+    expect(pushTopic('user-1\nreply-finished:session-2')).not.toBe(topic);
+    expect(pushTopic('')).toMatch(/^[A-Za-z0-9_-]{32}$/);
   });
 });
