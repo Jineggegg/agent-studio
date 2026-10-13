@@ -1,4 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
+import type { AgentToolRegistry } from './agent-tools.js';
 import type { StudioConfig } from './config.js';
 import type { Database, Migration } from './database.js';
 import type { EventBus } from './events.js';
@@ -33,6 +34,8 @@ export interface ModuleContext {
   readonly sandbox: Sandbox;
   readonly secrets: SecretStore;
   readonly keys: KeyRing;
+  /** Tools the Studio offers to every agent. Register during `setup`. */
+  readonly agentTools: AgentToolRegistry;
   readonly services: Services;
 }
 

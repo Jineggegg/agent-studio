@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
+import { AgentToolRegistry } from './agent-tools.js';
 import type { StudioConfig } from './config.js';
 import { Database } from './database.js';
 import { describeError } from './errors.js';
@@ -54,6 +55,7 @@ export async function createStudio(config: StudioConfig, modules: readonly Studi
     sandbox,
     secrets: new SecretStore(db, keys),
     keys,
+    agentTools: new AgentToolRegistry(),
     services: {} as Services,
   };
 
