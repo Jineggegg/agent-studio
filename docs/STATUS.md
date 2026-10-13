@@ -4,7 +4,7 @@ A running record of what is done, what is in flight and what comes next, kept
 so that work can resume after an interruption. It is updated at every
 integration point; nothing is listed as done unless its tests pass.
 
-Last updated: 2026-10-13 (wave 1 integrated; wave 2 started).
+Last updated: 2026-10-14 (adapters, providers, inbox and automation integrated; workbench UI in progress).
 
 ## Phases
 
@@ -14,10 +14,10 @@ Last updated: 2026-10-13 (wave 1 integrated; wave 2 started).
 | 2 Architecture | **Done** | `docs/architecture/ARCHITECTURE.md`, ADRs 0001–0006 |
 | 3 New project | **Done** | Workspace, tooling, CI definitions, licence and lockfile checks |
 | 4 Backend foundation, auth, database | **Done** | Kernel + auth (passkeys, tokens, lockout, audit, operator CLI) + projects + preferences; unit, integration and 21 black-box acceptance tests |
-| 5 Agent runtime (Claude Code, Codex) | In progress | Runtime core **done** (sessions, runs, event log, queue, permission engine, approvals, MCP bridge; 390 tests). Adapters for the real CLIs in progress |
+| 5 Agent runtime (Claude Code, Codex) | **Done** (server) | Runtime core; Claude Code adapter (stream-json; verified against Claude Code 2.1.283: attachments, resume, approved and denied writes, steering, stop); Codex adapter (app-server protocol; verified against codex-cli 0.160.0: status, turn, resume, bridge tool, approved and denied changes, stop). See `docs/guides/agent-smoke-test.md` for what was and was not seen from the real CLIs |
 | 6 Workbench, sessions, tasks | In progress | Server side done with the runtime core; workbench UI in progress |
 | 7 Projects, GitHub, terminal, files | Server **done** | Files, Git, worktrees, GitHub (through a stand-in `gh` only — needs one manual check against a real account), terminal with real PTY tests, remote hosts, plugins. UI pending |
-| 8 Memory, API models, automation | In progress | Memory server **done** (575 tests). API-model adapter, inbox, notifications and automation in progress |
+| 8 Memory, API models, automation | Server **done** | Memory; API-model providers with a confined tool loop (never run against a real provider — preset model ids are unverified); inbox, notifications, Web Push (never sent to a real push service), automation with exactly-once scheduling. UI pending |
 | 9 Mobile UI, PWA, remote access | In progress | Web foundation **done** (design system, shell, auth and settings screens, launcher, PWA; verified in headless Chromium at phone, tablet and desktop sizes — not yet on a real device). Feature screens pending |
 | 10 Hardening, integration tests, docs | In progress | 119 black-box acceptance tests for the security domain; they found and fixed an authentication bypass (URL spelling), non-atomic setup and a parallel-guess race. Independent review still to come |
 | 11 Compliance and similarity review | Tooling done | `scripts/similarity-audit.mjs`, `scripts/check-licenses.mjs`; final runs pending |
@@ -36,10 +36,10 @@ Wave 1 (server modules and the client foundation, in parallel):
 
 Wave 2 (needs the runtime core and the web foundation):
 
-- [ ] Claude Code adapter (official CLI, stream-json, permission prompts through the bridge)
-- [ ] Codex adapter (official CLI; app-server protocol for approvals)
-- [ ] API-model providers: configuration, encrypted keys, OpenAI-compatible adapter, confined built-in tools
-- [ ] Inbox, notifications, Web Push delivery, automation and deferred runs
+- [x] Claude Code adapter (official CLI, stream-json, permission prompts through the bridge)
+- [x] Codex adapter (official CLI; app-server protocol for approvals)
+- [x] API-model providers: configuration, encrypted keys, OpenAI-compatible adapter, confined built-in tools
+- [x] Inbox, notifications, Web Push delivery, automation and deferred runs
 - [ ] Usage aggregation; handoff between models, summaries, multi-agent tasks
 - [ ] Workbench UI; project tools UI (files, editor, Git, GitHub, terminal); memory, inbox, automation and usage UI; settings pages; launcher customisation
 
@@ -56,6 +56,15 @@ Wave 3:
 `npm run typecheck`, `npm run lint`, 2,031 unit tests, 834 integration tests,
 `npm run build`, `node scripts/smoke.mjs`, and 119 acceptance tests against the
 built server all pass on Linux with bubblewrap available.
+
+Since then (each verified by its own suites; a full run is due at the next
+integration point): the two CLI adapters, API-model providers, inbox,
+notifications and automation.
+
+Operational note: this project is developed on a 6 GB machine that also runs
+other services. Heavy commands are serialised machine-wide and at most two
+development agents work at a time; running five in parallel exhausted memory
+and restarted the machine on 2026-10-14.
 
 Known gaps carried forward: GitHub module not yet exercised against the real
 service; nothing verified on a physical iPhone or iPad; a disabled account's
