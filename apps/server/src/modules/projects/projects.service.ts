@@ -1,14 +1,34 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { CreateProjectRequest, Project, ProjectAccess, ProjectIcon, ProjectMember, UpdateProjectRequest } from '@agent-studio/protocol';
+import {
+  MAX_PROJECT_PINS,
+  PROJECT_OPENED,
+  PROJECT_PINS_CHANGED,
+  type CreateProjectRequest,
+  type Project,
+  type ProjectAccess,
+  type ProjectFeature,
+  type ProjectFeatures,
+  type ProjectIcon,
+  type ProjectMember,
+  type UpdateProjectRequest,
+} from '@agent-studio/protocol';
 import type { StudioConfig } from '../../kernel/config.js';
 import { newId } from '../../kernel/crypto.js';
 import type { Database, Migration } from '../../kernel/database.js';
-import { badRequest, conflict, forbidden, notFound } from '../../kernel/errors.js';
+import { badRequest, conflict, forbidden, notFound, unavailable } from '../../kernel/errors.js';
 import type { EventBus } from '../../kernel/events.js';
 import { isInside } from '../../kernel/paths.js';
 import type { Principal } from '../../kernel/principal.js';
+import {
+  checkAgentsAndFeatures,
+  isAgentEnabled,
+  isFeatureEnabled,
+  normaliseLinks,
+  readProjectSettings,
+  type ProjectSettingsView,
+} from './projects.settings.js';
 
 export const PROJECTS_MIGRATIONS: readonly Migration[] = [
   {
@@ -34,6 +54,20 @@ export const PROJECTS_MIGRATIONS: readonly Migration[] = [
         PRIMARY KEY (project_id, user_id)
       );
       CREATE INDEX project_members_user ON project_members(user_id);
+    `,
+  },
+  {
+    version: 2,
+    name: 'per-user pins and last-opened times',
+    sql: `
+      CREATE TABLE project_user_state (
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        pin_position INTEGER,
+        last_opened_at INTEGER,
+        PRIMARY KEY (user_id, project_id)
+      );
+      CREATE INDEX project_user_state_project ON project_user_state(project_id);
     `,
   },
 ];
@@ -65,7 +99,31 @@ interface ProjectRow {
   updated_at: number;
 }
 
+interface UserStateRow {
+  project_id: string;
+  pin_position: number | null;
+  last_opened_at: number | null;
+}
+
+interface UserProjectState {
+  readonly pinPosition: number | null;
+  readonly lastOpenedAt: number | null;
+}
+
 const DEFAULT_ICON: ProjectIcon = { symbol: 'folder', color: 'blue' };
+
+/** Folder of the scratch workspace inside the first workspace root. */
+export const SCRATCH_FOLDER = 'studio-scratch';
+
+/** Drops keys whose value is undefined, so that a partial patch never overwrites with "nothing". */
+function definedOnly<T extends object>(value: T | undefined): Partial<T> {
+  const result: Partial<T> = {};
+  if (value === undefined) return result;
+  for (const [key, entry] of Object.entries(value)) {
+    if (entry !== undefined) (result as Record<string, unknown>)[key] = entry;
+  }
+  return result;
+}
 
 const toRecord = (row: ProjectRow): ProjectRecord => ({
   id: row.id,
@@ -165,12 +223,23 @@ export class ProjectsService {
              WHERE m.user_id = ? ORDER BY p.name COLLATE NOCASE`,
             principal.userId,
           );
+    const state = this.#userState(principal.userId);
     return rows
       .filter((row) => options.includeArchived || row.archived_at === null)
-      .map((row) => this.present(toRecord(row), row.access));
+      .map((row) => this.#present(toRecord(row), row.access, state.get(row.id)));
   }
 
-  present(record: ProjectRecord, access: ProjectAccess): Project {
+  /**
+   * The project as a client sees it. Pass the caller as `viewer` to include
+   * what is personal to them (pinned, last opened); without it those fields
+   * carry their defaults.
+   */
+  present(record: ProjectRecord, access: ProjectAccess, viewer?: Principal): Project {
+    return this.#present(record, access, viewer ? this.#userState(viewer.userId, record.id).get(record.id) : undefined);
+  }
+
+  #present(record: ProjectRecord, access: ProjectAccess, state: UserProjectState | undefined): Project {
+    const settings = readProjectSettings(record.settings);
     return {
       id: record.id,
       name: record.name,
@@ -181,7 +250,93 @@ export class ProjectsService {
       archived: record.archivedAt !== null,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
+      links: [...settings.links],
+      agents: settings.agents === null ? null : [...settings.agents],
+      features: settings.features,
+      scratch: settings.scratch,
+      pinned: state?.pinPosition != null,
+      lastOpenedAt: state?.lastOpenedAt ?? null,
     };
+  }
+
+  // ---- typed settings ------------------------------------------------------
+
+  /** The links, enabled agents and feature switches of a project. */
+  settingsOf(record: ProjectRecord): ProjectSettingsView {
+    return readProjectSettings(record.settings);
+  }
+
+  /** Whether an agent may be used in this project. Agents modules must ask before starting a run. */
+  isAgentEnabled(record: ProjectRecord, agentId: string): boolean {
+    return isAgentEnabled(readProjectSettings(record.settings), agentId);
+  }
+
+  isFeatureEnabled(record: ProjectRecord, feature: ProjectFeature): boolean {
+    return isFeatureEnabled(readProjectSettings(record.settings), feature);
+  }
+
+  // ---- what is personal to a user: pins and recents ----------------------------
+
+  #userState(userId: string, projectId?: string): Map<string, UserProjectState> {
+    const rows =
+      projectId === undefined
+        ? this.#db.all<UserStateRow>('SELECT project_id, pin_position, last_opened_at FROM project_user_state WHERE user_id = ?', userId)
+        : this.#db.all<UserStateRow>(
+            'SELECT project_id, pin_position, last_opened_at FROM project_user_state WHERE user_id = ? AND project_id = ?',
+            userId,
+            projectId,
+          );
+    return new Map(rows.map((row) => [row.project_id, { pinPosition: row.pin_position, lastOpenedAt: row.last_opened_at }]));
+  }
+
+  /** The caller's pins, first pin first. Projects the caller can no longer see are left out. */
+  pins(principal: Principal): string[] {
+    const visible = this.visibleProjectIds(principal);
+    return this.#db
+      .all<{ project_id: string }>(
+        'SELECT project_id FROM project_user_state WHERE user_id = ? AND pin_position IS NOT NULL ORDER BY pin_position',
+        principal.userId,
+      )
+      .map((row) => row.project_id)
+      .filter((id) => visible === null || visible.includes(id));
+  }
+
+  /** Replaces the caller's pins. Every project must be one the caller can see. */
+  setPins(principal: Principal, projectIds: readonly string[]): string[] {
+    if (projectIds.length > MAX_PROJECT_PINS) throw badRequest(`At most ${MAX_PROJECT_PINS} projects can be pinned.`, undefined, 'too_many_pins');
+    if (new Set(projectIds).size !== projectIds.length) throw badRequest('A project can be pinned only once.');
+    for (const projectId of projectIds) this.requireAccess(principal, projectId);
+    this.#db.transaction(() => {
+      this.#db.run('UPDATE project_user_state SET pin_position = NULL WHERE user_id = ?', principal.userId);
+      projectIds.forEach((projectId, position) => {
+        this.#db.run(
+          `INSERT INTO project_user_state (user_id, project_id, pin_position) VALUES (?, ?, ?)
+           ON CONFLICT (user_id, project_id) DO UPDATE SET pin_position = excluded.pin_position`,
+          principal.userId,
+          projectId,
+          position,
+        );
+      });
+      this.#db.run('DELETE FROM project_user_state WHERE user_id = ? AND pin_position IS NULL AND last_opened_at IS NULL', principal.userId);
+    });
+    const pins = this.pins(principal);
+    this.#bus.publish(`user:${principal.userId}`, PROJECT_PINS_CHANGED, { projectIds: pins });
+    return pins;
+  }
+
+  /** Remembers that the caller opened the project now, for "recent" lists on all their devices. */
+  markOpened(principal: Principal, projectId: string): number {
+    this.requireAccess(principal, projectId);
+    const lastOpenedAt = Date.now();
+    this.#db.run(
+      `INSERT INTO project_user_state (user_id, project_id, last_opened_at) VALUES (?, ?, ?)
+       ON CONFLICT (user_id, project_id) DO UPDATE SET last_opened_at = excluded.last_opened_at`,
+      principal.userId,
+      projectId,
+      lastOpenedAt,
+    );
+    this.#bus.publish(`user:${principal.userId}`, PROJECT_OPENED, { projectId, lastOpenedAt });
+    return lastOpenedAt;
   }
 
   // ---- location rules ------------------------------------------------------
@@ -245,18 +400,28 @@ export class ProjectsService {
 
   async create(principal: Principal, input: CreateProjectRequest): Promise<Project> {
     if (principal.role !== 'owner') throw forbidden('Only the owner can add projects.', 'owner_required');
+    // Everything that can be refused is checked before a folder is created.
+    const settings: Record<string, unknown> = {};
+    const features: ProjectFeatures = { ...readProjectSettings({}).features, ...definedOnly(input.features) };
+    const agents = input.agents ?? null;
+    checkAgentsAndFeatures(agents, features);
+    if (input.links !== undefined && input.links.length > 0) settings.links = normaliseLinks(input.links, [], true);
+    if (input.agents !== undefined && input.agents !== null) settings.agents = input.agents;
+    if (input.features !== undefined) settings.features = features;
+
     const rootDir = await this.resolveRootDir(input.rootDir, input.createDirectory);
     if (this.findByRootDir(rootDir)) throw conflict('That folder is already a project.', 'project_exists');
     const now = Date.now();
     const id = newId();
     this.#db.run(
-      `INSERT INTO projects (id, name, description, root_dir, icon, created_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO projects (id, name, description, root_dir, icon, settings, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       id,
       input.name,
       input.description,
       rootDir,
       JSON.stringify(input.icon ?? DEFAULT_ICON),
+      JSON.stringify(settings),
       principal.userId,
       now,
       now,
@@ -268,21 +433,81 @@ export class ProjectsService {
 
   update(principal: Principal, projectId: string, changes: UpdateProjectRequest): Project {
     const record = this.requireAccess(principal, projectId, 'write');
-    if (changes.archived !== undefined && principal.role !== 'owner') {
+    const isOwner = principal.role === 'owner';
+    if (changes.archived !== undefined && !isOwner) {
       throw forbidden('Only the owner can archive a project.', 'owner_required');
     }
+    // Which agents and features a project offers decides what its members may use: the owner's call.
+    if ((changes.agents !== undefined || changes.features !== undefined) && !isOwner) {
+      throw forbidden('Only the owner can change which agents and features a project offers.', 'owner_required');
+    }
+
+    const current = readProjectSettings(record.settings);
+    const settings: Record<string, unknown> = { ...record.settings };
+    if (changes.links !== undefined) {
+      const links = normaliseLinks(changes.links, current.links, isOwner);
+      if (links.length > 0) settings.links = links;
+      else delete settings.links;
+    }
+    if (changes.agents !== undefined || changes.features !== undefined) {
+      const agents = changes.agents === undefined ? current.agents : changes.agents;
+      const features: ProjectFeatures = { ...current.features, ...definedOnly(changes.features) };
+      checkAgentsAndFeatures(agents, features);
+      if (agents === null) delete settings.agents;
+      else settings.agents = [...agents];
+      settings.features = features;
+    }
+
     const archivedAt = changes.archived === undefined ? record.archivedAt : changes.archived ? (record.archivedAt ?? Date.now()) : null;
     this.#db.run(
-      `UPDATE projects SET name = ?, description = ?, icon = ?, archived_at = ?, updated_at = ? WHERE id = ?`,
+      `UPDATE projects SET name = ?, description = ?, icon = ?, settings = ?, archived_at = ?, updated_at = ? WHERE id = ?`,
       changes.name ?? record.name,
       changes.description ?? record.description,
       JSON.stringify(changes.icon ?? record.icon),
+      JSON.stringify(settings),
       archivedAt,
       Date.now(),
       projectId,
     );
     this.#bus.publish(`project:${projectId}`, 'project.changed', { projectId });
-    return this.present(this.find(projectId)!, 'write');
+    return this.present(this.find(projectId)!, 'write', principal);
+  }
+
+  /**
+   * The default workspace for conversations started outside any project. It
+   * is an ordinary project in a fixed folder of the first workspace root,
+   * created the first time it is asked for.
+   */
+  async ensureScratch(principal: Principal): Promise<Project> {
+    if (principal.role !== 'owner') throw forbidden('Only the owner can set up the scratch workspace.', 'owner_required');
+    const marked = this.#db.get<ProjectRow>(`SELECT * FROM projects WHERE json_extract(settings, '$.scratch') = 1 ORDER BY created_at LIMIT 1`);
+    let record = marked ? toRecord(marked) : null;
+    if (!record) {
+      const base = this.#config.workspaceRoots[0];
+      if (base === undefined) throw unavailable('No workspace folder is configured, so there is nowhere to put a scratch workspace.', 'no_workspace_root');
+      const rootDir = await this.resolveRootDir(path.join(base, SCRATCH_FOLDER), true);
+      const existing = this.findByRootDir(rootDir);
+      if (existing) {
+        record = this.patchSettings(existing.id, { scratch: true });
+      } else {
+        const created = await this.create(principal, {
+          name: 'Scratch',
+          rootDir,
+          description: 'Conversations that do not belong to a project start here.',
+          icon: { symbol: 'spark', color: 'slate' },
+          createDirectory: true,
+        });
+        record = this.patchSettings(created.id, { scratch: true });
+      }
+    }
+    if (record.archivedAt !== null) {
+      this.#db.run('UPDATE projects SET archived_at = NULL, updated_at = ? WHERE id = ?', Date.now(), record.id);
+      this.#bus.publish(`project:${record.id}`, 'project.changed', { projectId: record.id });
+      record = this.find(record.id)!;
+    }
+    // The folder may have been deleted by hand since; a scratch workspace without a folder is useless.
+    await fs.mkdir(record.rootDir, { recursive: true });
+    return this.present(record, 'write', principal);
   }
 
   /** Merges a feature's settings into the project's settings bag. */
