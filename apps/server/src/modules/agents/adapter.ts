@@ -243,6 +243,14 @@ export interface PermissionRequest {
   readonly diff?: string;
   /** The plan text, for `approval: 'plan'`. */
   readonly plan?: string;
+  /**
+   * Put this to a person even where the permission mode or a saved rule would
+   * allow it. Deny rules, plan mode and the hard-deny list still refuse without
+   * asking; an unattended run is denied; the answer cannot be remembered as a
+   * rule. For the rare action the usual safeguards do not cover — a shell
+   * command line on a server that has no sandbox, say.
+   */
+  readonly requireHuman?: boolean;
 }
 
 export type PermissionDecision =

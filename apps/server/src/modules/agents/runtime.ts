@@ -223,6 +223,16 @@ export class RunService {
     this.#adapters.set(adapter.id, adapter);
   }
 
+  /**
+   * Takes an agent away again (an API provider the owner removed or switched
+   * off). Its sessions stay readable; sending to them answers
+   * `agent_unavailable`. A run already in progress is not touched — whoever
+   * unregisters the adapter stops its runs. False when no such agent was registered.
+   */
+  unregisterAdapter(id: string): boolean {
+    return this.#adapters.delete(id);
+  }
+
   adapter(id: string): AgentAdapter | undefined {
     return this.#adapters.get(id);
   }
@@ -1379,8 +1389,10 @@ export class RunService {
 
     const toolRequest: ToolRequest = { toolName, kind: request.kind, command, paths, url: request.url ?? null };
     const outcome = evaluatePermission({ request: toolRequest, mode: session.permission_mode, rules: this.#rulesFor(run), env });
+    // `requireHuman`: what the mode or a rule would allow is still put to a person, and cannot be remembered.
+    const mustAsk = request.requireHuman === true && outcome.decision === 'allow';
 
-    if (outcome.decision === 'allow') {
+    if (outcome.decision === 'allow' && !mustAsk) {
       if (outcome.risk === 'dangerous') this.#audit('approval.auto-allowed', run.userId, request, `auto mode · ${outcome.categories.join(', ')}`);
       return { behavior: 'allow', updatedInput: request.input, source: outcome.code === 'allow_rule' ? 'rule' : 'mode' };
     }
@@ -1406,12 +1418,13 @@ export class RunService {
         input: boundInput(request.input).input,
         plan: null,
         questions: null,
-        suggestedRule: suggestRule(toolRequest, env),
+        suggestedRule: request.requireHuman === true ? null : suggestRule(toolRequest, env),
       },
       risk: outcome.risk,
       categories: outcome.categories,
-      reason: outcome.reason,
-      toolRequest,
+      reason: mustAsk ? 'This is not covered by the permission mode or by saved rules: a person has to approve it each time.' : outcome.reason,
+      // Without the engine's request a rule saved later cannot answer this one in passing.
+      toolRequest: request.requireHuman === true ? null : toolRequest,
       questions: null,
       ttlMs: this.#options.approvalTtlMs,
     });

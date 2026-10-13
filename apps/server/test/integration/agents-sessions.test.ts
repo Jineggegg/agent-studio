@@ -24,11 +24,14 @@ const search = async (client: TestClient, q: string, extra = ''): Promise<Messag
 describe('agents', () => {
   it('lists what is registered, with capabilities and status but no credentials', async () => {
     const { owner, agent } = kit;
-    const agents = (await owner.get<{ agents: Agent[] }>('/api/agents')).body.agents;
+    // The real adapters (Claude Code, Codex) register themselves too; this test is about the two it controls.
+    const all = (await owner.get<{ agents: Agent[] }>('/api/agents')).body.agents;
+    const agents = all.filter((entry) => entry.id === 'scripted' || entry.id === 'chat-model');
     expect(agents.map((entry) => [entry.id, entry.kind])).toEqual([
       ['scripted', 'cli'],
       ['chat-model', 'api'],
     ]);
+    expect(JSON.stringify(all)).not.toMatch(/token|secret|apiKey|password/i);
     expect(agents[0]).toMatchObject({
       displayName: 'Scripted agent',
       capabilities: { defaultModel: 'scripted-large', permissionModes: ['plan', 'ask', 'accept-edits', 'auto'], steering: true, resume: true, images: true, planMode: true, usage: true },

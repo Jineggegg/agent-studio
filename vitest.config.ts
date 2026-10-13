@@ -12,7 +12,7 @@ export default defineConfig({
       'tests/acceptance/vitest.config.ts',
     ],
     // Keep the suite gentle on small machines (CI runners, a home server).
-    maxWorkers: 4,
+    maxWorkers: 2,
     coverage: {
       provider: 'v8',
       include: ['apps/*/src/**', 'packages/*/src/**'],

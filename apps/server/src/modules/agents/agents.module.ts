@@ -79,6 +79,8 @@ export type CreateSessionInput = z.input<typeof createSessionRequestSchema>;
 export interface AgentsService {
   /** Makes an agent available. Call during `setup`. */
   registerAdapter(adapter: AgentAdapter): void;
+  /** Takes an agent away again while the server runs. Its sessions stay readable. False when it was not registered. */
+  unregisterAdapter(id: string): boolean;
   adapters(): AgentAdapter[];
   adapter(id: string): AgentAdapter | undefined;
   /**
@@ -157,6 +159,7 @@ export function createAgentsModule(options: AgentsModuleOptions = {}): StudioMod
 
       context.services.agents = {
         registerAdapter: (adapter) => runService.registerAdapter(adapter),
+        unregisterAdapter: (id) => runService.unregisterAdapter(id),
         adapters: () => runService.adapters(),
         adapter: (id) => runService.adapter(id),
         principalFor: (userId) => runService.principalFor(userId),

@@ -18,6 +18,12 @@ export interface ChatMessage {
   readonly tool_calls?: ReadonlyArray<{ id: string; type: 'function'; function: { name: string; arguments: string } }>;
   /** Present on tool messages: which call this answers. */
   readonly tool_call_id?: string;
+  /**
+   * The reasoning that came with an assistant message that called tools.
+   * DeepSeek's thinking models want it handed back for the rest of the same
+   * turn; it is never sent again in a later turn.
+   */
+  readonly reasoning_content?: string;
 }
 
 export interface ToolDeclaration {
@@ -34,6 +40,8 @@ export interface ChatRequest {
   readonly model: string;
   readonly messages: readonly ChatMessage[];
   readonly tools?: readonly ToolDeclaration[];
+  /** `none`: the tools stay declared (so earlier calls in the conversation make sense) but the model must answer in words. Default `auto`. */
+  readonly toolChoice?: 'auto' | 'none';
   readonly temperature?: number;
   readonly maxTokens?: number;
   readonly signal?: AbortSignal;
@@ -60,11 +68,14 @@ export type ChatDelta =
 
 export class ProviderError extends StudioError {
   readonly retryAfterSeconds: number | undefined;
+  /** The HTTP status the provider answered with, when it answered at all. */
+  readonly upstreamStatus: number | undefined;
 
-  constructor(status: number, code: string, message: string, retryAfterSeconds?: number) {
+  constructor(status: number, code: string, message: string, retryAfterSeconds?: number, upstreamStatus?: number) {
     super(status, code, message);
     this.name = 'ProviderError';
     this.retryAfterSeconds = retryAfterSeconds;
+    this.upstreamStatus = upstreamStatus;
   }
 }
 
@@ -126,17 +137,22 @@ async function failure(status: number, headers: Record<string, unknown>, body: R
     detail = text.slice(0, 300);
   }
   // A provider may echo the key back in its error text.
-  detail = redactSecrets(apiKey ? detail.split(apiKey).join('[redacted]') : detail).slice(0, 300);
+  detail = sanitise(detail, apiKey);
   const suffix = detail ? ` (${detail})` : '';
   const retryAfter = Number(headers['retry-after']);
-  if (status === 401 || status === 403) return new ProviderError(502, 'provider_auth_failed', `The model provider rejected the API key${suffix}.`);
-  if (status === 402) return new ProviderError(502, 'provider_no_credit', `The model provider reports insufficient balance${suffix}.`);
-  if (status === 404) return new ProviderError(502, 'provider_model_not_found', `The model provider does not know that model or address${suffix}.`);
+  if (status === 401 || status === 403) return new ProviderError(502, 'provider_auth_failed', `The model provider rejected the API key${suffix}.`, undefined, status);
+  if (status === 402) return new ProviderError(502, 'provider_no_credit', `The model provider reports insufficient balance${suffix}.`, undefined, status);
+  if (status === 404) return new ProviderError(502, 'provider_model_not_found', `The model provider does not know that model or address${suffix}.`, undefined, status);
   if (status === 429) {
-    return new ProviderError(503, 'provider_rate_limited', `The model provider is rate limiting requests${suffix}.`, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined);
+    return new ProviderError(503, 'provider_rate_limited', `The model provider is rate limiting requests${suffix}.`, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined, status);
   }
-  if (status >= 500) return new ProviderError(503, 'provider_unavailable', `The model provider is having trouble (HTTP ${status})${suffix}.`);
-  return new ProviderError(502, 'provider_rejected', `The model provider refused the request (HTTP ${status})${suffix}.`);
+  if (status >= 500) return new ProviderError(503, 'provider_unavailable', `The model provider is having trouble (HTTP ${status})${suffix}.`, undefined, status);
+  return new ProviderError(502, 'provider_rejected', `The model provider refused the request (HTTP ${status})${suffix}.`, undefined, status);
+}
+
+/** Error text from a provider, made safe to keep: the key and anything key-shaped removed, bounded. */
+function sanitise(text: string, apiKey: string | null): string {
+  return redactSecrets(apiKey ? text.split(apiKey).join('[redacted]') : text).slice(0, 300);
 }
 
 /** Streams one completion. Throws a {@link ProviderError} with a stable code when the provider refuses. */
@@ -147,7 +163,7 @@ export async function* streamChat(request: ChatRequest): AsyncGenerator<ChatDelt
     stream: true,
     stream_options: { include_usage: true },
     ...(request.tools && request.tools.length > 0
-      ? { tools: request.tools.map((tool) => ({ type: 'function', function: tool })), tool_choice: 'auto' }
+      ? { tools: request.tools.map((tool) => ({ type: 'function', function: tool })), tool_choice: request.toolChoice ?? 'auto' }
       : {}),
     ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
     ...(request.maxTokens === undefined ? {} : { max_tokens: request.maxTokens }),
@@ -192,7 +208,7 @@ export async function* streamChat(request: ChatRequest): AsyncGenerator<ChatDelt
       } catch {
         continue; // a keep-alive or a malformed line: skip rather than fail the whole answer
       }
-      if (event.error) throw new ProviderError(503, 'provider_stream_error', `The model provider reported an error mid-answer (${redactSecrets(event.error.message ?? 'unknown').slice(0, 300)}).`);
+      if (event.error) throw new ProviderError(503, 'provider_stream_error', `The model provider reported an error mid-answer (${sanitise(String(event.error.message ?? 'unknown'), request.apiKey)}).`);
       const choice = event.choices?.[0];
       const delta = choice?.delta;
       if (delta) {
@@ -228,16 +244,64 @@ export async function* streamChat(request: ChatRequest): AsyncGenerator<ChatDelt
   }
 }
 
-/** Lists model ids from the provider's `/models` endpoint, when it has one. */
-export async function listModels(baseUrl: string, apiKey: string | null, policy?: NetPolicy, signal?: AbortSignal): Promise<string[]> {
-  const url = `${baseUrl.replace(/\/+$/, '').replace(/\/chat\/completions$/, '')}/models`;
+export interface ProviderCallOptions {
+  readonly policy?: NetPolicy;
+  readonly signal?: AbortSignal;
+  /** Time allowed for the response to start. */
+  readonly timeoutMs?: number;
+  readonly maxBytes?: number;
+}
+
+/** The address of another endpoint next to `/chat/completions`, e.g. `/models`. */
+export function siblingUrl(baseUrl: string, path: string): string {
+  return `${baseUrl.replace(/\/+$/, '').replace(/\/chat\/completions$/, '')}${path}`;
+}
+
+/** GETs a JSON document from a provider, with the same failure mapping as a chat request. */
+export async function getJson(url: string, apiKey: string | null, options: ProviderCallOptions = {}): Promise<unknown> {
   const response = await guardedRequest(url, {
     headers: { accept: 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) },
-    timeoutMs: 15_000,
-    policy,
-    signal,
+    timeoutMs: options.timeoutMs ?? 15_000,
+    policy: options.policy,
+    signal: options.signal,
   });
   if (response.status < 200 || response.status >= 300) throw await failure(response.status, response.headers, response.body, apiKey);
-  const parsed = JSON.parse((await readBody(response.body, 2 * 1024 * 1024)).toString('utf8')) as { data?: Array<{ id?: unknown }> };
-  return (parsed.data ?? []).map((model) => model.id).filter((id): id is string => typeof id === 'string' && id.length > 0 && id.length < 200);
+  const text = (await readBody(response.body, options.maxBytes ?? 2 * 1024 * 1024)).toString('utf8');
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new ProviderError(502, 'provider_protocol_error', 'The model server answered with something that is not JSON.', undefined, response.status);
+  }
+}
+
+/** Lists model ids from the provider's `/models` endpoint, when it has one. */
+export async function listModels(baseUrl: string, apiKey: string | null, policy?: NetPolicy, signal?: AbortSignal): Promise<string[]> {
+  const parsed = (await getJson(siblingUrl(baseUrl, '/models'), apiKey, { policy, signal })) as { data?: unknown } | null;
+  const entries: unknown[] = Array.isArray(parsed?.data) ? parsed.data : [];
+  return entries.map((model) => (model as { id?: unknown } | null)?.id).filter((id): id is string => typeof id === 'string' && id.length > 0 && id.length < 200);
+}
+
+/**
+ * The cheapest authenticated call a server without a model listing offers:
+ * one token, not streamed. Resolves when the provider accepted it; the answer
+ * itself is thrown away.
+ */
+export async function probeCompletion(request: Pick<ChatRequest, 'baseUrl' | 'apiKey' | 'model' | 'policy' | 'signal' | 'timeoutMs'>): Promise<void> {
+  const body = Buffer.from(JSON.stringify({ model: request.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, stream: false }), 'utf8');
+  const response = await guardedRequest(completionsUrl(request.baseUrl), {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      accept: 'application/json',
+      'content-length': String(body.length),
+      ...(request.apiKey ? { authorization: `Bearer ${request.apiKey}` } : {}),
+    },
+    body,
+    signal: request.signal,
+    timeoutMs: request.timeoutMs ?? 15_000,
+    policy: request.policy,
+  });
+  if (response.status < 200 || response.status >= 300) throw await failure(response.status, response.headers, response.body, request.apiKey);
+  response.body.resume();
+  response.body.destroy();
 }

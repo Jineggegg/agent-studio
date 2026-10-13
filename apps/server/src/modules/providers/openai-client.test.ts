@@ -2,7 +2,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Readable } from 'node:stream';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { completionsUrl, listModels, sseData, streamChat, type ChatDelta } from './openai-client.js';
+import { ProviderError, completionsUrl, getJson, listModels, probeCompletion, siblingUrl, sseData, streamChat, type ChatDelta } from './openai-client.js';
 
 const local = { allowHttp: true, allowPrivateNetwork: true } as const;
 
@@ -163,6 +163,95 @@ describe('streamChat', () => {
     await expect(collect(chat({ policy: {} }))).rejects.toMatchObject({ code: 'insecure_url' });
     await expect(collect(chat({ baseUrl: 'https://127.0.0.1:1/v1', policy: {} }))).rejects.toMatchObject({ code: 'address_not_allowed' });
     await expect(collect(chat({ baseUrl: 'https://169.254.169.254/v1', policy: local }))).rejects.toMatchObject({ code: 'address_not_allowed' });
+  });
+
+  it('can keep tools declared while telling the model to answer in words', async () => {
+    respond = sse([{ choices: [{ delta: { content: 'done' }, finish_reason: 'stop' }] }, '[DONE]']);
+    const tools = [{ name: 'read_file', description: 'Reads a file.', parameters: { type: 'object' } }];
+    await collect(chat({ tools, toolChoice: 'none' }));
+    expect(lastRequest!.body).toMatchObject({ tool_choice: 'none', tools: [{ type: 'function', function: { name: 'read_file' } }] });
+    await collect(chat({ tools }));
+    expect(lastRequest!.body.tool_choice).toBe('auto');
+    // Without tools there is no choice to state.
+    await collect(chat({ toolChoice: 'none' }));
+    expect(lastRequest!.body).not.toHaveProperty('tool_choice');
+  });
+
+  it('passes reasoning back with an assistant message that called tools', async () => {
+    respond = sse([{ choices: [{ delta: { content: 'ok' }, finish_reason: 'stop' }] }, '[DONE]']);
+    await collect(
+      chat({
+        messages: [
+          { role: 'user', content: 'hi' },
+          { role: 'assistant', content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 'read_file', arguments: '{}' } }], reasoning_content: 'thinking it through' },
+          { role: 'tool', tool_call_id: 'c1', content: 'file text' },
+        ],
+      }),
+    );
+    expect((lastRequest!.body.messages as Array<Record<string, unknown>>)[1]).toMatchObject({ role: 'assistant', reasoning_content: 'thinking it through' });
+  });
+
+  it('remembers the status the provider answered with', async () => {
+    for (const status of [401, 402, 404, 429, 500, 400, 302]) {
+      respond = (response) => {
+        response.writeHead(status, { 'content-type': 'application/json' }).end('{}');
+      };
+      const error = await collect(chat()).then(
+        () => null,
+        (thrown: unknown) => thrown,
+      );
+      expect(error).toBeInstanceOf(ProviderError);
+      expect((error as ProviderError).upstreamStatus).toBe(status);
+    }
+  });
+
+  it('keeps the key out of an error the provider sends mid-stream', async () => {
+    // A key in no well-known shape: only knowing it lets it be removed.
+    const apiKey = 'local-key-without-a-known-shape';
+    respond = sse([{ choices: [{ delta: { content: 'so far' } }] }, { error: { message: `quota exceeded for ${apiKey}` } }]);
+    const error = (await collect(chat({ apiKey })).then(
+      () => null,
+      (thrown: Error) => thrown,
+    ))!;
+    expect(error).toMatchObject({ code: 'provider_stream_error' });
+    expect(error.message).not.toContain(apiKey);
+    expect(error.message).toContain('[redacted]');
+  });
+
+  it('checks a key with one token, not streamed, when asked to', async () => {
+    respond = (response) => {
+      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ choices: [{ message: { content: 'p' } }] }));
+    };
+    await expect(probeCompletion({ baseUrl: base, apiKey: 'sk-test-key-0123456789abcdef', model: 'model-a', policy: local })).resolves.toBeUndefined();
+    expect(lastRequest!.body).toEqual({ model: 'model-a', messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, stream: false });
+    expect(lastRequest!.headers.authorization).toBe('Bearer sk-test-key-0123456789abcdef');
+    respond = (response) => {
+      response.writeHead(401, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: 'bad key sk-test-key-0123456789abcdef' } }));
+    };
+    const refused = await probeCompletion({ baseUrl: base, apiKey: 'sk-test-key-0123456789abcdef', model: 'model-a', policy: local }).then(
+      () => null,
+      (thrown: Error) => thrown,
+    );
+    expect(refused).toMatchObject({ code: 'provider_auth_failed', upstreamStatus: 401 });
+    expect(refused!.message).not.toContain('sk-test-key-0123456789abcdef');
+    await expect(probeCompletion({ baseUrl: base, apiKey: null, model: 'model-a', policy: {} })).rejects.toMatchObject({ code: 'insecure_url' });
+  });
+
+  it('reads JSON from a neighbouring endpoint and says so when it is not JSON', async () => {
+    expect(siblingUrl('https://host/v1/', '/models')).toBe('https://host/v1/models');
+    expect(siblingUrl('https://host/v1/chat/completions', '/models')).toBe('https://host/v1/models');
+    respond = (response) => {
+      response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ hello: 'world' }));
+    };
+    expect(await getJson(`${base}/anything`, 'k', { policy: local })).toEqual({ hello: 'world' });
+    expect(lastRequest!.headers.authorization).toBe('Bearer k');
+    respond = (response) => {
+      response.writeHead(200, { 'content-type': 'text/html' }).end('<html>not a model server</html>');
+    };
+    await expect(getJson(`${base}/anything`, null, { policy: local })).rejects.toMatchObject({ code: 'provider_protocol_error' });
+    // No more is buffered than the caller allowed.
+    await expect(getJson(`${base}/anything`, null, { policy: local, maxBytes: 5 })).rejects.toMatchObject({ code: 'too_large' });
+    await expect(getJson(`${base}/anything`, null, { policy: {} })).rejects.toMatchObject({ code: 'insecure_url' });
   });
 
   it('lists models and builds endpoint addresses', async () => {
