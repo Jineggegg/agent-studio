@@ -46,6 +46,8 @@ export const authStateSchema = z.object({
       recentlyAuthenticated: z.boolean(),
     })
     .nullable(),
+  /** Whether passkeys can be used at the address this request was sent to. */
+  passkeysAvailable: z.boolean(),
   serverTime: timestampSchema,
   version: z.string(),
 });
@@ -130,3 +132,27 @@ export const updateUserRequestSchema = z
     password: passwordSchema,
   })
   .partial();
+
+// ---- passkeys (WebAuthn) ----
+
+export const passkeySchema = z.object({
+  id: idSchema,
+  name: z.string(),
+  /** The host name this passkey is bound to. It only works there. */
+  hostname: z.string(),
+  usableHere: z.boolean(),
+  /** True when the passkey provider syncs it to the user's other devices. */
+  syncedAcrossDevices: z.boolean(),
+  createdAt: timestampSchema,
+  lastUsedAt: timestampSchema.nullable(),
+});
+export type Passkey = z.infer<typeof passkeySchema>;
+
+export const passkeyListSchema = z.object({ available: z.boolean(), passkeys: z.array(passkeySchema) });
+
+/** `response` is the browser's credential, exactly as `@simplewebauthn/browser` returns it. */
+export const passkeyRegistrationRequestSchema = z.object({
+  response: z.record(z.string(), z.unknown()),
+  name: z.string().trim().min(1).max(80).optional(),
+});
+export const passkeyLoginRequestSchema = z.object({ response: z.record(z.string(), z.unknown()) });

@@ -17,6 +17,7 @@ import { RECENT_AUTH_WINDOW_MS, SECURE_SESSION_COOKIE, SESSION_COOKIE, type Http
 import type { ModuleContext, StudioModule } from '../../kernel/module.js';
 import { VERSION } from '../../kernel/version.js';
 import { AUTH_MIGRATIONS, AuthService, type StartedSession } from './auth.service.js';
+import { setupPasskeys } from './passkeys.js';
 import { AttemptThrottle } from './throttle.js';
 
 declare module '../../kernel/module.js' {
@@ -85,6 +86,20 @@ export const authModule: StudioModule = {
       stepUpPerSession.recordSuccess(sessionKey(user.credentialId));
     };
 
+    const passkeys = setupPasskeys(context, auth, {
+      signedIn: (request, userId, session) => {
+        // The reply for the current request is reachable through the request's own context.
+        pendingCookies.set(request, session);
+        return stateAfterSignIn(request, userId, session, 'passkey');
+      },
+      clearSignInLock: (username) => perAccount.recordSuccess(accountKey(username)),
+    });
+    // Sets the cookie for sign-ins completed by a sub-feature (passkeys).
+    http.app.addHook('onSend', async (request, reply) => {
+      const session = pendingCookies.get(request);
+      if (session) setSessionCookie(http, request, reply, session);
+    });
+
     const stateFor = (request: FastifyRequest): AuthState => {
       const principal = request.principal;
       const session = principal?.via === 'session' ? auth.describeSession(principal.credentialId) : null;
@@ -102,13 +117,14 @@ export const authModule: StudioModule = {
               recentlyAuthenticated: Date.now() - session.authenticated_at <= RECENT_AUTH_WINDOW_MS,
             }
           : null,
+        passkeysAvailable: passkeys.availableFor(request),
         serverTime: Date.now(),
         version: VERSION,
       };
     };
 
     /** Builds the state a client sees right after signing in, before its next request. */
-    const stateAfterSignIn = (userId: string, session: StartedSession, method: 'password' | 'setup'): AuthState => ({
+    const stateAfterSignIn = (request: FastifyRequest, userId: string, session: StartedSession, method: 'password' | 'setup' | 'passkey'): AuthState => ({
       needsSetup: false,
       authenticated: true,
       user: auth.getUser(userId),
@@ -120,6 +136,7 @@ export const authModule: StudioModule = {
         expiresAt: session.expiresAt,
         recentlyAuthenticated: true,
       },
+      passkeysAvailable: passkeys.availableFor(request),
       serverTime: Date.now(),
       version: VERSION,
     });
@@ -152,7 +169,7 @@ export const authModule: StudioModule = {
         audit.record({ category: 'change', action: 'owner.created', userId: user.id, subject: user.username, address: request.ip });
         const session = auth.startSession(user.id, 'setup', { ip: request.ip, userAgent: request.headers['user-agent'] ?? null });
         setSessionCookie(http, request, reply, session);
-        return stateAfterSignIn(user.id, session, 'setup');
+        return stateAfterSignIn(request, user.id, session, 'setup');
       },
     });
 
@@ -181,7 +198,7 @@ export const authModule: StudioModule = {
         audit.record({ category: 'sign-in', action: 'sign-in.password', userId: user.id, address: request.ip });
         const session = auth.startSession(user.id, 'password', { ip: request.ip, userAgent: request.headers['user-agent'] ?? null });
         setSessionCookie(http, request, reply, session);
-        return stateAfterSignIn(user.id, session, 'password');
+        return stateAfterSignIn(request, user.id, session, 'password');
       },
     });
 
@@ -375,5 +392,6 @@ export const authModule: StudioModule = {
   },
 };
 
+const pendingCookies = new WeakMap<FastifyRequest, StartedSession>();
 const housekeeping = new WeakMap<ModuleContext, NodeJS.Timeout>();
 const throttles = new WeakMap<ModuleContext, AttemptThrottle>();

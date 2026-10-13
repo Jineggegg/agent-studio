@@ -8,6 +8,7 @@ import { badRequest, conflict, forbidden, notFound, unauthorized } from '../../k
 import type { EventBus } from '../../kernel/events.js';
 import type { Authenticator, Principal, RequestMeta } from '../../kernel/principal.js';
 import type { KeyRing } from '../../kernel/secrets.js';
+import { PASSKEY_MIGRATION } from './passkeys.js';
 
 export const AUTH_MIGRATIONS: readonly Migration[] = [
   {
@@ -62,6 +63,7 @@ export const AUTH_MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  PASSKEY_MIGRATION,
 ];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
