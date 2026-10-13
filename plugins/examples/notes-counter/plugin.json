@@ -1,0 +1,51 @@
+{
+  "manifestVersion": 1,
+  "id": "notes-counter",
+  "name": "Notes counter",
+  "version": "1.0.0",
+  "description": "Keeps short notes and counts them. The example plugin: a read tool, a write tool, a panel and a hook.",
+  "author": "Agent Cloud Studio contributors",
+  "license": "MIT",
+  "minStudioVersion": "2.0.0",
+  "server": { "entry": "server/index.js" },
+  "permissions": [],
+  "contributes": {
+    "tools": [
+      {
+        "name": "count_notes",
+        "description": "Says how many notes have been saved and shows the newest ones. Use it to recall what was noted earlier.",
+        "effect": "read",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "latest": { "type": "integer", "minimum": 0, "maximum": 20, "description": "How many of the newest notes to include. Default 3." }
+          },
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "add_note",
+        "description": "Saves a short note so that it can be found again later.",
+        "effect": "write",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "text": { "type": "string", "minLength": 1, "maxLength": 500, "description": "The note, in plain text." }
+          },
+          "required": ["text"],
+          "additionalProperties": false
+        }
+      }
+    ],
+    "panels": [
+      {
+        "id": "notes",
+        "title": "Notes",
+        "icon": "notebook",
+        "entry": "panel/index.html",
+        "slots": ["home-tile", "project-tab"]
+      }
+    ],
+    "hooks": ["run.finished"]
+  }
+}

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Notes</title>
+    <!-- A panel may load files from its own folder only: no inline script or style, nothing from the network. -->
+    <link rel="stylesheet" href="./panel.css" />
+  </head>
+  <body>
+    <main>
+      <p id="greeting" class="greeting"></p>
+      <p class="count"><output id="total">–</output> <span id="total-label">notes</span></p>
+      <ul id="notes" aria-label="Newest notes"></ul>
+      <form id="add">
+        <label for="text">New note</label>
+        <div class="row">
+          <input id="text" name="text" maxlength="500" autocomplete="off" required />
+          <button type="submit">Add</button>
+        </div>
+      </form>
+      <p id="status" role="status"></p>
+    </main>
+    <script type="module" src="./panel.js"></script>
+  </body>
+</html>

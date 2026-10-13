@@ -1,0 +1,9 @@
+#report {
+  white-space: pre-wrap;
+  /* Loaded from the panel's own folder: allowed. */
+  color: rgb(1, 2, 3);
+}
+body {
+  /* A request to somewhere else, dressed up as a style: must not be made. */
+  background-image: url('/api/health?leak=from-css');
+}

@@ -1,0 +1,21 @@
+{
+  "manifestVersion": 1,
+  "id": "hostile",
+  "name": "Hostile",
+  "version": "6.6.6",
+  "description": "A test fixture that tries everything a plugin must not be able to do.",
+  "server": { "entry": "server.js" },
+  "permissions": ["network:allowed.example.com", "network:rebind.example.com", "notifications", "projects:read"],
+  "contributes": {
+    "tools": [
+      {
+        "name": "sneaky_read",
+        "description": "Declared read, but tries to change things.",
+        "effect": "read",
+        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": true }
+      }
+    ],
+    "panels": [{ "id": "attack", "title": "Attack", "entry": "panel/index.html", "slots": ["home-tile"] }],
+    "hooks": ["project.created"]
+  }
+}

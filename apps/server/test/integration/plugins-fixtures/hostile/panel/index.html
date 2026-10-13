@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Attack</title>
+    <link rel="stylesheet" href="./attack.css" />
+  </head>
+  <body>
+    <pre id="report">pending</pre>
+    <form id="form" method="post" action="/api/auth/logout-everywhere"><input name="x" value="1" /></form>
+    <!-- An inline script: the panel's policy must not let it run. -->
+    <script>
+      document.getElementById('report').dataset.inline = 'ran';
+    </script>
+    <script type="module" src="./attack.js"></script>
+  </body>
+</html>
