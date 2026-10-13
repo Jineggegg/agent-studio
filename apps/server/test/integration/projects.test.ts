@@ -174,15 +174,21 @@ describe('audit log', () => {
     audit.record({ category: 'change', action: 'token.created', userId: owner.userId, subject: 'ci', detail: 'token=ast_abcdefghijklmnopqrstuvwxyz012345', address: '203.0.113.42' });
     audit.record({ category: 'failure', action: 'sign-in.refused', userId: member.userId, address: '2001:db8:1234:5678::1' });
 
+    // The owner sees every account's events (including the ones sign-in itself recorded).
     const all = (await owner.get<{ events: Array<Record<string, unknown>> }>('/api/audit')).body.events;
-    expect(all).toHaveLength(2);
+    expect(all.map((event) => event.action)).toEqual(expect.arrayContaining(['token.created', 'sign-in.refused', 'owner.created']));
     expect(JSON.stringify(all)).not.toContain('ast_abcdefghijklmnopqrstuvwxyz012345');
     expect(JSON.stringify(all)).not.toContain('203.0.113.42');
     expect(all.find((event) => event.action === 'token.created')).toMatchObject({ address: '203.0.113.x' });
 
+    // A member sees only events about their own account.
     const own = (await member.get<{ events: Array<Record<string, unknown>> }>('/api/audit')).body.events;
-    expect(own).toHaveLength(1);
-    expect(own[0]).toMatchObject({ action: 'sign-in.refused', address: '2001:db8:1234::/48' });
-    expect((await owner.get<{ events: unknown[] }>('/api/audit?category=failure')).body.events).toHaveLength(1);
+    expect(own.length).toBeGreaterThan(0);
+    expect(own.every((event) => event.userId === member.userId)).toBe(true);
+    expect(own.find((event) => event.action === 'sign-in.refused')).toMatchObject({ address: '2001:db8:1234::/48' });
+    expect(own.some((event) => event.action === 'token.created')).toBe(false);
+    const failures = (await owner.get<{ events: Array<{ category: string }> }>('/api/audit?category=failure')).body.events;
+    expect(failures.length).toBeGreaterThan(0);
+    expect(failures.every((event) => event.category === 'failure')).toBe(true);
   });
 });
