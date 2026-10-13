@@ -4,7 +4,7 @@ A running record of what is done, what is in flight and what comes next, kept
 so that work can resume after an interruption. It is updated at every
 integration point; nothing is listed as done unless its tests pass.
 
-Last updated: 2026-10-13 (after wave 1 was interrupted and resumed).
+Last updated: 2026-10-13 (wave 1 integrated; wave 2 started).
 
 ## Phases
 
@@ -14,12 +14,12 @@ Last updated: 2026-10-13 (after wave 1 was interrupted and resumed).
 | 2 Architecture | **Done** | `docs/architecture/ARCHITECTURE.md`, ADRs 0001–0006 |
 | 3 New project | **Done** | Workspace, tooling, CI definitions, licence and lockfile checks |
 | 4 Backend foundation, auth, database | **Done** | Kernel + auth (passkeys, tokens, lockout, audit, operator CLI) + projects + preferences; unit, integration and 21 black-box acceptance tests |
-| 5 Agent runtime (Claude Code, Codex) | In progress | Runtime core being written; adapters next. Both CLIs verified to run in machine-readable mode from a scrubbed environment |
-| 6 Workbench, sessions, tasks | In progress | Server side is part of the runtime core; client follows the web foundation |
-| 7 Projects, GitHub, terminal, files | In progress | Server modules being written |
-| 8 Memory, API models, automation | In progress | Memory being written; Web Push crypto and the OpenAI-compatible client are done and tested; automation not started |
-| 9 Mobile UI, PWA, remote access | In progress | Web foundation being written; remote-access guide done |
-| 10 Hardening, integration tests, docs | Not started | |
+| 5 Agent runtime (Claude Code, Codex) | In progress | Runtime core **done** (sessions, runs, event log, queue, permission engine, approvals, MCP bridge; 390 tests). Adapters for the real CLIs in progress |
+| 6 Workbench, sessions, tasks | In progress | Server side done with the runtime core; workbench UI in progress |
+| 7 Projects, GitHub, terminal, files | Server **done** | Files, Git, worktrees, GitHub (through a stand-in `gh` only — needs one manual check against a real account), terminal with real PTY tests, remote hosts, plugins. UI pending |
+| 8 Memory, API models, automation | In progress | Memory server **done** (575 tests). API-model adapter, inbox, notifications and automation in progress |
+| 9 Mobile UI, PWA, remote access | In progress | Web foundation **done** (design system, shell, auth and settings screens, launcher, PWA; verified in headless Chromium at phone, tablet and desktop sizes — not yet on a real device). Feature screens pending |
+| 10 Hardening, integration tests, docs | In progress | 119 black-box acceptance tests for the security domain; they found and fixed an authentication bypass (URL spelling), non-atomic setup and a parallel-guess race. Independent review still to come |
 | 11 Compliance and similarity review | Tooling done | `scripts/similarity-audit.mjs`, `scripts/check-licenses.mjs`; final runs pending |
 | 12 GitHub release | Not started | Repository not created yet; the name `Jineggegg/agent-studio` was free when checked |
 
@@ -27,12 +27,12 @@ Last updated: 2026-10-13 (after wave 1 was interrupted and resumed).
 
 Wave 1 (server modules and the client foundation, in parallel):
 
-- [ ] Agent runtime core — sessions, runs, event log, queue, permission engine, approvals, MCP bridge, scripted test adapter
-- [ ] Web client foundation — design system, shell, data layer, auth and settings screens, launcher, PWA
-- [ ] Shared memory — Markdown store, search, scope-isolated agent tools
-- [ ] Projects (extended), files, Git, GitHub
-- [ ] Terminal and remote hosts
-- [ ] Plugin system — sandboxed processes, capability API, panel grants, SDK, example
+- [x] Agent runtime core — sessions, runs, event log, queue, permission engine, approvals, MCP bridge, scripted test adapter
+- [x] Web client foundation — design system, shell, data layer, auth and settings screens, launcher, PWA
+- [x] Shared memory — Markdown store, search, scope-isolated agent tools
+- [x] Projects (extended), files, Git, GitHub
+- [x] Terminal and remote hosts
+- [x] Plugin system — sandboxed processes, capability API, panel grants, SDK, example
 
 Wave 2 (needs the runtime core and the web foundation):
 
@@ -50,6 +50,18 @@ Wave 3:
 - [ ] README, SECURITY, CONTRIBUTING, CHANGELOG, guides
 - [ ] Final similarity audit, licence inventory, secret scan of the full history
 - [ ] Create the GitHub repository, pass CI, publish, tag the first release
+
+## Verified at the last integration point
+
+`npm run typecheck`, `npm run lint`, 2,031 unit tests, 834 integration tests,
+`npm run build`, `node scripts/smoke.mjs`, and 119 acceptance tests against the
+built server all pass on Linux with bubblewrap available.
+
+Known gaps carried forward: GitHub module not yet exercised against the real
+service; nothing verified on a physical iPhone or iPad; a disabled account's
+running agent is not stopped (the event now exists, the runtime does not yet
+listen for it); notification channels other than in-app and Web Push are not
+planned for the first release.
 
 ## Rules that outlive any one session
 

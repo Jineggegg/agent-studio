@@ -25,6 +25,8 @@ Nothing is required: with no variables set, the server listens on
 | `AGENT_STUDIO_SESSION_IDLE_DAYS` | `30` | A browser session unused for this long ends. |
 | `AGENT_STUDIO_SESSION_MAX_DAYS` | `90` | A browser session ends after this long regardless of use. |
 | `AGENT_STUDIO_REMOTE_HOSTS_FILE` | `<data dir>/remote-hosts.json` | Operator-managed list of SSH hosts that projects may use. |
+| `AGENT_STUDIO_PLUGIN_SOURCE_DIR` | *(none)* | A directory on the server from which the owner may install plugins by name. Plugins can also be installed from an https Git address. |
+| `AGENT_STUDIO_PLUGINS_UNSANDBOXED` | `off` | Allow plugins with server-side code to run when no sandbox is available at all. Leave off unless you wrote the plugin yourself. |
 | `AGENT_STUDIO_LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`. |
 | `AGENT_STUDIO_WEB_DIR` | the bundled client | Directory of a built web client to serve; empty string serves the API only. |
 | `AGENT_STUDIO_ENV` | `production` | `development` or `test` relax nothing security-relevant; they only change logging and rate-limit ceilings for tests. |

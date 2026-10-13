@@ -396,6 +396,26 @@ export class ProjectsService {
     return real;
   }
 
+
+  /**
+   * Tells every account that can see a project that the list of projects changed,
+   * so launchers on other devices refresh. Sent on each watcher's own topic: an
+   * account that cannot see the project learns nothing, not even that it exists.
+   */
+  #announce(projectId: string, change: 'created' | 'updated' | 'removed', watchers?: string[]): void {
+    for (const userId of watchers ?? this.#watchers(projectId)) this.#bus.publish(`user:${userId}`, 'projects.changed', { projectId, change });
+  }
+
+  #watchers(projectId: string): string[] {
+    return this.#db
+      .all<{ id: string }>(
+        `SELECT id FROM users WHERE role = 'owner' AND disabled = 0
+         UNION SELECT user_id AS id FROM project_members WHERE project_id = ?`,
+        projectId,
+      )
+      .map((row) => row.id);
+  }
+
   // ---- changes -------------------------------------------------------------
 
   async create(principal: Principal, input: CreateProjectRequest): Promise<Project> {
@@ -428,6 +448,7 @@ export class ProjectsService {
     );
     const record = this.find(id)!;
     this.#bus.publish('internal:projects', 'project.created', { projectId: id });
+    this.#announce(id, 'created');
     return this.present(record, 'write');
   }
 
@@ -470,6 +491,7 @@ export class ProjectsService {
       projectId,
     );
     this.#bus.publish(`project:${projectId}`, 'project.changed', { projectId });
+    this.#announce(projectId, 'updated');
     return this.present(this.find(projectId)!, 'write', principal);
   }
 
@@ -526,9 +548,11 @@ export class ProjectsService {
     if (principal.role !== 'owner') throw forbidden('Only the owner can remove projects.', 'owner_required');
     if (!this.find(projectId)) throw notFound('No such project.', 'project_not_found');
     // Announce first so features can stop running work, then let the cascade clear their rows.
+    const watchers = this.#watchers(projectId);
     this.#bus.publish('internal:projects', 'project.deleting', { projectId });
     this.#db.run('DELETE FROM projects WHERE id = ?', projectId);
     this.#bus.publish('internal:projects', 'project.deleted', { projectId });
+    this.#announce(projectId, 'removed', watchers);
   }
 
   // ---- sharing -------------------------------------------------------------

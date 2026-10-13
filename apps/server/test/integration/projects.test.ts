@@ -127,6 +127,28 @@ describe('project access', () => {
   });
 });
 
+describe('telling other devices', () => {
+  it('announces list changes to accounts that can see the project, and to no one else', async () => {
+    const owner = await t.owner();
+    const insider = await t.member('alice');
+    const outsider = await t.member('bob');
+    const seen: Array<{ topic: string; change: string }> = [];
+    t.studio.context.bus.on('projects.changed', (event) => seen.push({ topic: event.topic, change: (event.data as { change: string }).change }));
+
+    const project = await makeProject('watched');
+    await owner.put(`/api/projects/${project.id}/members/${insider.userId}`, { access: 'read' });
+    seen.length = 0;
+    await owner.patch(`/api/projects/${project.id}`, { name: 'renamed' });
+    await owner.delete(`/api/projects/${project.id}`);
+
+    const topics = (change: string) => seen.filter((entry) => entry.change === change).map((entry) => entry.topic).sort();
+    const expected = [`user:${insider.userId}`, `user:${owner.userId}`].sort();
+    expect(topics('updated')).toEqual(expected);
+    expect(topics('removed')).toEqual(expected);
+    expect(seen.some((entry) => entry.topic === `user:${outsider.userId}`)).toBe(false);
+  });
+});
+
 describe('archiving and removing', () => {
   it('hides archived projects from the default list', async () => {
     const project = await makeProject('old');
