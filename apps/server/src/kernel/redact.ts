@@ -1,0 +1,36 @@
+/**
+ * Best-effort removal of credentials from text that is about to be logged or
+ * shown. This is a safety net, not a boundary: secrets should not reach logs
+ * in the first place.
+ */
+const PATTERNS: readonly RegExp[] = [
+  /\b(sk|rk|pk)-[A-Za-z0-9_-]{16,}\b/g, // API keys in the common "sk-..." shape
+  /\bgh[pousr]_[A-Za-z0-9]{20,}\b/g, // GitHub tokens
+  /\bgithub_pat_[A-Za-z0-9_]{20,}\b/g,
+  /\bast_[A-Za-z0-9_-]{20,}\b/g, // this service's own API tokens
+  /\bxox[abprs]-[A-Za-z0-9-]{10,}\b/g, // Slack tokens
+  /\bAKIA[0-9A-Z]{16}\b/g, // AWS access key ids
+  /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, // JWTs
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g,
+];
+
+const ASSIGNMENT =
+  /\b([A-Za-z0-9_]*(?:password|passwd|secret|token|api[_-]?key|authorization)[A-Za-z0-9_]*)(["']?\s*[=:]\s*)(["']?)([^\s"']{6,})\3/gi;
+
+export const REDACTED = '[redacted]';
+
+export function redactSecrets(text: string): string {
+  let result = text;
+  for (const pattern of PATTERNS) result = result.replace(pattern, REDACTED);
+  result = result.replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/gi, `$1 ${REDACTED}`);
+  result = result.replace(
+    ASSIGNMENT,
+    (_match, name: string, separator: string, quote: string) => `${name}${separator}${quote}${REDACTED}${quote}`,
+  );
+  return result;
+}
+
+/** A hint that identifies a stored secret to its owner without revealing it. */
+export function secretHint(value: string): string {
+  return value.length >= 12 ? `…${value.slice(-4)}` : '…';
+}

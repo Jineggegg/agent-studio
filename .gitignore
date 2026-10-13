@@ -1,0 +1,30 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Local runtime data — never commit
+.env
+.env.*
+!.env.example
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.key
+*.pem
+/data/
+.agent-studio/
+
+# Test output
+playwright-report/
+test-results/
+tests/e2e/.auth/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log

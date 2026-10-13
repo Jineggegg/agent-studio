@@ -1,0 +1,45 @@
+{
+  "name": "agent-studio",
+  "version": "2.0.0-beta.1",
+  "private": true,
+  "description": "Agent Cloud Studio 2.0 — a self-hosted work platform for AI coding agents, built for phone, tablet and desktop.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "npm run build -w @agent-studio/protocol && npm run build -w @agent-studio/plugin-sdk && npm run build -w @agent-studio/server && npm run build -w @agent-studio/web",
+    "start": "node apps/server/dist/main.js",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc -p tests/tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:unit": "vitest run --project protocol --project plugin-sdk --project server --project web",
+    "test:integration": "vitest run --project server-integration",
+    "test:acceptance": "vitest run --project acceptance",
+    "test:e2e": "playwright test -c tests/e2e/playwright.config.ts",
+    "licenses": "node scripts/check-licenses.mjs",
+    "audit:deps": "npm audit --audit-level=high"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^24.19.2",
+    "@vitest/coverage-v8": "^5.0.4",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.4"
+  }
+}

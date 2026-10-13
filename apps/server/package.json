@@ -1,0 +1,38 @@
+{
+  "name": "@agent-studio/server",
+  "version": "2.0.0-beta.1",
+  "private": true,
+  "description": "Agent Cloud Studio server: authentication, agent runtime, projects, memory and automation.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "agent-studio": "./dist/main.js"
+  },
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@agent-studio/protocol": "2.0.0-beta.1",
+    "@fastify/cookie": "^11.1.3",
+    "@fastify/helmet": "^13.1.2",
+    "@fastify/multipart": "^10.1.3",
+    "@fastify/rate-limit": "^11.2.1",
+    "@fastify/static": "^10.1.6",
+    "@fastify/websocket": "^11.3.4",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@simplewebauthn/server": "^14.0.3",
+    "croner": "^10.0.1",
+    "fastify": "^5.12.5",
+    "zod": "^4.6.7"
+  },
+  "optionalDependencies": {
+    "@lydell/node-pty": "1.1.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.2",
+    "ws": "^8.22.0"
+  }
+}

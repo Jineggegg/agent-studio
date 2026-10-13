@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@agent-studio/protocol": ["../../packages/protocol/src/index.ts"],
+      "@agent-studio/plugin-sdk": ["../../packages/plugin-sdk/src/index.ts"]
+    }
+  },
+  "include": ["src", "test", "vitest.*.ts"]
+}
