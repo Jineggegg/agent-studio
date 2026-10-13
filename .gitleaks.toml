@@ -1,0 +1,17 @@
+title = "Agent Cloud Studio secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fixtures that only look like secrets"
+# Tests need strings shaped like credentials to prove that redaction, refusal
+# and encryption work. They are confined to test files and are not real.
+paths = [
+  '''.*\.test\.tsx?$''',
+  '''apps/server/src/testing/.*''',
+  '''apps/server/test/.*''',
+  '''tests/.*''',
+  '''docs/requirements/.*''',
+  '''package-lock\.json$''',
+]

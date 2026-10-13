@@ -87,13 +87,10 @@ export function unlock(config: StudioConfig): number {
 export async function status(config: StudioConfig): Promise<{ running: boolean; url: string; dataDir: string; accounts: number | null }> {
   const host = config.host === '0.0.0.0' || config.host === '::' ? '127.0.0.1' : config.host;
   const url = `${config.tls ? 'https' : 'http'}://${host.includes(':') ? `[${host}]` : host}:${config.port}`;
-  let running = false;
-  try {
-    const response = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(2000) });
-    running = response.ok;
-  } catch {
-    running = false;
-  }
+  const running = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(2000) }).then(
+    (response) => response.ok,
+    () => false,
+  );
   let accounts: number | null = null;
   if (existsSync(path.join(config.dataDir, 'studio.db'))) {
     const db = openDatabase(config);
