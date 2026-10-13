@@ -111,11 +111,17 @@ export class HttpKernel {
             },
       trustProxy: config.trustProxy ? 'loopback' : false,
       bodyLimit: 1024 * 1024,
+      // Slow-request protection: a client gets a bounded time to send its request.
+      connectionTimeout: 120_000,
+      requestTimeout: 120_000,
+      keepAliveTimeout: 65_000,
+      maxRequestsPerSocket: 1000,
       ...(config.tls
         ? { https: { cert: readFileSync(config.tls.certFile), key: readFileSync(config.tls.keyFile) } }
         : {}),
     }) as unknown as FastifyInstance;
     this.app.decorateRequest('principal', null);
+    this.app.server.headersTimeout = 15_000;
   }
 
   setAuthenticator(authenticator: Authenticator): void {

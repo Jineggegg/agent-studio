@@ -33,6 +33,9 @@ const clientMessage = z.discriminatedUnion('op', [
 const MAX_TOPICS_PER_CONNECTION = 200;
 const MAX_BUFFERED_BYTES = 8 * 1024 * 1024;
 const HEARTBEAT_MS = 30_000;
+const MAX_CONNECTIONS_PER_USER = 24;
+const MAX_CONNECTIONS = 512;
+export const CLOSE_TOO_MANY = 4429;
 export const CLOSE_AUTH_ENDED = 4401;
 export const CLOSE_SLOW_CONSUMER = 4408;
 export const CLOSE_PROTOCOL = 4400;
@@ -111,6 +114,12 @@ export class RealtimeHub {
   }
 
   #accept(socket: WebSocket, principal: Principal): void {
+    let mine = 0;
+    for (const other of this.#connections) if (other.principal.userId === principal.userId) mine += 1;
+    if (mine >= MAX_CONNECTIONS_PER_USER || this.#connections.size >= MAX_CONNECTIONS) {
+      socket.close(CLOSE_TOO_MANY, 'too many connections');
+      return;
+    }
     const connection: Connection = { id: newId(), socket, principal, topics: new Set(), alive: true, budget: 60 };
     this.#connections.add(connection);
     this.#send(connection, { op: 'ready', connectionId: connection.id, serverTime: Date.now() });

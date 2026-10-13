@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { runCommand } from './cli.js';
 import { ConfigError, loadConfig } from './kernel/config.js';
 import { createStudio } from './kernel/studio.js';
 import { modules } from './modules/index.js';
 
 async function main(): Promise<void> {
+  const exitCode = await runCommand(process.argv.slice(2), () => loadConfig(process.env));
+  if (exitCode !== null) process.exit(exitCode);
+
   // The web client is served from the sibling package's build output unless told otherwise.
   const bundledWeb = fileURLToPath(new URL('../../web/dist', import.meta.url));
   const overrides =
@@ -46,6 +50,8 @@ async function main(): Promise<void> {
 main().catch((error: unknown) => {
   if (error instanceof ConfigError) {
     console.error(`Configuration problem: ${error.message}`);
+  } else if (process.argv.length > 2 && process.argv[2] !== 'start' && error instanceof Error) {
+    console.error(error.message);
   } else {
     console.error(error);
   }

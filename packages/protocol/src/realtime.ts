@@ -41,6 +41,8 @@ export const CLOSE_CODES = {
   slowConsumer: 4408,
   /** The client broke the protocol. */
   protocol: 4400,
+  /** This account already has too many live connections: close some tabs. */
+  tooMany: 4429,
 } as const;
 
 export const userTopic = (userId: string) => `user:${userId}`;

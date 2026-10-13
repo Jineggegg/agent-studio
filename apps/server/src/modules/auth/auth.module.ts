@@ -1,5 +1,6 @@
 import {
   type AuthState,
+  type LockStatus,
   changePasswordRequestSchema,
   createApiTokenRequestSchema,
   createUserRequestSchema,
@@ -54,11 +55,35 @@ export const authModule: StudioModule = {
     context.services.signIn = (request, reply, session) => setSessionCookie(http, request, reply, session);
     http.setAuthenticator(auth);
 
-    // Per account: a handful of free guesses, then exponential waits.
+    const audit = context.services.audit;
+    const DAY_MS = 24 * 60 * 60_000;
+    // Per account: a handful of free guesses, then exponential waits that survive a restart.
     // Per address: more headroom, because a tunnel can make every client share one address.
-    const perAccount = new AttemptThrottle({ freeAttempts: 5 });
+    const perAccount = new AttemptThrottle({ freeAttempts: 5 }, context.db);
     const perAddress = new AttemptThrottle({ freeAttempts: 20 });
     const setupAttempts = new AttemptThrottle({ freeAttempts: 5 });
+    // Confirming identity inside a session has its own budget per session, so a stolen
+    // session can lock only itself — and a daily cap per account across all sessions.
+    const stepUpPerSession = new AttemptThrottle({ freeAttempts: 5 }, context.db);
+    const stepUpPerDay = new AttemptThrottle({ freeAttempts: 20, baseDelayMs: DAY_MS, maxDelayMs: DAY_MS, forgetAfterMs: DAY_MS }, context.db);
+    throttles.set(context, perAccount);
+
+    const accountKey = (username: string) => `account:${username.toLowerCase()}`;
+    const sessionKey = (sessionId: string) => `stepup:${sessionId}`;
+    const dailyKey = (userId: string) => `stepup-day:${userId}`;
+
+    /** Checks the password of an already signed-in user, within the step-up budgets. */
+    const confirmPassword = async (user: { userId: string; username: string; credentialId: string }, password: string, ip: string): Promise<void> => {
+      const wait = Math.max(stepUpPerSession.retryAfter(sessionKey(user.credentialId)), stepUpPerDay.retryAfter(dailyKey(user.userId)));
+      if (wait > 0) throw rateLimited(wait, 'Too many wrong passwords. Try again later.');
+      if (!(await auth.verifyCredentials(user.username, password))) {
+        stepUpPerSession.recordFailure(sessionKey(user.credentialId));
+        stepUpPerDay.recordFailure(dailyKey(user.userId));
+        audit.record({ category: 'failure', action: 'identity.confirmation-refused', userId: user.userId, address: ip });
+        throw unauthorized('That password is not correct.', 'invalid_credentials');
+      }
+      stepUpPerSession.recordSuccess(sessionKey(user.credentialId));
+    };
 
     const stateFor = (request: FastifyRequest): AuthState => {
       const principal = request.principal;
@@ -121,8 +146,10 @@ export const authModule: StudioModule = {
           user = await auth.setup(body);
         } catch (error) {
           setupAttempts.recordFailure(key);
+          audit.record({ category: 'failure', action: 'setup.refused', address: request.ip });
           throw error;
         }
+        audit.record({ category: 'change', action: 'owner.created', userId: user.id, subject: user.username, address: request.ip });
         const session = auth.startSession(user.id, 'setup', { ip: request.ip, userAgent: request.headers['user-agent'] ?? null });
         setSessionCookie(http, request, reply, session);
         return stateAfterSignIn(user.id, session, 'setup');
@@ -136,19 +163,22 @@ export const authModule: StudioModule = {
       body: loginRequestSchema,
       rateLimit: { max: config.env === 'test' ? 10_000 : 30, windowMs: 60_000 },
       handler: async ({ body, request, reply }) => {
-        const accountKey = `account:${body.username.toLowerCase()}`;
+        const account = accountKey(body.username);
         const addressKey = `address:${request.ip}`;
-        const wait = Math.max(perAccount.retryAfter(accountKey), perAddress.retryAfter(addressKey));
+        // The lock is checked before the password is: a locked account costs an attacker nothing to learn.
+        const wait = Math.max(perAccount.retryAfter(account), perAddress.retryAfter(addressKey));
         if (wait > 0) throw rateLimited(wait, 'Too many sign-in attempts. Try again later.');
 
         const user = await auth.verifyCredentials(body.username, body.password);
         if (!user) {
-          perAccount.recordFailure(accountKey);
+          perAccount.recordFailure(account);
           perAddress.recordFailure(addressKey);
+          audit.record({ category: 'failure', action: 'sign-in.refused', address: request.ip });
           // One message for every failure: wrong password, unknown account, disabled account.
           throw unauthorized('That username or password is not correct.', 'invalid_credentials');
         }
-        perAccount.recordSuccess(accountKey);
+        perAccount.recordSuccess(account);
+        audit.record({ category: 'sign-in', action: 'sign-in.password', userId: user.id, address: request.ip });
         const session = auth.startSession(user.id, 'password', { ip: request.ip, userAgent: request.headers['user-agent'] ?? null });
         setSessionCookie(http, request, reply, session);
         return stateAfterSignIn(user.id, session, 'password');
@@ -166,6 +196,32 @@ export const authModule: StudioModule = {
       },
     });
 
+    // Ends every session and API token of the account, on every device, including this one.
+    http.route({
+      method: 'POST',
+      url: '/api/auth/logout-everywhere',
+      access: 'user',
+      sessionOnly: true,
+      handler: ({ user, request, reply }) => {
+        auth.revokeAllCredentials(user.userId);
+        stepUpPerDay.recordSuccess(dailyKey(user.userId));
+        audit.record({ category: 'change', action: 'sessions.revoked-all', userId: user.userId, address: request.ip });
+        clearSessionCookies(reply);
+      },
+    });
+
+    http.route({
+      method: 'GET',
+      url: '/api/auth/locks',
+      access: 'user',
+      sessionOnly: true,
+      handler: ({ user }): LockStatus => ({
+        signInLockedUntil: perAccount.lockedUntil(accountKey(user.username)),
+        stepUpLockedUntil:
+          stepUpPerSession.lockedUntil(sessionKey(user.credentialId)) ?? stepUpPerDay.lockedUntil(dailyKey(user.userId)),
+      }),
+    });
+
     http.route({
       method: 'POST',
       url: '/api/auth/reauth',
@@ -173,15 +229,8 @@ export const authModule: StudioModule = {
       sessionOnly: true,
       body: reauthRequestSchema,
       rateLimit: { max: config.env === 'test' ? 10_000 : 20, windowMs: 60_000 },
-      handler: async ({ user, body }) => {
-        const accountKey = `account:${user.username.toLowerCase()}`;
-        const wait = perAccount.retryAfter(accountKey);
-        if (wait > 0) throw rateLimited(wait);
-        if (!(await auth.verifyCredentials(user.username, body.password))) {
-          perAccount.recordFailure(accountKey);
-          throw unauthorized('That password is not correct.', 'invalid_credentials');
-        }
-        perAccount.recordSuccess(accountKey);
+      handler: async ({ user, body, request }) => {
+        await confirmPassword(user, body.password, request.ip);
         auth.markReauthenticated(user.credentialId);
         return { recentlyAuthenticated: true };
       },
@@ -194,9 +243,12 @@ export const authModule: StudioModule = {
       sessionOnly: true,
       body: changePasswordRequestSchema,
       rateLimit: { max: config.env === 'test' ? 10_000 : 10, windowMs: 60_000 },
-      handler: async ({ user, body }) => {
+      handler: async ({ user, body, request }) => {
+        await confirmPassword(user, body.currentPassword, request.ip);
         await auth.changePassword(user.userId, body.currentPassword, body.newPassword, user.credentialId);
         auth.markReauthenticated(user.credentialId);
+        perAccount.recordSuccess(accountKey(user.username));
+        audit.record({ category: 'change', action: 'password.changed', userId: user.userId, address: request.ip });
       },
     });
 
@@ -214,8 +266,9 @@ export const authModule: StudioModule = {
       access: 'user',
       sessionOnly: true,
       params: idParams,
-      handler: ({ user, params, reply }) => {
+      handler: ({ user, params, request, reply }) => {
         if (!auth.endSession(user.userId, params.id)) throw notFound('No such session.');
+        audit.record({ category: 'change', action: 'session.revoked', userId: user.userId, address: request.ip });
         if (params.id === user.credentialId) clearSessionCookies(reply);
       },
     });
@@ -235,7 +288,11 @@ export const authModule: StudioModule = {
       sessionOnly: true,
       recentAuth: true,
       body: createApiTokenRequestSchema,
-      handler: ({ user, body }) => auth.createApiToken(user, body),
+      handler: ({ user, body, request }) => {
+        const created = auth.createApiToken(user, body);
+        audit.record({ category: 'change', action: 'api-token.created', userId: user.userId, subject: body.name, detail: `scopes: ${created.record.scopes.join(', ')}`, address: request.ip });
+        return created;
+      },
     });
     http.route({
       method: 'DELETE',
@@ -243,8 +300,9 @@ export const authModule: StudioModule = {
       access: 'user',
       sessionOnly: true,
       params: idParams,
-      handler: ({ user, params }) => {
+      handler: ({ user, params, request }) => {
         if (!auth.revokeApiToken(user.userId, params.id)) throw notFound('No such token.');
+        audit.record({ category: 'change', action: 'api-token.revoked', userId: user.userId, address: request.ip });
       },
     });
 
@@ -262,8 +320,9 @@ export const authModule: StudioModule = {
       sessionOnly: true,
       recentAuth: true,
       body: createUserRequestSchema,
-      handler: async ({ body, reply }) => {
+      handler: async ({ user: actor, body, request, reply }) => {
         const user = await auth.createUser(body);
+        audit.record({ category: 'change', action: 'user.created', userId: actor.userId, subject: user.username, detail: `role: ${user.role}`, address: request.ip });
         void reply.status(201);
         return user;
       },
@@ -276,7 +335,13 @@ export const authModule: StudioModule = {
       recentAuth: true,
       params: idParams,
       body: updateUserRequestSchema,
-      handler: ({ user, params, body }) => auth.updateUser(params.id, body, user),
+      handler: async ({ user, params, body, request }) => {
+        const updated = await auth.updateUser(params.id, body, user);
+        const changed = Object.keys(body).map((key) => (key === 'password' ? 'password reset' : key)).join(', ');
+        audit.record({ category: 'change', action: 'user.updated', userId: user.userId, subject: updated.username, detail: changed, address: request.ip });
+        if (body.password !== undefined) perAccount.recordSuccess(accountKey(updated.username));
+        return updated;
+      },
     });
     http.route({
       method: 'DELETE',
@@ -285,14 +350,21 @@ export const authModule: StudioModule = {
       sessionOnly: true,
       recentAuth: true,
       params: idParams,
-      handler: ({ user, params }) => auth.deleteUser(params.id, user),
+      handler: ({ user, params, request }) => {
+        const target = auth.getUser(params.id);
+        auth.deleteUser(params.id, user);
+        audit.record({ category: 'change', action: 'user.deleted', userId: user.userId, subject: target.username, address: request.ip });
+      },
     });
   },
 
   start(context) {
     const auth = context.services.auth;
     auth.purgeExpired();
-    const timer = setInterval(() => auth.purgeExpired(), 60 * 60 * 1000);
+    const timer = setInterval(() => {
+      auth.purgeExpired();
+      throttles.get(context)?.prune();
+    }, 60 * 60 * 1000);
     timer.unref();
     housekeeping.set(context, timer);
   },
@@ -304,3 +376,4 @@ export const authModule: StudioModule = {
 };
 
 const housekeeping = new WeakMap<ModuleContext, NodeJS.Timeout>();
+const throttles = new WeakMap<ModuleContext, AttemptThrottle>();

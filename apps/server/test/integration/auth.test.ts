@@ -270,3 +270,96 @@ describe('people and roles', () => {
     expect((await owner.post('/api/users', { username: 'bob', password: TEST_PASSWORD })).status).toBe(201);
   });
 });
+
+describe('locks that outlast a restart, and operator recovery', () => {
+  it('keeps an account locked across a restart and lets the operator clear it', async () => {
+    const { createStudio } = await import('../../src/kernel/studio.js');
+    const { modules } = await import('../../src/modules/index.js');
+    const { runCommand } = await import('../../src/cli.js');
+    await t.owner();
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await t.anonymous().post('/api/auth/login', { username: 'owner', password: 'wrong guess here' });
+    }
+    expect((await t.anonymous().post('/api/auth/login', { username: 'owner', password: TEST_PASSWORD })).status).toBe(429);
+
+    const config = t.studio.context.config;
+    await t.studio.stop();
+    const restarted = await createStudio(config, modules);
+    await restarted.app.ready();
+    try {
+      const login = () =>
+        restarted.app.inject({ method: 'POST', url: '/api/auth/login', headers: { host: 'localhost:7420' }, payload: { username: 'owner', password: TEST_PASSWORD } });
+      expect((await login()).statusCode).toBe(429);
+
+      const lines: string[] = [];
+      const output = { write: (text: string) => (lines.push(text), true) } as unknown as NodeJS.WriteStream;
+      expect(await runCommand(['unlock'], () => config, { input: process.stdin, output })).toBe(0);
+      expect(lines.join('')).toMatch(/Cleared 1 lock/);
+      expect((await login()).statusCode).toBe(200);
+    } finally {
+      await restarted.stop();
+    }
+  });
+
+  it('lets the operator reset a forgotten password from the host, signing the account out everywhere', async () => {
+    const { resetPassword, runCommand } = await import('../../src/cli.js');
+    const owner = await t.owner();
+    const config = t.studio.context.config;
+    await expect(resetPassword(config, 'owner', 'short')).rejects.toThrow(/at least 12/);
+    await expect(resetPassword(config, 'nobody', 'a perfectly fine passphrase')).rejects.toThrow(/no account/);
+    await resetPassword(config, 'owner', 'a perfectly fine passphrase');
+    expect((await owner.get('/api/system/info')).status).toBe(401);
+    expect((await t.anonymous().post('/api/auth/login', { username: 'owner', password: TEST_PASSWORD })).status).toBe(401);
+    await t.signIn('owner', 'a perfectly fine passphrase');
+
+    const lines: string[] = [];
+    const output = { write: (text: string) => (lines.push(text), true) } as unknown as NodeJS.WriteStream;
+    expect(await runCommand(['version'], () => config, { input: process.stdin, output })).toBe(0);
+    expect(await runCommand(['bogus'], () => config, { input: process.stdin, output })).toBe(2);
+    expect(await runCommand(['setup-token'], () => config, { input: process.stdin, output })).toBe(1);
+    expect(await runCommand(['start'], () => config, { input: process.stdin, output })).toBeNull();
+  });
+});
+
+describe('signing out everywhere and step-up budgets', () => {
+  it('ends every session and API token of the account at once', async () => {
+    const laptop = await t.owner();
+    const phone = await t.signIn('owner');
+    const { token } = (await laptop.post<CreatedApiToken>('/api/auth/tokens', { name: 'ci', scopes: ['read'] })).body;
+    const robot = t.anonymous();
+    robot.bearer = token;
+    expect((await robot.get('/api/system/info')).status).toBe(200);
+
+    expect((await laptop.post('/api/auth/logout-everywhere')).status).toBe(204);
+    for (const client of [laptop, phone, robot]) expect((await client.get('/api/system/info')).status).toBe(401);
+    await t.signIn('owner');
+  });
+
+  it('locks identity confirmation per session, so a stolen session cannot lock the account', async () => {
+    const stolen = await t.owner();
+    const legitimate = await t.signIn('owner');
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      expect((await stolen.post('/api/auth/reauth', { password: 'guessing wildly' })).status).toBe(401);
+    }
+    expect((await stolen.post('/api/auth/reauth', { password: TEST_PASSWORD })).status).toBe(429);
+    expect((await stolen.get<{ stepUpLockedUntil: number | null }>('/api/auth/locks')).body.stepUpLockedUntil).toBeGreaterThan(Date.now());
+
+    // The other session and password sign-in are unaffected.
+    expect((await legitimate.post('/api/auth/reauth', { password: TEST_PASSWORD })).status).toBe(200);
+    expect((await legitimate.get('/api/auth/locks')).body).toEqual({ signInLockedUntil: null, stepUpLockedUntil: null });
+    await t.signIn('owner');
+  });
+
+  it('records sign-ins, refusals and changes in the security log without secrets', async () => {
+    const owner = await t.owner();
+    await t.anonymous().post('/api/auth/login', { username: 'owner', password: 'definitely wrong pw' });
+    await owner.post('/api/auth/tokens', { name: 'ci', scopes: ['read'] });
+    const events = (await owner.get<{ events: Array<{ action: string; category: string }> }>('/api/audit')).body.events;
+    const actions = events.map((event) => event.action);
+    expect(actions).toEqual(expect.arrayContaining(['owner.created', 'sign-in.refused', 'api-token.created']));
+    const dump = JSON.stringify(events);
+    expect(dump).not.toContain(TEST_PASSWORD);
+    expect(dump).not.toContain('definitely wrong pw');
+    expect(dump).not.toMatch(/ast_[A-Za-z0-9_-]{20,}/);
+  });
+});

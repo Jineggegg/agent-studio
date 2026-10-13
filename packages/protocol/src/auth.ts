@@ -8,7 +8,7 @@ export const usernameSchema = z
   .max(40, 'Use at most 40 characters.')
   .regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/, 'Use letters, digits, dots, dashes and underscores.');
 
-export const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_MIN_LENGTH = 12;
 export const passwordSchema = z
   .string()
   .min(PASSWORD_MIN_LENGTH, `Use at least ${PASSWORD_MIN_LENGTH} characters.`)
@@ -67,6 +67,15 @@ export const loginRequestSchema = z.object({
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 
 export const reauthRequestSchema = z.object({ password: z.string().min(1).max(256) });
+
+/** Where password use is currently locked, so the client can say until when. */
+export const lockStatusSchema = z.object({
+  /** Password sign-in for this account. */
+  signInLockedUntil: timestampSchema.nullable(),
+  /** Identity confirmation (step-up) in this browser session. */
+  stepUpLockedUntil: timestampSchema.nullable(),
+});
+export type LockStatus = z.infer<typeof lockStatusSchema>;
 
 export const changePasswordRequestSchema = z.object({
   currentPassword: z.string().min(1).max(256),

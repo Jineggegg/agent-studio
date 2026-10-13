@@ -50,6 +50,18 @@ export const AUTH_MIGRATIONS: readonly Migration[] = [
       CREATE INDEX api_tokens_user ON api_tokens(user_id);
     `,
   },
+  {
+    version: 2,
+    name: 'persistent attempt throttle',
+    sql: `
+      CREATE TABLE auth_throttle (
+        key TEXT PRIMARY KEY,
+        failures INTEGER NOT NULL,
+        locked_until INTEGER NOT NULL,
+        last_failure INTEGER NOT NULL
+      );
+    `,
+  },
 ];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -58,9 +70,9 @@ export const API_TOKEN_PREFIX = 'ast_';
 
 /** Passwords everyone tries first. A real breach-list check belongs in front of this, not instead of it. */
 const COMMON_PASSWORDS = new Set([
-  'password123', 'password1234', '1234567890', '12345678910', 'qwertyuiop', 'qwerty12345', 'iloveyou123',
-  'administrator', 'letmein12345', 'welcome12345', 'changeme123', 'adminadmin', 'passwordpassword', '0123456789',
-  '1q2w3e4r5t', 'abcdefghij', 'abc1234567', 'password!1',
+  'password1234', 'password12345', '123456789012', '1234567890123', 'qwertyuiop12', 'qwertyuiopas', 'qwerty123456',
+  'iloveyou1234', 'administrator', 'letmein12345', 'welcome12345', 'changeme1234', 'adminadminadmin', 'adminadmin12',
+  'passwordpassword', '012345678901', '1q2w3e4r5t6y', 'abcdefghijkl', 'abc123456789', 'password!123',
 ]);
 
 interface UserRow {
