@@ -4,8 +4,8 @@ import { idSchema, roleSchema, timestampSchema, tokenScopeSchema } from './commo
 export const usernameSchema = z
   .string()
   .trim()
-  .min(2, 'Use at least 2 characters.')
-  .max(40, 'Use at most 40 characters.')
+  .min(3, 'Use at least 3 characters.')
+  .max(64, 'Use at most 64 characters.')
   .regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/, 'Use letters, digits, dots, dashes and underscores.');
 
 export const PASSWORD_MIN_LENGTH = 12;

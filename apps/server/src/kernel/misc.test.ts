@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ConfigError, loadConfig, parseOrigin } from './config.js';
 import { Database } from './database.js';
 import { EventBus } from './events.js';
+import { looksLikeApiPath } from './http.js';
 import { redactSecrets, secretHint } from './redact.js';
 import { AttemptThrottle } from '../modules/auth/throttle.js';
 
@@ -177,5 +178,18 @@ describe('AttemptThrottle', () => {
     expect(throttle.retryAfter('k')).toBeGreaterThan(0);
     throttle.recordSuccess('k');
     expect(throttle.retryAfter('k')).toBe(0);
+  });
+});
+
+describe('looksLikeApiPath', () => {
+  it.each(['/api/users', '/api', '/API/users', '/%61pi/users', '/a%70i/x', '/%2561pi/users', '//api/users', '/api//users', '/%2Fapi/users', '/\\api/users', '/api/users?next=/home', '/%E0%A4%A/api'])(
+    'treats %s as an API path',
+    (url) => {
+      expect(looksLikeApiPath(url)).toBe(true);
+    },
+  );
+
+  it.each(['/', '/settings/account', '/assets/app-1a2b.js', '/apiary', '/projects/api/files', '/workbench?tab=api/'])('treats %s as a page or asset', (url) => {
+    expect(looksLikeApiPath(url)).toBe(false);
   });
 });

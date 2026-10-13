@@ -103,6 +103,20 @@ export class AttemptThrottle {
     this.#remove(key);
   }
 
+  /**
+   * Takes back one counted attempt. Attempts are counted *before* the secret is
+   * compared, so that a burst of parallel guesses cannot all be evaluated; a
+   * caller that then succeeds, but must not wipe the whole count, undoes its own.
+   */
+  undoFailure(key: string): void {
+    const entry = this.#read(key);
+    if (!entry) return;
+    entry.failures -= 1;
+    if (entry.failures <= 0) return this.#remove(key);
+    if (entry.failures < this.#freeAttempts) entry.lockedUntil = 0;
+    this.#write(key, entry);
+  }
+
   /** Forgets every key with the given prefix (for example all locks of one account). */
   clear(prefix = ''): number {
     if (this.#db) {

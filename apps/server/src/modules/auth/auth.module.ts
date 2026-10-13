@@ -29,6 +29,8 @@ declare module '../../kernel/module.js' {
 }
 
 const idParams = z.object({ id: idSchema });
+/** Anyone can reach the sign-in routes, so they read very little before deciding. */
+const PUBLIC_BODY_LIMIT = 16 * 1024;
 
 function setSessionCookie(http: HttpKernel, request: FastifyRequest, reply: FastifyReply, session: StartedSession): void {
   void reply.setCookie(http.sessionCookieName(request), session.token, {
@@ -77,12 +79,13 @@ export const authModule: StudioModule = {
     const confirmPassword = async (user: { userId: string; username: string; credentialId: string }, password: string, ip: string): Promise<void> => {
       const wait = Math.max(stepUpPerSession.retryAfter(sessionKey(user.credentialId)), stepUpPerDay.retryAfter(dailyKey(user.userId)));
       if (wait > 0) throw rateLimited(wait, 'Too many wrong passwords. Try again later.');
+      stepUpPerSession.recordFailure(sessionKey(user.credentialId));
+      stepUpPerDay.recordFailure(dailyKey(user.userId));
       if (!(await auth.verifyCredentials(user.username, password))) {
-        stepUpPerSession.recordFailure(sessionKey(user.credentialId));
-        stepUpPerDay.recordFailure(dailyKey(user.userId));
         audit.record({ category: 'failure', action: 'identity.confirmation-refused', userId: user.userId, address: ip });
         throw unauthorized('That password is not correct.', 'invalid_credentials');
       }
+      stepUpPerDay.undoFailure(dailyKey(user.userId));
       stepUpPerSession.recordSuccess(sessionKey(user.credentialId));
     };
 
@@ -152,20 +155,22 @@ export const authModule: StudioModule = {
       method: 'POST',
       url: '/api/auth/setup',
       access: 'public',
+      bodyLimit: PUBLIC_BODY_LIMIT,
       body: setupRequestSchema,
       rateLimit: { max: config.env === 'test' ? 10_000 : 20, windowMs: 60_000 },
       handler: async ({ body, request, reply }) => {
         const key = `setup:${request.ip}`;
         const wait = setupAttempts.retryAfter(key);
         if (wait > 0) throw rateLimited(wait);
+        setupAttempts.recordFailure(key);
         let user;
         try {
           user = await auth.setup(body);
         } catch (error) {
-          setupAttempts.recordFailure(key);
           audit.record({ category: 'failure', action: 'setup.refused', address: request.ip });
           throw error;
         }
+        setupAttempts.recordSuccess(key);
         audit.record({ category: 'change', action: 'owner.created', userId: user.id, subject: user.username, address: request.ip });
         const session = auth.startSession(user.id, 'setup', { ip: request.ip, userAgent: request.headers['user-agent'] ?? null });
         setSessionCookie(http, request, reply, session);
@@ -177,6 +182,7 @@ export const authModule: StudioModule = {
       method: 'POST',
       url: '/api/auth/login',
       access: 'public',
+      bodyLimit: PUBLIC_BODY_LIMIT,
       body: loginRequestSchema,
       rateLimit: { max: config.env === 'test' ? 10_000 : 30, windowMs: 60_000 },
       handler: async ({ body, request, reply }) => {
@@ -186,14 +192,17 @@ export const authModule: StudioModule = {
         const wait = Math.max(perAccount.retryAfter(account), perAddress.retryAfter(addressKey));
         if (wait > 0) throw rateLimited(wait, 'Too many sign-in attempts. Try again later.');
 
+        // Count the attempt first, compare second: a burst of parallel guesses is then
+        // bounded by the same budget as guesses made one after another.
+        perAccount.recordFailure(account);
+        perAddress.recordFailure(addressKey);
         const user = await auth.verifyCredentials(body.username, body.password);
         if (!user) {
-          perAccount.recordFailure(account);
-          perAddress.recordFailure(addressKey);
           audit.record({ category: 'failure', action: 'sign-in.refused', address: request.ip });
           // One message for every failure: wrong password, unknown account, disabled account.
           throw unauthorized('That username or password is not correct.', 'invalid_credentials');
         }
+        perAddress.undoFailure(addressKey);
         perAccount.recordSuccess(account);
         audit.record({ category: 'sign-in', action: 'sign-in.password', userId: user.id, address: request.ip });
         const session = auth.startSession(user.id, 'password', { ip: request.ip, userAgent: request.headers['user-agent'] ?? null });

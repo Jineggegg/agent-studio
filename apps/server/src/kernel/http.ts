@@ -75,6 +75,27 @@ export const SECURE_SESSION_COOKIE = '__Host-studio_session';
 
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+/**
+ * Whether a raw request target spells a path under /api, in any encoding. Used
+ * only to decide that an *unmatched* request deserves API-style treatment
+ * (JSON 404, no-store); access control never depends on it.
+ */
+export function looksLikeApiPath(rawUrl: string): boolean {
+  const rawPath = rawUrl.split('?')[0] ?? '';
+  let decoded = rawPath;
+  for (let round = 0; round < 3; round += 1) {
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    } catch {
+      return true; // undecodable: treat with suspicion
+    }
+  }
+  const normalised = decoded.replace(/\\/g, '/').replace(/\/+/g, '/').toLowerCase();
+  return normalised === '/api' || normalised.startsWith('/api/');
+}
+
 function hostnameOf(hostHeader: string): string {
   if (hostHeader.startsWith('[')) return hostHeader.slice(0, hostHeader.indexOf(']') + 1);
   const colon = hostHeader.lastIndexOf(':');
@@ -104,7 +125,8 @@ export class HttpKernel {
                 req: (request: FastifyRequest) => ({
                   method: request.method,
                   // Query strings are dropped: they are the likeliest place for something sensitive.
-                  path: request.url.split('?')[0],
+                  // Path segments that are themselves capabilities are masked.
+                  path: (request.url.split('?')[0] ?? '').replace(/(\/api\/plugins\/panel\/)[^/]+/, '$1[grant]'),
                   ip: request.ip,
                 }),
               },
@@ -224,9 +246,7 @@ export class HttpKernel {
 
     // A route without an explicit access level is a bug, not a public endpoint.
     app.addHook('onRoute', (route) => {
-      const isApi = route.url.startsWith('/api/');
-      const methods = Array.isArray(route.method) ? route.method : [route.method];
-      if (isApi && !route.config?.studio && !methods.every((method) => method === 'HEAD' || method === 'OPTIONS')) {
+      if (route.url.startsWith('/api/') && !route.config?.studio) {
         throw new Error(`Route ${String(route.method)} ${route.url} does not declare who may call it.`);
       }
     });
@@ -239,22 +259,40 @@ export class HttpKernel {
           'host_not_allowed',
         );
       }
-      if (!request.url.startsWith('/api/')) return;
+      // Only origin-form targets ("/path?query"). Absolute-form and asterisk-form
+      // targets are for proxies; accepting them only multiplies the spellings of a URL.
+      if (!request.url.startsWith('/')) {
+        throw badRequest('That request target is not accepted.', undefined, 'invalid_target');
+      }
+
+      // Whether this request is subject to the API's rules is decided by the
+      // route the router actually matched — never by how the URL was spelled.
+      // (The router matches the percent-decoded path, so "/%61pi/users" reaches
+      // the same handler as "/api/users".) The spelling is consulted only as an
+      // additional reason to apply the rules, e.g. for unknown /api paths.
+      const declared = request.routeOptions.config.studio;
+      const matchedPattern = request.routeOptions.url;
+      const isApiRoute = declared !== undefined || matchedPattern?.startsWith('/api/') === true;
+      if (!isApiRoute && !looksLikeApiPath(request.url)) return;
       reply.header('cache-control', 'no-store');
 
       const meta = { ip: request.ip, userAgent: request.headers['user-agent'] ?? null };
       const authorization = request.headers.authorization;
       let principal: Principal | null = null;
+      let staleSession = false;
       if (authorization?.startsWith('Bearer ')) {
         principal = this.authenticator.fromBearerToken(authorization.slice(7).trim(), meta);
         // A bearer token that does not resolve is an error rather than "anonymous",
         // unless the route does its own token handling.
-        if (!principal && request.routeOptions.config.studio?.access !== 'self') {
+        if (!principal && declared?.access !== 'self') {
           throw unauthorized('That API token is not valid.', 'invalid_token');
         }
       } else {
         const token = request.cookies[SECURE_SESSION_COOKIE] ?? request.cookies[SESSION_COOKIE];
-        if (token) principal = this.authenticator.fromSessionCookie(token, meta);
+        if (token) {
+          principal = this.authenticator.fromSessionCookie(token, meta);
+          staleSession = principal === null;
+        }
       }
       request.principal = principal;
 
@@ -281,10 +319,16 @@ export class HttpKernel {
         }
       }
 
-      const route = request.routeOptions.config.studio;
-      if (!route) return; // unknown URL: the not-found handler answers
+      if (!isApiRoute) return; // nothing matched under /api: the not-found handler answers
+      // An API route with no declaration cannot be registered (see onRoute); should one
+      // ever slip through, it is treated as the most restricted kind rather than as open.
+      const route: RouteConfig = declared ?? { access: 'owner', scope: 'admin', sessionOnly: true, recentAuth: true };
       if (route.access === 'public' || route.access === 'self') return;
-      if (!principal) throw unauthorized();
+      if (!principal) {
+        // "Your session ended" and "you never signed in" are different things to tell a person.
+        if (staleSession) throw unauthorized('Your session has ended. Sign in again.', 'session_expired');
+        throw unauthorized();
+      }
       if (route.access === 'owner' && principal.role !== 'owner') {
         throw forbidden('Only the owner of this Studio can do that.', 'owner_required');
       }
@@ -332,7 +376,7 @@ export class HttpKernel {
 
     app.setNotFoundHandler((request, reply) => {
       const wantsPage =
-        request.method === 'GET' && !request.url.startsWith('/api/') && !path.extname(request.url.split('?')[0] ?? '');
+        request.method === 'GET' && !looksLikeApiPath(request.url) && !path.extname(request.url.split('?')[0] ?? '');
       if (wantsPage && config.webDir) {
         return reply.header('cache-control', 'no-cache').type('text/html').sendFile('index.html');
       }
@@ -342,7 +386,8 @@ export class HttpKernel {
     if (config.webDir) {
       await app.register(fastifyStatic, {
         root: config.webDir,
-        wildcard: false,
+        // Looked up per request, so a freshly built client is served without a restart.
+        wildcard: true,
         index: ['index.html'],
         setHeaders: (response, filePath) => {
           const name = path.basename(filePath);

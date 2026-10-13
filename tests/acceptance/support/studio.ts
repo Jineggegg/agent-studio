@@ -143,6 +143,19 @@ export interface StartOptions {
   readonly binDir?: string;
 }
 
+/**
+ * Like {@link startStudio} but runs the server in `test` env, which only raises
+ * the Fastify rate-limit plugin's ceilings (see docs/configuration.md: test env
+ * "relax[es] nothing security-relevant"). The per-account lockout and
+ * per-address sign-in throttles live in the auth module, not that plugin, so
+ * they still fire at their real thresholds — which is what lets a functional
+ * test make many requests without the generic limiter getting in the way.
+ * Use plain {@link startStudio} when a test means to observe the limiter itself.
+ */
+export async function startTestStudio(options: StartOptions = {}): Promise<RunningStudio> {
+  return startStudio({ ...options, env: { AGENT_STUDIO_ENV: 'test', ...(options.env ?? {}) } });
+}
+
 export async function startStudio(options: StartOptions = {}): Promise<RunningStudio> {
   const root = await mkdtemp(path.join(os.tmpdir(), 'agent-studio-acceptance-'));
   const dataDir = path.join(root, 'data');

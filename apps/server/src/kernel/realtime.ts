@@ -22,6 +22,8 @@ export interface TopicSpec {
   replay?(key: string, afterSeq: number): ReplayEvent[];
   /** State handed to a new subscriber straight away (for example a half-streamed message). */
   snapshot?(key: string): unknown;
+  /** The newest sequence number of a durable topic, so a fresh subscriber knows where "now" is. */
+  head?(key: string): number;
 }
 
 const clientMessage = z.discriminatedUnion('op', [
@@ -33,6 +35,8 @@ const clientMessage = z.discriminatedUnion('op', [
 const MAX_TOPICS_PER_CONNECTION = 200;
 const MAX_BUFFERED_BYTES = 8 * 1024 * 1024;
 const HEARTBEAT_MS = 30_000;
+/** Frames a client may send per heartbeat interval; a screen full of lists subscribes to many topics at once. */
+const MESSAGE_BUDGET = 400;
 const MAX_CONNECTIONS_PER_USER = 24;
 const MAX_CONNECTIONS = 512;
 export const CLOSE_TOO_MANY = 4429;
@@ -120,7 +124,7 @@ export class RealtimeHub {
       socket.close(CLOSE_TOO_MANY, 'too many connections');
       return;
     }
-    const connection: Connection = { id: newId(), socket, principal, topics: new Set(), alive: true, budget: 60 };
+    const connection: Connection = { id: newId(), socket, principal, topics: new Set(), alive: true, budget: MESSAGE_BUDGET };
     this.#connections.add(connection);
     this.#send(connection, { op: 'ready', connectionId: connection.id, serverTime: Date.now() });
 
@@ -179,6 +183,7 @@ export class RealtimeHub {
       op: 'subscribed',
       topic,
       replayed: replayed.length,
+      ...(spec.head ? { head: spec.head(key) } : {}),
       ...(spec.snapshot ? { snapshot: spec.snapshot(key) } : {}),
     });
     for (const event of replayed) {
@@ -191,6 +196,35 @@ export class RealtimeHub {
     const set = this.#subscribers.get(topic);
     set?.delete(connection);
     if (set?.size === 0) this.#subscribers.delete(topic);
+  }
+
+  /**
+   * Checks the subscriptions of the matching connections again and ends the
+   * ones their topic no longer authorises. Call it when access changes while
+   * clients are connected (a member is taken off a project, say): a
+   * subscription is otherwise only checked when it is made. The client gets a
+   * `rejected` frame for each topic it loses. Returns how many were ended.
+   */
+  reauthorize(match: (principal: Principal) => boolean): number {
+    let ended = 0;
+    for (const connection of this.#connections) {
+      if (!match(connection.principal)) continue;
+      for (const topic of [...connection.topics]) {
+        const separator = topic.indexOf(':');
+        const spec = this.#topics.get(separator === -1 ? topic : topic.slice(0, separator));
+        let allowed = false;
+        try {
+          allowed = spec !== undefined && spec.authorize(connection.principal, topic.slice(separator + 1));
+        } catch (error) {
+          this.#log.warn({ err: error, topic }, 'topic authorisation failed');
+        }
+        if (allowed) continue;
+        this.#unsubscribe(connection, topic);
+        this.#send(connection, { op: 'rejected', topic, code: 'forbidden' });
+        ended += 1;
+      }
+    }
+    return ended;
   }
 
   #deliver(event: StudioEvent): void {
@@ -225,7 +259,7 @@ export class RealtimeHub {
   #heartbeat(): void {
     const authenticator = this.#http.authenticator;
     for (const connection of this.#connections) {
-      connection.budget = 60;
+      connection.budget = MESSAGE_BUDGET;
       if (!authenticator.isCredentialLive(connection.principal)) {
         connection.socket.close(CLOSE_AUTH_ENDED, 'session ended');
         continue;

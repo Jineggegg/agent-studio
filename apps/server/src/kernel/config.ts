@@ -24,6 +24,12 @@ export interface StudioConfig {
   readonly tls: { readonly certFile: string; readonly keyFile: string } | null;
   readonly sandbox: SandboxMode;
   readonly terminalEnabled: boolean;
+  /** Operator-managed list of remote SSH hosts. Null means `remote-hosts.json` inside the data directory. */
+  readonly remoteHostsFile: string | null;
+  /** The one directory plugins may be installed from by path. Null turns installing from a directory off. */
+  readonly pluginSourceDir: string | null;
+  /** Let plugins with server code run when no isolation at all is available. Off unless the operator insists. */
+  readonly pluginsUnsandboxed: boolean;
   readonly logLevel: LogLevel;
   /** Base64 of 32 bytes. When absent a key file is created inside the data directory. */
   readonly masterKey: string | null;
@@ -168,6 +174,9 @@ export function loadConfig(
     tls: certFile && keyFile ? { certFile: path.resolve(certFile), keyFile: path.resolve(keyFile) } : null,
     sandbox,
     terminalEnabled: flag(read('TERMINAL'), true, `${ENV_PREFIX}TERMINAL`),
+    remoteHostsFile: read('REMOTE_HOSTS_FILE') ? path.resolve(expandHome(read('REMOTE_HOSTS_FILE')!)) : null,
+    pluginSourceDir: read('PLUGIN_SOURCE_DIR') ? path.resolve(expandHome(read('PLUGIN_SOURCE_DIR')!)) : null,
+    pluginsUnsandboxed: flag(read('PLUGINS_UNSANDBOXED'), false, `${ENV_PREFIX}PLUGINS_UNSANDBOXED`),
     logLevel: logLevel as LogLevel,
     masterKey,
     setupToken,

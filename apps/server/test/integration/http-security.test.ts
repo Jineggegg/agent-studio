@@ -26,6 +26,35 @@ describe('who may call what', () => {
     expect((await anonymous.get('/api/health')).body).toEqual({ status: 'ok' });
   });
 
+  it('applies access control to the route that matched, however the URL was spelled', async () => {
+    const owner = await t.owner();
+    await owner.post('/api/users', { username: 'alice', password: 'correct horse battery staple' });
+    // The router decodes percent-escapes before matching; each of these reaches (or tries to reach) /api/users.
+    for (const url of ['/%61pi/users', '/a%70i/users', '/api/%75sers', '/api/users?x=%2F', '/%2561pi/users', '//api/users', '/api//users', '/API/users', '/api/users/']) {
+      const response = await t.studio.app.inject({ method: 'GET', url, headers: { host: 'localhost:7420' } });
+      expect([401, 404], url).toContain(response.statusCode);
+      expect(response.body, url).not.toContain('alice');
+    }
+    // …and state-changing requests keep their cross-site defences under any spelling.
+    const forged = await t.studio.app.inject({
+      method: 'POST',
+      url: '/%61pi/auth/logout-everywhere',
+      headers: { host: 'localhost:7420', origin: 'https://evil.example', cookie: owner.cookie! },
+      payload: {},
+    });
+    expect(forged.statusCode).toBe(403);
+    expect((await owner.get('/api/system/info')).status).toBe(200);
+  });
+
+  it('tells a session that has ended apart from no session at all', async () => {
+    const owner = await t.owner();
+    const cookie = owner.cookie!;
+    await owner.post('/api/auth/logout');
+    const stale = await t.studio.app.inject({ method: 'GET', url: '/api/system/info', headers: { host: 'localhost:7420', cookie } });
+    expect(stale.json()).toMatchObject({ error: { code: 'session_expired' } });
+    expect((await t.anonymous().get('/api/system/info')).body).toMatchObject({ error: { code: 'unauthorized' } });
+  });
+
   it('refuses to start with a route that does not declare its access level', async () => {
     const dataDir = await mkdtemp(path.join(os.tmpdir(), 'studio-undeclared-'));
     const config = loadConfig({}, { env: 'test', dataDir, logLevel: 'silent', sandbox: 'off', port: 0 });
@@ -39,6 +68,19 @@ describe('who may call what', () => {
         },
       ]),
     ).rejects.toThrow(/does not declare who may call it/);
+    // No method is exempt: an undeclared OPTIONS or HEAD route is refused as well.
+    const second = await mkdtemp(path.join(os.tmpdir(), 'studio-undeclared-'));
+    await expect(
+      createStudio(loadConfig({}, { env: 'test', dataDir: second, logLevel: 'silent', sandbox: 'off', port: 0 }), [
+        {
+          name: 'sloppy',
+          setup(context) {
+            context.http.app.options('/api/sloppy', () => ({ secret: 'data' }));
+          },
+        },
+      ]),
+    ).rejects.toThrow(/does not declare who may call it/);
+    await rm(second, { recursive: true, force: true });
     await rm(dataDir, { recursive: true, force: true });
   });
 

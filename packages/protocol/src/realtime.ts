@@ -19,7 +19,14 @@ export type ClientFrame = z.infer<typeof clientFrameSchema>;
 
 export const serverFrameSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('ready'), connectionId: z.string(), serverTime: z.number() }),
-  z.object({ op: z.literal('subscribed'), topic: z.string(), replayed: z.number(), snapshot: z.unknown().optional() }),
+  z.object({
+    op: z.literal('subscribed'),
+    topic: z.string(),
+    replayed: z.number(),
+    /** Newest sequence number of a durable topic at the moment of subscribing. */
+    head: z.number().optional(),
+    snapshot: z.unknown().optional(),
+  }),
   z.object({ op: z.literal('rejected'), topic: z.string(), code: z.string() }),
   z.object({
     op: z.literal('event'),

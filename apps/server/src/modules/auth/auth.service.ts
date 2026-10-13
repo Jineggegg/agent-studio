@@ -176,7 +176,9 @@ export class AuthService implements Authenticator {
     if (!safeEqual(input.setupToken, this.#setupToken)) {
       throw forbidden('That setup token is not correct.', 'invalid_setup_token');
     }
-    const user = await this.createUser({ ...input, role: 'owner' });
+    // `onlyAsFirst` makes "is there no account yet?" and the insert one atomic step,
+    // so simultaneous requests cannot each create an owner.
+    const user = await this.createUser({ ...input, role: 'owner' }, { onlyAsFirst: true });
     this.#setupToken = null;
     rmSync(this.#setupTokenFile, { force: true });
     return user;
@@ -191,23 +193,32 @@ export class AuthService implements Authenticator {
     }
   }
 
-  async createUser(input: { username: string; password: string; displayName?: string; role: Role }): Promise<User> {
+  async createUser(
+    input: { username: string; password: string; displayName?: string; role: Role },
+    options: { onlyAsFirst?: boolean } = {},
+  ): Promise<User> {
     this.#assertPasswordAcceptable(input.password, input.username);
     const passwordHash = await hashPassword(input.password);
     const now = Date.now();
     const id = newId();
     try {
-      this.#db.run(
-        `INSERT INTO users (id, username, display_name, role, password_hash, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        id,
-        input.username,
-        input.displayName ?? input.username,
-        input.role,
-        passwordHash,
-        now,
-        now,
-      );
+      // Everything after the hash is synchronous: no other request can run in between.
+      this.#db.transaction(() => {
+        if (options.onlyAsFirst && !this.needsSetup()) {
+          throw conflict('This Studio is already set up.', 'already_set_up');
+        }
+        this.#db.run(
+          `INSERT INTO users (id, username, display_name, role, password_hash, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          id,
+          input.username,
+          input.displayName ?? input.username,
+          input.role,
+          passwordHash,
+          now,
+          now,
+        );
+      });
     } catch (error) {
       if (String((error as Error).message).includes('UNIQUE')) {
         throw conflict('That username is taken.', 'username_taken');
@@ -282,6 +293,11 @@ export class AuthService implements Authenticator {
     // ends its existing sessions and tokens.
     if (changes.disabled === true || changes.role !== undefined || passwordHash !== null) {
       this.revokeAllCredentials(id);
+    }
+    if (changes.disabled === true) {
+      // Lets other modules stop what the account had running (agent runs, terminals).
+      this.#bus.publish('internal:auth', 'auth.user.revoked', { userId: id });
+      this.#bus.publish('internal:auth', 'auth.user.disabled', { userId: id });
     }
     return this.getUser(id);
   }

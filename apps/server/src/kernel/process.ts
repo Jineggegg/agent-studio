@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readlinkSync, statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { ENV_PREFIX, type SandboxMode } from './config.js';
@@ -74,7 +74,39 @@ export type SandboxProfile =
       readonly writable: readonly string[];
       readonly network: boolean;
       readonly expose?: readonly string[];
+    }
+  /**
+   * Nothing of the host at all except the system's program and library
+   * directories (read-only), `readable` (read-only) and `writable`: no home
+   * directory, no /etc, no /run (so no local service sockets), no /tmp, a
+   * private /dev and /proc, its own IPC and host-name spaces, and a root that
+   * cannot be written to. For code that is not trusted at all (plugins).
+   */
+  | {
+      readonly kind: 'isolate';
+      readonly readable: readonly string[];
+      readonly writable: readonly string[];
+      readonly network: boolean;
     };
+
+/** Program and library directories an isolated process may read. */
+const ISOLATE_SYSTEM_PATHS = ['/usr', '/bin', '/sbin', '/lib', '/lib32', '/lib64', '/libx32'] as const;
+
+/** What name resolution and TLS need; given to an isolated process only together with the network. */
+const ISOLATE_NETWORK_PATHS = [
+  '/etc/resolv.conf',
+  '/etc/hosts',
+  '/etc/nsswitch.conf',
+  '/etc/ssl',
+  '/etc/ca-certificates',
+  '/etc/pki',
+] as const;
+
+/** True when `inner` is `outer` or lies beneath it (lexically). */
+function contains(outer: string, inner: string): boolean {
+  const relative = path.relative(outer, inner);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
 
 /** Places in a home directory that hold credentials. Hidden from confined processes. */
 const CREDENTIAL_PATHS = [
@@ -146,6 +178,9 @@ export class Sandbox {
   /** Rewrites a command so that it runs inside the sandbox; a no-op when there is none. */
   wrap(file: string, args: readonly string[], profile: SandboxProfile): { file: string; args: string[]; sandboxed: boolean } {
     if (this.status.mode !== 'bwrap') return { file, args: [...args], sandboxed: false };
+    if (profile.kind === 'isolate') {
+      return { file: 'bwrap', args: [...this.#isolate(profile), '--', file, ...args], sandboxed: true };
+    }
 
     const flags: string[] = ['--die-with-parent', '--unshare-pid'];
     if (profile.kind === 'mask') {
@@ -173,6 +208,40 @@ export class Sandbox {
       if (existsSync(exposed)) flags.push('--ro-bind', exposed, exposed);
     }
     return { file: 'bwrap', args: [...flags, '--', file, ...args], sandboxed: true };
+  }
+
+  /** Builds the root of an `isolate` profile from nothing: only what is listed gets in. */
+  #isolate(profile: Extract<SandboxProfile, { kind: 'isolate' }>): string[] {
+    for (const target of [...profile.readable, ...profile.writable]) {
+      if (!path.isAbsolute(target)) throw new Error(`Sandbox paths must be absolute, got "${target}".`);
+      // A path *inside* protected data may be handed over on purpose (a plugin's
+      // own folder); one that contains the protected data never may.
+      if (this.#protected.some((secret) => contains(path.resolve(target), secret))) {
+        throw new Error(`"${target}" would expose the server's own data to an isolated process.`);
+      }
+    }
+    const flags: string[] = ['--die-with-parent', '--unshare-pid', '--unshare-ipc', '--unshare-uts', '--unshare-cgroup-try'];
+    if (!profile.network) flags.push('--unshare-net');
+    for (const directory of ISOLATE_SYSTEM_PATHS) {
+      const entry = lstatSync(directory, { throwIfNoEntry: false });
+      if (entry?.isSymbolicLink()) flags.push('--symlink', readlinkSync(directory), directory);
+      else if (entry?.isDirectory()) flags.push('--ro-bind', directory, directory);
+    }
+    if (profile.network) {
+      for (const target of ISOLATE_NETWORK_PATHS) {
+        if (existsSync(target)) flags.push('--ro-bind', target, target);
+      }
+    }
+    flags.push('--dev', '/dev', '--proc', '/proc');
+    for (const target of profile.readable) {
+      if (existsSync(target)) flags.push('--ro-bind', target, target);
+    }
+    for (const target of profile.writable) {
+      if (existsSync(target)) flags.push('--bind', target, target);
+    }
+    // The root and /dev are memory-backed: left writable they would be a way to exhaust RAM.
+    flags.push('--remount-ro', '/dev', '--remount-ro', '/');
+    return flags;
   }
 }
 

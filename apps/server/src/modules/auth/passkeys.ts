@@ -291,6 +291,7 @@ export function setupPasskeys(
     method: 'POST',
     url: '/api/auth/passkeys/login-options',
     access: 'public',
+    bodyLimit: 1024,
     rateLimit: { max: context.config.env === 'test' ? 10_000 : 60, windowMs: 60_000 },
     handler: async ({ request }) => {
       const party = requireRelyingParty(request);
@@ -308,6 +309,7 @@ export function setupPasskeys(
     method: 'POST',
     url: '/api/auth/passkeys/login',
     access: 'public',
+    bodyLimit: 32 * 1024,
     body: passkeyLoginRequestSchema,
     rateLimit: { max: context.config.env === 'test' ? 10_000 : 30, windowMs: 60_000 },
     handler: async ({ body, request }) => {

@@ -28,3 +28,4 @@ tests/e2e/.auth/
 .vscode/*
 !.vscode/extensions.json
 *.log
+.vitest/
