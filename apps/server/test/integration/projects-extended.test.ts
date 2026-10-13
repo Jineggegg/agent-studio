@@ -59,7 +59,7 @@ describe('new project fields', () => {
     expect(project.links).toHaveLength(1);
     expect(project.links[0]).toMatchObject({ label: 'Docs', url: 'https://docs.example.org/guide', local: false });
     expect(project.agents).toEqual(['claude-code']);
-    expect(project.features).toEqual({ assistant: true, automation: true });
+    expect(project.features).toEqual({ assistant: true, automation: true, instructions: true });
   });
 
   it('creates nothing when a new project is refused for its settings', async () => {

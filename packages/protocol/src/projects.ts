@@ -69,7 +69,7 @@ export const projectLinkStatusResponseSchema = z.object({ links: z.array(project
 /** Identifier of an agent adapter ("claude-code", "codex", …). */
 export const agentIdSchema = z.string().regex(/^[a-z][a-z0-9-]{0,39}$/, 'Not a valid agent id.');
 
-export const PROJECT_FEATURES = ['assistant', 'automation'] as const;
+export const PROJECT_FEATURES = ['assistant', 'automation', 'instructions'] as const;
 export const projectFeatureSchema = z.enum(PROJECT_FEATURES);
 export type ProjectFeature = z.infer<typeof projectFeatureSchema>;
 
@@ -78,10 +78,16 @@ export const projectFeaturesSchema = z.object({
   assistant: z.boolean(),
   /** Schedules and other unattended work are offered in this project. */
   automation: z.boolean(),
+  /**
+   * The project's own instruction file is handed to agents that would not
+   * load it by themselves. Today that is `CLAUDE.md` in the project's root
+   * folder, for Claude Code. On unless the owner switches it off.
+   */
+  instructions: z.boolean(),
 });
 export type ProjectFeatures = z.infer<typeof projectFeaturesSchema>;
 
-export const DEFAULT_PROJECT_FEATURES: ProjectFeatures = { assistant: true, automation: false };
+export const DEFAULT_PROJECT_FEATURES: ProjectFeatures = { assistant: true, automation: false, instructions: true };
 
 // ---- the project ---------------------------------------------------------------
 

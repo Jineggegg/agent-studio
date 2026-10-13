@@ -7,6 +7,7 @@ import { ClaudeCodeAdapter, type ClaudeCodeOptions } from './adapter.js';
  *
  * - `cli.ts`         finding the program; its version, options and sign-in status
  * - `invocation.ts`  the command line of a turn and the messages written to it
+ * - `instructions.ts` reading the project's own `CLAUDE.md`
  * - `run.ts`         one turn: the process, steering, stopping, resuming
  * - `translate.ts`   the CLI's JSON lines → the runtime's normalised events
  * - `tools.ts`       what each of the CLI's tools does, for titles and the permission engine
@@ -38,12 +39,49 @@ import { ClaudeCodeAdapter, type ClaudeCodeOptions } from './adapter.js';
  * its workspace-trust question.) The same goes for MCP servers: those of the
  * account that runs the service would be started for every member's run.
  *
- * What this costs: `CLAUDE.md` files are not loaded (verified: an instruction
- * in one was followed with the project's settings source on and ignored with
- * none), and with the settings files go the hooks, plugins and MCP servers
- * configured in them. Rules belong in the Studio's permission rules; standing
- * knowledge in shared memory, whose conventions are the one thing appended
- * to the CLI's system prompt.
+ * What this costs: the CLI loads no `CLAUDE.md` by itself any more (verified:
+ * an instruction in one was followed with the project's settings source on
+ * and ignored with none), and with the settings files go the hooks, plugins
+ * and MCP servers configured in them. Rules belong in the Studio's permission
+ * rules, standing knowledge in shared memory — and the project's instruction
+ * file is handed over by the Studio itself, as the next section says.
+ *
+ * ## The project's instruction file
+ *
+ * People expect a project's `CLAUDE.md` to apply. So when a session belongs
+ * to a project, the Studio reads **`CLAUDE.md` in the root of the project
+ * folder** and appends it to the CLI's system prompt (`--append-system-prompt`),
+ * after the shared-memory conventions, inside a block that says what it is:
+ *
+ * ```
+ * Project instructions. The text between the two marker lines below is this
+ * project's own instruction file: CLAUDE.md, from the root of the project folder, …
+ * ----- BEGIN PROJECT CLAUDE.md -----
+ * …the file…
+ * ----- END PROJECT CLAUDE.md -----
+ * ```
+ *
+ * That is all of it. Not `CLAUDE.local.md`, not a `CLAUDE.md` in a parent or
+ * sub-folder, not `~/.claude/CLAUDE.md`, no settings file, nothing else from
+ * the CLI's configuration directory. The file is reached through the kernel's
+ * path check (`confine`): a link is followed only if it stays inside the
+ * project. It must be a regular file of UTF-8 text; at most 48 KiB are used,
+ * and the conversation gets a notice when the file was cut
+ * (`project_instructions_truncated`) or could not be used
+ * (`project_instructions_unreadable`) — once per conversation, and again only
+ * if the problem changes. It is text for the model: it cannot allow a tool or
+ * change a permission mode, whatever it says.
+ *
+ * Per project it is the feature switch `instructions` of the projects module
+ * (`project.features.instructions`, on by default, changed by the owner with
+ * `PATCH /api/projects/:id { features: { instructions: false } }`).
+ *
+ * Not verified against the real CLI: its help says that, where it records a
+ * conversation's system prompt (`--system-prompt-snapshot`, on by default),
+ * the appended text is fixed at the conversation's first request and reused
+ * on resume until the conversation is compacted. If so, an edit to
+ * `CLAUDE.md` reaches a conversation that is already under way only then; a
+ * new conversation always gets the current file.
  *
  * What the CLI still decides alone is what it considers free of side
  * effects. Observed with 2.1.283: reading files in a folder named with

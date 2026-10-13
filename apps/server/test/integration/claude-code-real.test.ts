@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { Approval, Attachment, UploadAttachmentsResponse } from '@agent-studio/protocol';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { ClaudeCodeAdapter } from '../../src/modules/claude-code/claude-code.module.js';
+import { STANDIN_BIN } from '../../src/modules/claude-code/testing/kit.js';
 import { type AgentsKit, createAgentsKit, nextRequestId, until } from '../../src/testing/agents-kit.js';
 
 /**
@@ -17,6 +18,10 @@ import { type AgentsKit, createAgentsKit, nextRequestId, until } from '../../src
  * the CLI, one file per step (it contains the conversation; do not commit it),
  * and STUDIO_CLAUDE_SMOKE_SANDBOX=off runs the CLI outside the sandbox.
  *
+ * The integration tests' set-up puts the stand-in CLIs first on PATH; this file
+ * takes them off again for itself, and its first step fails if what it finds
+ * is the stand-in after all.
+ *
  * The project is a throw-away folder under the system's temporary directory.
  * What was observed with each CLI version is recorded in
  * `docs/guides/agent-smoke-test.md`.
@@ -25,6 +30,8 @@ import { type AgentsKit, createAgentsKit, nextRequestId, until } from '../../src
 const enabled = process.env.STUDIO_CLAUDE_SMOKE === '1';
 const captureDir = process.env.STUDIO_CLAUDE_SMOKE_DIR;
 const CODE_WORD = 'PELICAN-7';
+/** What the throw-away project's CLAUDE.md asks every reply to end with. */
+const INSTRUCTION_MARKER = 'ZEBRA-CHECK';
 const TURN_MS = 180_000;
 
 /** A 24×24 picture of one colour. */
@@ -69,12 +76,21 @@ describe.skipIf(!enabled)('the real Claude Code CLI (manual smoke test: spends q
     observations.push(`[${step}] ${line}`);
   };
 
+  const pathWithStandIns = process.env.PATH;
+
   beforeAll(async () => {
+    // This file is about the real program: the stand-in must not be the `claude` that is found.
+    process.env.PATH = (pathWithStandIns ?? '')
+      .split(path.delimiter)
+      .filter((entry) => entry !== '' && path.resolve(entry) !== path.resolve(STANDIN_BIN))
+      .join(path.delimiter);
     kit = await createAgentsKit({ config: { sandbox: process.env.STUDIO_CLAUDE_SMOKE_SANDBOX === 'off' ? 'off' : 'auto' } });
     await kit.listen();
     adapter = kit.t.studio.context.services.agents.adapter('claude-code') as ClaudeCodeAdapter;
     adapter.observe((entry) => tapped.push({ step, stream: entry.stream, text: entry.text }));
     projectDir = kit.project.rootDir;
+    // The project's own instruction file, which the Studio hands to the CLI.
+    writeFileSync(path.join(projectDir, 'CLAUDE.md'), `# Project instructions\n\nAlways end every reply with the single word ${INSTRUCTION_MARKER} on a line of its own.\n`);
     sessionId = (await kit.session(kit.owner, { agentId: 'claude-code', model: 'haiku' })).id;
   }, 60_000);
 
@@ -88,6 +104,8 @@ describe.skipIf(!enabled)('the real Claude Code CLI (manual smoke test: spends q
       writeFileSync(path.join(captureDir, 'observations.txt'), `${observations.join('\n')}\n`);
     }
     await kit?.close();
+    if (pathWithStandIns === undefined) delete process.env.PATH;
+    else process.env.PATH = pathWithStandIns;
   }, 60_000);
 
   const upload = async (files: Array<{ name: string; type: string; content: Buffer | string }>): Promise<Attachment[]> => {
@@ -145,6 +163,7 @@ describe.skipIf(!enabled)('the real Claude Code CLI (manual smoke test: spends q
     const capabilities = await adapter.capabilities();
     note(`models: ${capabilities.models.map((model) => model.id).join(', ')}; efforts: ${capabilities.models[0]?.efforts?.join(', ')}; steering: ${capabilities.steering}`);
     expect(status).toMatchObject({ installed: true, signedIn: true, problem: null });
+    expect(status.version, 'this must be the real CLI, not the stand-in from tests/fixtures/bin').not.toMatch(/standin/);
   }, 60_000);
 
   it('(a) answers a plain question, reads an attached file without a prompt and sees an attached image', async () => {
@@ -154,7 +173,7 @@ describe.skipIf(!enabled)('the real Claude Code CLI (manual smoke test: spends q
       { name: 'swatch.png', type: 'image/png', content: solidPng(220, 20, 20) },
     ]);
     const startedAt = Date.now();
-    const runId = await send('Answer in exactly three short lines and do nothing else: line 1, the code word from the attached text file; line 2, the main colour of the attached picture as one word; line 3, the word READY.', {
+    const runId = await send('Answer with three short lines: line 1, the code word from the attached text file; line 2, the main colour of the attached picture as one word; line 3, the word READY.', {
       attachmentIds: [notes!.id, picture!.id],
     });
     const run = await answering(runId, () => 'deny');
@@ -176,6 +195,9 @@ describe.skipIf(!enabled)('the real Claude Code CLI (manual smoke test: spends q
     expect(answer).toContain(CODE_WORD);
     expect(answer.toLowerCase()).toContain('red');
     expect(answer).toContain('READY');
+    // The project's CLAUDE.md reached the model: it asks for this marker.
+    expect(argvOf(step).join('\n')).toContain('----- BEGIN PROJECT CLAUDE.md -----');
+    expect(answer, "the marker the project's CLAUDE.md asks for").toContain(INSTRUCTION_MARKER);
     // Only the Studio's bridge was offered to the CLI, and it connected.
     expect(init?.mcp_servers).toEqual([expect.objectContaining({ name: 'studio', status: 'connected' })]);
     // The attachment was read without a question (its folder was named with --add-dir).

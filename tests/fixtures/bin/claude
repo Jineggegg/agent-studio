@@ -23,6 +23,7 @@
  *
  *   [[scenario:recall]]                lists what was said earlier in this conversation (shows that resume worked)
  *   [[scenario:echo-prompt]]           repeats the whole prompt exactly as it was received
+ *   [[scenario:system-prompt]]         repeats what was appended to its system prompt (--append-system-prompt)
  *   [[scenario:edit-file NAME]]        writes NAME (default standin-note.txt) in the project — needs approval
  *   [[scenario:bash COMMAND]]          "runs" COMMAND (nothing is executed) — needs approval unless read-only (pwd, ls, cat, echo)
  *   [[scenario:read-file PATH]]        reads PATH — needs approval outside the project and the --add-dir folders

@@ -224,6 +224,9 @@ export interface PermissionRequest {
   /**
    * `tool` (default): the agent wants to use a tool; the permission engine decides, and asks a person when it must.
    * `plan`: the agent asks the user to approve a plan; always put to a person.
+   * Approving it also moves a session that was in `plan` mode on — to `ask`,
+   * or to the mode the person chose with the approval — so the requests that
+   * follow in the same run are decided under the new mode.
    */
   readonly approval?: 'tool' | 'plan';
   readonly toolCallId?: string;

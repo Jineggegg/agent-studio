@@ -47,6 +47,7 @@ export function readProjectSettings(bag: Readonly<Record<string, unknown>>): Pro
   const features: ProjectFeatures = {
     assistant: typeof stored.assistant === 'boolean' ? stored.assistant : DEFAULT_PROJECT_FEATURES.assistant,
     automation: typeof stored.automation === 'boolean' ? stored.automation : DEFAULT_PROJECT_FEATURES.automation,
+    instructions: typeof stored.instructions === 'boolean' ? stored.instructions : DEFAULT_PROJECT_FEATURES.instructions,
   };
 
   return { links, agents, features, scratch: bag.scratch === true };

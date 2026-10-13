@@ -125,7 +125,9 @@ export const AGENT_LIMITS = {
 // ---------------------------------------------------------------------------
 
 /**
- * `plan`          read and search only; everything else is refused.
+ * `plan`          read and search only; everything else is refused. Approving
+ *                 the agent's plan moves the session on: to `ask`, or to the
+ *                 mode chosen with the approval.
  * `ask`           reads inside the project run; anything with a side effect asks.
  * `accept-edits`  as `ask`, and file edits inside the project also run.
  * `auto`          everything runs except what a deny rule or the hard-deny
@@ -689,6 +691,15 @@ export const approvalDecisionRequestSchema = z.object({
   /** Also save a rule so the same request is not asked again: for this session, this project, or always. */
   remember: z.enum(['session', 'project', 'always']).optional(),
   answers: z.array(questionAnswerSchema).max(20).optional(),
+  /**
+   * Only when allowing a plan (`kind: 'plan'`): the permission mode the session
+   * continues in, so that the work can start. Without it a session that was in
+   * `plan` continues in `ask`, and one that was in another mode keeps it.
+   * `auto` is refused where the project has not enabled it
+   * (`auto_mode_not_enabled`); with any other kind of approval, or a denial,
+   * the field is refused (`mode_not_applicable`).
+   */
+  permissionMode: z.enum(['ask', 'accept-edits', 'auto']).optional(),
 });
 export type ApprovalDecisionRequest = z.infer<typeof approvalDecisionRequestSchema>;
 

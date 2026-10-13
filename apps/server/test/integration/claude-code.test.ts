@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type { Agent, Attachment, PermissionRule, ServerFrame, SessionUsage, UploadAttachmentsResponse } from '@agent-studio/protocol';
+import type { Agent, Attachment, PermissionRule, Project, ServerFrame, SessionUsage, UploadAttachmentsResponse } from '@agent-studio/protocol';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import type { AgentToolContext } from '../../src/kernel/agent-tools.js';
@@ -394,33 +394,42 @@ describe('plan mode', () => {
     expect(await c.eventsOf(session.id, 'tool.finished')).toEqual([expect.objectContaining({ toolCallId: approval.toolCallId, status: 'denied', output: 'Make it smaller.' })]);
   });
 
-  it('after an approved plan the engine still decides every change: in a plan-mode session it refuses them', async () => {
-    const session = await c.session({ permissionMode: 'plan' });
-    const sent = await c.send(session.id, '[[scenario:plan]]');
-    const approval = await c.pendingApproval(session.id);
-    await c.decide(approval.id, { decision: 'allow' });
-    const run = await c.runEnded(sent.body.runId!);
-    expect(run.status).toBe('completed');
-    expect(existsSync(path.join(projectDir, 'plan-output.txt'))).toBe(false);
-    const finished = await c.eventsOf(session.id, 'tool.finished');
-    expect(finished.map((event) => event.status)).toEqual(['ok', 'denied']);
-    expect(finished[0]!.output).toContain('User has approved your plan');
-    expect(finished[1]!.output).toMatch(/Plan mode only reads and searches/);
-    // No second question: the engine refused the write by itself.
-    expect(await c.eventsOf(session.id, 'approval.requested')).toHaveLength(1);
-  });
-
-  it('carries the plan out when the user approves it and has left plan mode meanwhile', async () => {
+  it('approving the plan lets the work start: the session leaves plan mode and the first change is put to the user', async () => {
     const session = await c.session({ permissionMode: 'plan' });
     const sent = await c.send(session.id, '[[scenario:plan]]');
     const plan = await c.pendingApproval(session.id);
-    // The engine reads the session's mode at every request, so a mode change takes effect in the same turn.
-    expect((await c.owner.patch(`/api/sessions/${session.id}`, { permissionMode: 'accept-edits' })).status).toBe(200);
-    await c.decide(plan.id, { decision: 'allow' });
+    expect(plan.kind).toBe('plan');
+    expect((await c.decide(plan.id, { decision: 'allow' })).status).toBe(200);
+
+    // The CLI left its plan mode by itself and asks about the write, as it always does. The engine,
+    // which would have refused it while the session was planning, now puts it to the user.
+    const write = await until(async () => (await c.kit.state(c.owner, session.id)).pendingApprovals.find((approval) => approval.kind === 'tool'), { what: 'the write to be asked about', timeoutMs: 20_000 });
+    expect(write).toMatchObject({ toolName: 'Write', title: 'Write plan-output.txt' });
+    expect((await c.owner.get<{ permissionMode: string }>(`/api/sessions/${session.id}`)).body.permissionMode).toBe('ask');
+    await c.decide(write.id, { decision: 'allow' });
     const run = await c.runEnded(sent.body.runId!);
     expect(run.status).toBe('completed');
     expect(readFileSync(path.join(projectDir, 'plan-output.txt'), 'utf8')).toBe('written by the stand-in\n');
+    const finished = await c.eventsOf(session.id, 'tool.finished');
+    expect(finished.map((event) => event.status)).toEqual(['ok', 'ok']);
+    expect(finished[0]!.output).toContain('User has approved your plan');
+    expect(await c.texts(session.id)).toEqual(['Here is my plan.', 'The plan is approved; carrying it out.', 'The file plan-output.txt is written.']);
+    // The next turn starts the CLI in its asking mode, not in plan mode.
+    await c.turn(session.id, 'thanks');
+    expect(c.argOf(c.lastInvocation(), '--permission-mode')).toBe('manual');
+  });
+
+  it('continues in the mode chosen with the approval: with accept-edits the plan is carried out without another question', async () => {
+    const session = await c.session({ permissionMode: 'plan' });
+    const sent = await c.send(session.id, '[[scenario:plan]]');
+    const plan = await c.pendingApproval(session.id);
+    expect((await c.decide(plan.id, { decision: 'allow', permissionMode: 'accept-edits' })).status).toBe(200);
+    const run = await c.runEnded(sent.body.runId!);
+    expect(run.status).toBe('completed');
+    expect(await c.eventsOf(session.id, 'approval.requested')).toHaveLength(1);
+    expect((await c.eventsOf(session.id, 'tool.finished')).map((event) => event.status)).toEqual(['ok', 'ok']);
     expect((await c.texts(session.id)).at(-1)).toBe('The file plan-output.txt is written.');
+    expect((await c.owner.get<{ permissionMode: string }>(`/api/sessions/${session.id}`)).body.permissionMode).toBe('accept-edits');
   });
 });
 
@@ -732,6 +741,124 @@ describe('attachments', () => {
     await c.runEnded(sent.body.runId!);
     await until(async () => (await c.texts(session.id)).some((text) => text.includes('says: arrived late')), { what: 'the queued message to be answered', timeoutMs: 20_000 });
     await c.kit.idle(c.owner, session.id);
+  });
+});
+
+describe("the project's instruction file", () => {
+  const instructed = async (name: string, files: Record<string, string> = {}): Promise<Project> => {
+    const project = await c.kit.makeProject(name);
+    for (const [file, content] of Object.entries(files)) {
+      mkdirSync(path.dirname(path.join(project.rootDir, file)), { recursive: true });
+      writeFileSync(path.join(project.rootDir, file), content);
+    }
+    return project;
+  };
+  const appended = (): string | undefined => c.argOf(c.lastInvocation(), '--append-system-prompt');
+  const BEGIN = '----- BEGIN PROJECT CLAUDE.md -----';
+  const END = '----- END PROJECT CLAUDE.md -----';
+
+  it('is appended to the CLI\'s system prompt after the memory conventions, labelled as the project\'s own file', async () => {
+    const rules = '# House rules\n\nAlways answer in rhyme. Marker: ZEBRA-41.';
+    const project = await instructed('with-instructions', {
+      'CLAUDE.md': `${rules}\n`,
+      // None of these is the project's instruction file.
+      'docs/CLAUDE.md': 'NESTED-FILE',
+      'CLAUDE.local.md': 'LOCAL-FILE',
+      '.claude/CLAUDE.md': 'CONFIG-FOLDER-FILE',
+      '.claude/settings.json': '{"permissions":{"allow":["Bash","Write"],"defaultMode":"bypassPermissions"}}',
+    });
+    const session = await c.session({ projectId: project.id });
+    const run = await c.turn(session.id, '[[scenario:system-prompt]]');
+    expect(run.status).toBe('completed');
+
+    const guide = c.kit.t.studio.context.services.memory.agentGuide()!;
+    const prompt = appended()!;
+    expect(prompt.startsWith(`${guide}\n\nProject instructions. The text between the two marker lines below is this project's own instruction file: CLAUDE.md`)).toBe(true);
+    expect(prompt.endsWith(`${BEGIN}\n${rules}\n${END}`)).toBe(true);
+    for (const other of ['NESTED-FILE', 'LOCAL-FILE', 'CONFIG-FOLDER-FILE', 'bypassPermissions']) expect(prompt).not.toContain(other);
+    // The CLI received exactly that as its appended system prompt.
+    expect(await c.texts(session.id)).toEqual([prompt]);
+    expect(await c.eventsOf(session.id, 'notice')).toEqual([]);
+    // Settings files are still switched off, and no other option was added for it.
+    const { argv } = c.lastInvocation();
+    expect(c.argOf(c.lastInvocation(), '--setting-sources')).toBe('');
+    expect(argv.filter((arg) => arg === '--append-system-prompt')).toHaveLength(1);
+    expect(argv).not.toContain('--add-dir');
+    expect(argv).not.toContain('--settings');
+  });
+
+  it('can be switched off for a project by its owner, and is on by default', async () => {
+    const project = await instructed('instructions-off', { 'CLAUDE.md': 'Marker: HERON-7.' });
+    expect(project.features.instructions).toBe(true);
+    const session = await c.session({ projectId: project.id });
+    await c.turn(session.id, 'first');
+    expect(appended()).toContain('HERON-7');
+
+    const off = await c.owner.patch<Project>(`/api/projects/${project.id}`, { features: { instructions: false } });
+    expect(off.status).toBe(200);
+    expect(off.body.features).toMatchObject({ assistant: true, instructions: false });
+    await c.turn(session.id, 'second');
+    expect(appended()).toBe(c.kit.t.studio.context.services.memory.agentGuide());
+
+    // A member who works in the project cannot change what the project hands to agents.
+    const member = await c.kit.t.member();
+    await c.kit.share(project, member);
+    expect((await member.patch(`/api/projects/${project.id}`, { features: { instructions: true } })).status).toBe(403);
+    await c.owner.patch(`/api/projects/${project.id}`, { features: { instructions: true } });
+    await c.turn(session.id, 'third');
+    expect(appended()).toContain('HERON-7');
+  });
+
+  it('is not read when it is a link that leaves the project, and the user is told once', async () => {
+    const project = await instructed('linked-out');
+    const outside = path.join(c.home, 'private-notes.md');
+    writeFileSync(outside, 'OUTSIDE-SECRET: the deploy password is hunter2');
+    symlinkSync(outside, path.join(project.rootDir, 'CLAUDE.md'));
+
+    const session = await c.session({ projectId: project.id });
+    const run = await c.turn(session.id, '[[scenario:system-prompt]]');
+    expect(run.status).toBe('completed');
+    // Only the memory conventions reached the CLI; nothing of the linked file, anywhere.
+    expect(appended()).toBe(c.kit.t.studio.context.services.memory.agentGuide());
+    expect(JSON.stringify(c.lastInvocation().argv)).not.toContain('OUTSIDE-SECRET');
+    expect(JSON.stringify(await c.events(session.id))).not.toContain('OUTSIDE-SECRET');
+    expect(await c.eventsOf(session.id, 'notice')).toEqual([
+      expect.objectContaining({ level: 'warning', code: 'project_instructions_unreadable', text: 'CLAUDE.md in the project folder was not given to Claude Code: it is a link that leads outside the project folder.' }),
+    ]);
+    // The same problem is not announced again with every turn of the conversation…
+    await c.turn(session.id, 'again');
+    expect(await c.eventsOf(session.id, 'notice')).toHaveLength(1);
+    // …but another conversation in the project hears of it too.
+    const other = await c.session({ projectId: project.id });
+    await c.turn(other.id, 'hello');
+    expect((await c.eventsOf(other.id, 'notice')).map((notice) => notice.code)).toEqual(['project_instructions_unreadable']);
+
+    // A link that stays inside the project is the project's own business.
+    rmSync(path.join(project.rootDir, 'CLAUDE.md'));
+    mkdirSync(path.join(project.rootDir, 'docs'));
+    writeFileSync(path.join(project.rootDir, 'docs', 'agents.md'), 'Marker: INSIDE-LINK.');
+    symlinkSync('docs/agents.md', path.join(project.rootDir, 'CLAUDE.md'));
+    await c.turn(session.id, 'and now?');
+    expect(appended()).toContain('INSIDE-LINK');
+    expect(await c.eventsOf(session.id, 'notice')).toHaveLength(1);
+  });
+
+  it('is cut at 48 KiB, with a notice', async () => {
+    const line = 'Prefer small, reviewable changes.\n';
+    const project = await instructed('too-long', { 'CLAUDE.md': `FIRST-LINE\n${line.repeat(2000)}LAST-LINE\n` });
+    const session = await c.session({ projectId: project.id });
+    const run = await c.turn(session.id, 'hello');
+    expect(run.status).toBe('completed');
+    const prompt = appended()!;
+    const block = prompt.slice(prompt.indexOf(BEGIN) + BEGIN.length + 1, prompt.indexOf(END));
+    expect(block.startsWith('FIRST-LINE\n')).toBe(true);
+    expect(block).not.toContain('LAST-LINE');
+    expect(Buffer.byteLength(block)).toBeLessThanOrEqual(48 * 1024 + 1);
+    expect(Buffer.byteLength(block)).toBeGreaterThan(47 * 1024);
+    expect(prompt.endsWith('(The file is longer than this: only its beginning is shown above. Read CLAUDE.md in the project folder for the rest.)')).toBe(true);
+    expect(await c.eventsOf(session.id, 'notice')).toEqual([
+      expect.objectContaining({ level: 'warning', code: 'project_instructions_truncated', text: 'CLAUDE.md in the project folder is larger than 48 KiB, so Claude Code was given only its first 48 KiB.' }),
+    ]);
   });
 });
 

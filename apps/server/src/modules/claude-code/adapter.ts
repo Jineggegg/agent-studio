@@ -10,6 +10,7 @@ import type {
   UserQuestionAnswer,
 } from '../agents/adapter.js';
 import { ClaudeCli, type ClaudeCliOptions, DEFAULT_FEATURES } from './cli.js';
+import { type ProjectInstructions, readProjectInstructions } from './instructions.js';
 import { DEFAULT_MODEL } from './invocation.js';
 import { ClaudeRun, type Tap } from './run.js';
 import { ASK_USER_TOOL, EXIT_PLAN_TOOL, describeTool, isRecord, parseMcpToolName } from './tools.js';
@@ -133,6 +134,8 @@ export class ClaudeCodeAdapter implements AgentAdapter {
   readonly #context: ModuleContext;
   readonly #runs = new Map<string, ClaudeRun>();
   readonly #ledger = new ConversationLedger();
+  /** The problem with a project's instruction file that each session was last told about. */
+  readonly #instructionProblems = new Map<string, string>();
   #tap: Tap | undefined;
 
   constructor(context: ModuleContext, options: ClaudeCodeOptions = {}) {
@@ -176,14 +179,39 @@ export class ClaudeCodeAdapter implements AgentAdapter {
     return this.cli.status();
   }
 
+  /** The project's `CLAUDE.md`, unless the session has no project or the project does not hand it to agents. */
+  #projectInstructions(request: AgentRunRequest): Promise<ProjectInstructions> {
+    const projects = this.#context.services.projects;
+    const project = request.projectId === null ? null : projects.find(request.projectId);
+    if (!project || !projects.isFeatureEnabled(project, 'instructions')) return Promise.resolve({ kind: 'none' });
+    return readProjectInstructions(project.rootDir);
+  }
+
+  /** A truncated or unusable instruction file is reported once per session, and again only when the problem changes. */
+  #instructionsProblemIsNews(sessionId: string, problem: string | null): boolean {
+    const known = this.#instructionProblems.get(sessionId);
+    this.#instructionProblems.delete(sessionId);
+    if (problem === null) return false;
+    this.#instructionProblems.set(sessionId, problem);
+    while (this.#instructionProblems.size > 1000) {
+      const oldest = this.#instructionProblems.keys().next().value;
+      if (oldest === undefined) break;
+      this.#instructionProblems.delete(oldest);
+    }
+    return known !== problem;
+  }
+
   run(request: AgentRunRequest, host: AgentRunHost): AgentRunHandle {
     const run = new ClaudeRun({
       context: this.#context,
       cli: this.cli,
       request,
       host,
-      // The shared-memory conventions, when the memory module is there and assistants may use it. Nothing else is added.
-      systemPrompt: () => (this.#context.services as Partial<Services>).memory?.agentGuide() ?? null,
+      // Two standing texts are appended to the CLI's system prompt and nothing else: the shared-memory
+      // conventions (when the memory module is there and assistants may use it) and the project's CLAUDE.md.
+      memoryGuide: () => (this.#context.services as Partial<Services>).memory?.agentGuide() ?? null,
+      projectInstructions: () => this.#projectInstructions(request),
+      instructionsProblemIsNews: (problem) => this.#instructionsProblemIsNews(request.sessionId, problem),
       onRateLimit: (info) => {
         const observed: RateLimitObserved = { agentId: this.id, userId: request.userId, observedAt: Date.now(), info };
         this.#context.bus.publish(USAGE_TOPIC, RATE_LIMIT_OBSERVED, observed);

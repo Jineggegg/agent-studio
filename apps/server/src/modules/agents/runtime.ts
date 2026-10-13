@@ -130,6 +130,8 @@ interface Resolution {
   readonly decidedBy: string | null;
   readonly note: string | null;
   readonly answers: QuestionAnswer[] | null;
+  /** For a plan that was approved: the permission mode its session continues in. */
+  readonly sessionMode?: PermissionMode;
 }
 
 interface Waiter {
@@ -1629,6 +1631,9 @@ export class RunService {
         resolution.answers === null ? null : JSON.stringify(resolution.answers),
       );
       if (won) {
+        // An approved plan lets the work start: the session leaves plan mode in the same step, so that
+        // whoever hears of the approval — the agent first of all — already finds the new mode in force.
+        if (resolution.sessionMode !== undefined) this.#store.updateSession(row.session_id, { permissionMode: resolution.sessionMode }, Date.now());
         this.#sessions.append(row.session_id, row.run_id, SESSION_EVENT.approvalResolved, {
           runId: row.run_id,
           approvalId,
@@ -1708,8 +1713,28 @@ export class RunService {
       .map(presentApproval);
   }
 
+  /**
+   * The mode a session continues in once its plan is approved: the one chosen
+   * with the approval, or `ask` for a session that was planning. A session
+   * that was in another mode (the agent chose to plan by itself) keeps it.
+   */
+  async #modeAfterPlan(row: ApprovalRow, chosen: PermissionMode | undefined): Promise<PermissionMode | undefined> {
+    const agentId = this.#store.session(row.session_id)?.agent_id;
+    const adapter = agentId === undefined ? undefined : this.#adapters.get(agentId);
+    const supported: readonly PermissionMode[] = adapter ? (await adapter.capabilities()).permissionModes : [];
+    // Read after the wait above: the mode may have been changed meanwhile.
+    const session = this.#store.session(row.session_id);
+    if (!session) return undefined;
+    if (chosen === undefined) return session.permission_mode === 'plan' && supported.includes('ask') ? 'ask' : undefined;
+    if (!supported.includes(chosen)) throw unprocessable(`${adapter?.displayName ?? 'This agent'} does not have that permission mode.`, 'unsupported_permission_mode');
+    if (chosen === 'auto' && !this.#sessions.autoModeEnabled(this.#projectOf(session))) {
+      throw unprocessable('Auto mode is not enabled for this project. Its owner can enable it in the project settings.', 'auto_mode_not_enabled');
+    }
+    return chosen;
+  }
+
   /** Answers an approval. The first answer wins; later ones are told so. */
-  decide(principal: Principal, approvalId: string, body: ApprovalDecisionRequest): ApprovalDecisionResponse {
+  async decide(principal: Principal, approvalId: string, body: ApprovalDecisionRequest): Promise<ApprovalDecisionResponse> {
     const row = this.#requireApproval(principal, approvalId);
     const resolved = () => conflict('That request has already been answered.', 'approval_resolved', { status: this.#store.approval(approvalId)?.status });
     if (row.status !== 'pending') throw resolved();
@@ -1741,12 +1766,18 @@ export class RunService {
       const known = new Set((detail.questions ?? []).map((question) => question.id));
       answers = (body.answers ?? []).filter((answer) => known.has(answer.questionId));
     }
+    const approvesPlan = row.kind === 'plan' && body.decision === 'allow';
+    if (body.permissionMode !== undefined && !approvesPlan) {
+      throw unprocessable('A permission mode can only be chosen when approving a plan.', 'mode_not_applicable');
+    }
+    const sessionMode = approvesPlan ? await this.#modeAfterPlan(row, body.permissionMode) : undefined;
 
     const won = this.#resolve(approvalId, {
       status: body.decision === 'allow' ? 'allowed' : 'denied',
       decidedBy: principal.userId,
       note: body.note ?? null,
       answers,
+      ...(sessionMode === undefined ? {} : { sessionMode }),
     });
     if (!won) throw resolved();
 

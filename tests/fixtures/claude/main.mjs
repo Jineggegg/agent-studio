@@ -557,6 +557,11 @@ async function converse(options) {
     async 'echo-prompt'(turn) {
       await turn.say(turn.userText, { pieces: [turn.userText] });
     },
+    async 'system-prompt'(turn) {
+      const appended = options.one('--append-system-prompt');
+      const text = appended === undefined ? 'Nothing was appended to my system prompt.' : appended;
+      await turn.say(text, { pieces: [text] });
+    },
     async 'edit-file'(turn, args) {
       const name = args || 'standin-note.txt';
       const file = path.resolve(cwd, name);

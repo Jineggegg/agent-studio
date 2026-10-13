@@ -7,7 +7,8 @@ import { type ProcessSupervisor, terminate } from '../../kernel/process.js';
 import { AgentRunError, type AgentRunHost, type AgentRunRequest, type AgentRunResult, type PromptAttachment } from '../agents/adapter.js';
 import type { ClaudeCli, CliInstallation } from './cli.js';
 import { type ExitFacts, NOT_INSTALLED_MESSAGE, errorFromExit, errorFromResult, isResumeNotFound, presentable } from './errors.js';
-import { INLINE_IMAGE_BYTES, attachmentDirs, buildArgs, buildMcpConfig, buildUserMessage, historyPreamble, isValidModel } from './invocation.js';
+import { PROJECT_INSTRUCTIONS_BYTES, PROJECT_INSTRUCTIONS_FILE, type ProjectInstructions } from './instructions.js';
+import { INLINE_IMAGE_BYTES, attachmentDirs, buildArgs, buildMcpConfig, buildSystemPrompt, buildUserMessage, historyPreamble, isValidModel } from './invocation.js';
 import { type CliResult, type LineSignal, StreamTranslator, type UsageLedger } from './translate.js';
 
 /**
@@ -43,8 +44,15 @@ export interface ClaudeRunDeps {
   readonly cli: ClaudeCli;
   readonly request: AgentRunRequest;
   readonly host: AgentRunHost;
-  /** Standing instructions to append to the CLI's system prompt, or null. */
-  readonly systemPrompt: () => string | null;
+  /** The shared-memory conventions to append to the CLI's system prompt, or null. */
+  readonly memoryGuide: () => string | null;
+  /** The project's own instruction file, when the project has one and hands it to agents. */
+  readonly projectInstructions: () => Promise<ProjectInstructions>;
+  /**
+   * Whether the user should be told about a problem with that file: true the
+   * first time a session meets it, false while it stays the same. Null: there is no problem.
+   */
+  readonly instructionsProblemIsNews: (problem: string | null) => boolean;
   readonly onRateLimit: (info: Record<string, unknown>) => void;
   /** Remembers what each conversation had used, across runs. */
   readonly ledger?: UsageLedger | undefined;
@@ -81,6 +89,8 @@ export class ClaudeRun {
   #replays = 0;
   #killTimer: NodeJS.Timeout | null = null;
   #idleTimer: NodeJS.Timeout | null = null;
+  /** What this turn appends to the CLI's system prompt. */
+  #systemPrompt: string | null = null;
 
   constructor(deps: ClaudeRunDeps) {
     this.#deps = deps;
@@ -161,6 +171,9 @@ export class ClaudeRun {
       host.emit({ type: 'notice', level: 'info', code: 'effort_ignored', text: `This Claude Code does not have an effort level "${presentable(request.effort, 40)}", so its default was used.` });
     }
 
+    this.#systemPrompt = await this.#standingInstructions();
+    if (this.#stopping) return { status: 'completed' };
+
     const resume = request.nativeSessionId !== null && NATIVE_ID_PATTERN.test(request.nativeSessionId) ? request.nativeSessionId : null;
     let outcome = await this.#attempt(installation, resume, '');
     if (outcome.kind === 'resume-not-found') {
@@ -174,6 +187,32 @@ export class ClaudeRun {
     }
     if (outcome.kind === 'resume-not-found') throw new AgentRunError('agent_error', 'Claude Code could not open a conversation for this session.');
     return outcome.result;
+  }
+
+  /** The memory conventions and the project's `CLAUDE.md`; says so in the transcript when the file could not be used whole. */
+  async #standingInstructions(): Promise<string | null> {
+    const { host } = this.#deps;
+    let instructions: ProjectInstructions;
+    try {
+      instructions = await this.#deps.projectInstructions();
+    } catch (error) {
+      host.log.warn({ err: presentable(describeError(error), 200) }, "reading the project's instruction file failed");
+      instructions = { kind: 'unreadable', reason: 'it could not be read' };
+    }
+    const kib = Math.round(PROJECT_INSTRUCTIONS_BYTES / 1024);
+    const problem =
+      instructions.kind === 'unreadable'
+        ? { code: 'project_instructions_unreadable', text: `${PROJECT_INSTRUCTIONS_FILE} in the project folder was not given to Claude Code: ${instructions.reason}.` }
+        : instructions.kind === 'loaded' && instructions.truncated
+          ? { code: 'project_instructions_truncated', text: `${PROJECT_INSTRUCTIONS_FILE} in the project folder is larger than ${kib} KiB, so Claude Code was given only its first ${kib} KiB.` }
+          : null;
+    if (this.#deps.instructionsProblemIsNews(problem === null ? null : `${problem.code}:${problem.text}`) && problem !== null) {
+      host.emit({ type: 'notice', level: 'warning', code: problem.code, text: problem.text });
+    }
+    return buildSystemPrompt({
+      memoryGuide: this.#deps.memoryGuide(),
+      projectInstructions: instructions.kind === 'loaded' ? { text: instructions.text, truncated: instructions.truncated } : null,
+    });
   }
 
   async #attempt(installation: CliInstallation, resume: string | null, preamble: string): Promise<AttemptOutcome> {
@@ -208,7 +247,7 @@ export class ClaudeRun {
         model: request.model,
         effort: request.effort,
         resume,
-        appendSystemPrompt: this.#deps.systemPrompt(),
+        appendSystemPrompt: this.#systemPrompt,
         addDirs: folders,
       });
       // Attachments live in the Studio's data directory, which the sandbox hides: let exactly these back in.
