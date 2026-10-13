@@ -12,6 +12,11 @@ export default defineProject({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  define: {
+    __BUILD_ID__: JSON.stringify('test-build'),
+    __BUILD_TIME__: JSON.stringify(0),
+    __APP_VERSION__: JSON.stringify('0.0.0-test'),
+  },
   test: {
     name: 'web',
     environment: 'jsdom',

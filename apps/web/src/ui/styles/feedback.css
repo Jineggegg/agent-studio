@@ -1,0 +1,443 @@
+/* Spinner, Skeleton, ProgressLine, EmptyState, ErrorState, Banner, StaleNotice, Badge, ActivityMark, Avatar, Glyph */
+
+/* ---- Spinner ------------------------------------------------------------- */
+
+.ui-spinner {
+  display: inline-block;
+  flex: none;
+  width: var(--spinner-size, 20px);
+  height: var(--spinner-size, 20px);
+  color: inherit;
+  animation: spin 0.8s linear infinite;
+}
+.ui-spinner circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+}
+.ui-spinner circle:first-child {
+  opacity: 0.2;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No rotation: the same mark breathes instead. */
+  .ui-spinner {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+}
+
+.ui-loading-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 72px;
+  padding: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+/* ---- Skeleton ------------------------------------------------------------ */
+
+.ui-skeleton {
+  display: block;
+  width: var(--skeleton-width, 100%);
+  height: var(--skeleton-height, 1em);
+  border-radius: var(--skeleton-radius, 8px);
+  background: var(--color-skeleton);
+  background-image: linear-gradient(100deg, transparent 30%, var(--color-skeleton-shine) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation:
+    fade-in var(--motion-base) var(--ease-standard) both,
+    skeleton-shine 1.6s linear infinite;
+}
+@keyframes skeleton-shine {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-skeleton {
+    background-image: none;
+    animation: fade-in var(--motion-base) var(--ease-standard) both;
+  }
+}
+.ui-skeleton-text {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ---- ProgressLine -------------------------------------------------------- */
+
+.ui-progress {
+  position: absolute;
+  z-index: var(--z-progress);
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--ease-standard) 120ms;
+}
+.ui-progress[data-inline] {
+  position: relative;
+  z-index: auto;
+  border-radius: 2px;
+}
+.ui-progress[data-active] {
+  opacity: 1;
+  transition-delay: 0s;
+}
+.ui-progress__bar {
+  width: 100%;
+  height: 100%;
+  background: var(--color-accent);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.ui-progress[data-active] .ui-progress__bar {
+  animation: progress-creep 8s cubic-bezier(0.1, 0.6, 0.2, 1) forwards;
+}
+.ui-progress[data-finishing] .ui-progress__bar {
+  animation: none;
+  transform: scaleX(1);
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.ui-progress[data-value] .ui-progress__bar {
+  animation: none;
+  transform: scaleX(var(--progress, 0));
+  transition: transform var(--motion-base) var(--ease-out);
+}
+@keyframes progress-creep {
+  0% {
+    transform: scaleX(0.04);
+  }
+  20% {
+    transform: scaleX(0.5);
+  }
+  100% {
+    transform: scaleX(0.92);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-progress[data-active] .ui-progress__bar {
+    animation: pulse 1.4s ease-in-out infinite;
+    transform: scaleX(1);
+  }
+}
+
+/* ---- EmptyState / ErrorState ------------------------------------------- */
+
+.ui-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  max-width: 420px;
+  margin: 0 auto;
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+}
+.ui-state[data-compact] {
+  padding: var(--space-6) var(--space-4);
+}
+.ui-state__icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: var(--space-2);
+  border-radius: 20px;
+  background: var(--color-fill);
+  color: var(--color-text-secondary);
+}
+.ui-state[data-tone='danger'] .ui-state__icon {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+.ui-state[data-tone='warning'] .ui-state__icon {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.ui-state__title {
+  font-size: var(--text-title-3);
+  line-height: var(--leading-title-3);
+  font-weight: var(--weight-semibold);
+  text-wrap: balance;
+}
+.ui-state__description {
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+.ui-state__detail {
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  color: var(--color-text-tertiary);
+  overflow-wrap: anywhere;
+}
+.ui-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* ---- Banner -------------------------------------------------------------- */
+
+.ui-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-fill);
+  color: var(--color-text);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.ui-banner > svg {
+  margin-top: 1px;
+  color: var(--color-text-secondary);
+}
+.ui-banner[data-tone='info'] {
+  background: var(--color-info-soft);
+}
+.ui-banner[data-tone='info'] > svg {
+  color: var(--color-info);
+}
+.ui-banner[data-tone='success'] {
+  background: var(--color-positive-soft);
+}
+.ui-banner[data-tone='success'] > svg {
+  color: var(--color-positive);
+}
+.ui-banner[data-tone='warning'] {
+  background: var(--color-warning-soft);
+}
+.ui-banner[data-tone='warning'] > svg {
+  color: var(--color-warning);
+}
+.ui-banner[data-tone='danger'] {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+.ui-banner[data-tone='danger'] > svg {
+  color: var(--color-danger);
+}
+.ui-banner__text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ui-banner__title {
+  font-weight: var(--weight-semibold);
+}
+.ui-banner__action {
+  flex: none;
+  align-self: center;
+  margin: -6px -6px -6px 0;
+}
+
+/* ---- StaleNotice ---------------------------------------------------------- */
+
+.ui-stale {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 2px 10px 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: var(--weight-semibold);
+}
+
+/* ---- Badge --------------------------------------------------------------- */
+
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  min-height: 22px;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  background: var(--color-fill-hover);
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+.ui-badge[data-tone='accent'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+.ui-badge[data-tone='positive'] {
+  background: var(--color-positive-soft);
+  color: var(--color-positive);
+}
+.ui-badge[data-tone='warning'] {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.ui-badge[data-tone='danger'] {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+.ui-badge[data-tone='info'] {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+/* A count: a filled dot that grows with its digits. */
+.ui-badge[data-count] {
+  justify-content: center;
+  min-width: 22px;
+  padding: 2px 7px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- ActivityMark -------------------------------------------------------- */
+
+.ui-mark {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+/* finished, not yet seen: a plain filled dot */
+.ui-mark[data-kind='unseen'] {
+  background: var(--color-mark-unseen);
+}
+/* needs you: a ringed dot — a different shape, not only a different colour */
+.ui-mark[data-kind='attention'] {
+  background: var(--color-mark-attention);
+  box-shadow:
+    0 0 0 2px var(--mark-surface, var(--color-surface)),
+    0 0 0 3.5px var(--color-mark-attention);
+  transform: scale(0.72);
+}
+/* running: an open ring that turns */
+.ui-mark[data-kind='running'] {
+  border: 2.5px solid var(--color-mark-running);
+  border-right-color: transparent;
+  animation: spin 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Still, but still recognisably "in progress": a ring with a gap. */
+  .ui-mark[data-kind='running'] {
+    animation: none;
+  }
+}
+
+/* ---- Avatar -------------------------------------------------------------- */
+
+.ui-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--avatar-size, 40px);
+  height: var(--avatar-size, 40px);
+  border-radius: 50%;
+  background: var(--tint-soft, var(--color-fill-hover));
+  color: var(--tint-strong, var(--color-text));
+  font-size: calc(var(--avatar-size, 40px) * 0.42);
+  line-height: 1;
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ---- Glyph (an icon on a duotone plate: tiles, list rows, pickers) ---------- */
+
+.ui-glyph {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--glyph-size, 30px);
+  height: var(--glyph-size, 30px);
+  border-radius: calc(var(--glyph-size, 30px) * 0.3);
+  background: var(--tint-soft, var(--color-fill-hover));
+  color: var(--tint-strong, var(--color-text-secondary));
+}
+
+/* One attribute selects a tint pair for avatars, glyph plates and swatches. */
+[data-tint='blue'] {
+  --tint-soft: var(--tint-blue-soft);
+  --tint-strong: var(--tint-blue-strong);
+}
+[data-tint='sky'] {
+  --tint-soft: var(--tint-sky-soft);
+  --tint-strong: var(--tint-sky-strong);
+}
+[data-tint='teal'] {
+  --tint-soft: var(--tint-teal-soft);
+  --tint-strong: var(--tint-teal-strong);
+}
+[data-tint='green'] {
+  --tint-soft: var(--tint-green-soft);
+  --tint-strong: var(--tint-green-strong);
+}
+[data-tint='amber'] {
+  --tint-soft: var(--tint-amber-soft);
+  --tint-strong: var(--tint-amber-strong);
+}
+[data-tint='orange'] {
+  --tint-soft: var(--tint-orange-soft);
+  --tint-strong: var(--tint-orange-strong);
+}
+[data-tint='red'] {
+  --tint-soft: var(--tint-red-soft);
+  --tint-strong: var(--tint-red-strong);
+}
+[data-tint='pink'] {
+  --tint-soft: var(--tint-pink-soft);
+  --tint-strong: var(--tint-pink-strong);
+}
+[data-tint='purple'] {
+  --tint-soft: var(--tint-purple-soft);
+  --tint-strong: var(--tint-purple-strong);
+}
+[data-tint='slate'] {
+  --tint-soft: var(--tint-slate-soft);
+  --tint-strong: var(--tint-slate-strong);
+}
+
+/* ---- LogoMark ---------------------------------------------------------- */
+
+.ui-logo {
+  display: block;
+  flex: none;
+  color: var(--color-text);
+}
+.ui-logo__ring {
+  stroke: currentColor;
+}
+.ui-logo__spark {
+  fill: #e39a1c;
+}
+:root[data-theme='dark'] .ui-logo__spark {
+  fill: #f1b445;
+}
+.ui-logo__plate {
+  fill: #2a37b8;
+}
+.ui-logo[data-plated] .ui-logo__ring {
+  stroke: #ffffff;
+}
+.ui-logo[data-plated] .ui-logo__spark {
+  fill: #ffc24a;
+}

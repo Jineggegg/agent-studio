@@ -1,0 +1,474 @@
+/* Sheet (bottom sheet on phone, dialog on wider screens), ConfirmDialog, Menu, Toast */
+
+/* ---- Sheet ----------------------------------------------------------------- */
+
+.ui-sheet-layer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  padding-top: calc(var(--safe-top) + var(--space-6));
+  padding-bottom: calc(var(--safe-bottom) + var(--space-6));
+}
+/* A layer that is leaving takes no more input. */
+.ui-sheet-layer[data-state='closing'] {
+  pointer-events: none;
+}
+
+.ui-sheet__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--color-scrim);
+  animation: fade-in var(--motion-base) var(--ease-standard) both;
+}
+.ui-sheet-layer[data-state='closing'] .ui-sheet__scrim {
+  animation: fade-out var(--motion-fast) var(--ease-standard) both;
+}
+.ui-sheet-layer[data-scrim='light'] .ui-sheet__scrim {
+  opacity: 0.55;
+}
+
+.ui-sheet {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: min(100%, 760px);
+  border-radius: var(--radius-xl);
+  background: var(--color-material-sheet);
+  box-shadow: var(--shadow-3);
+  overflow: hidden;
+  outline: none;
+  animation: sheet-dialog-in var(--motion-base) var(--ease-out) both;
+}
+.ui-sheet[data-size='sm'] {
+  max-width: 400px;
+}
+.ui-sheet[data-size='lg'] {
+  max-width: 680px;
+}
+.ui-sheet-layer[data-state='closing'] .ui-sheet {
+  animation: sheet-dialog-out var(--motion-fast) var(--ease-in) both;
+}
+@keyframes sheet-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(calc(1 - 0.04 * var(--motion-distance))) translateY(calc(8px * var(--motion-distance)));
+  }
+}
+@keyframes sheet-dialog-out {
+  to {
+    opacity: 0;
+    transform: scale(calc(1 - 0.03 * var(--motion-distance)));
+  }
+}
+
+/* Phone: the same content rises from the bottom edge and can be dragged away. */
+.ui-sheet-layer[data-presentation='sheet'] {
+  align-items: flex-end;
+  padding: calc(var(--safe-top) + var(--space-3)) 0 0;
+}
+.ui-sheet-layer[data-presentation='sheet'] .ui-sheet {
+  max-width: none;
+  max-height: 100%;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  animation-name: sheet-rise;
+  animation-duration: var(--motion-slow);
+}
+.ui-sheet-layer[data-presentation='sheet'] .ui-sheet[data-fill] {
+  height: 100%;
+}
+.ui-sheet-layer[data-presentation='sheet'][data-state='closing'] .ui-sheet {
+  animation-name: sheet-fall;
+  animation-duration: var(--motion-base);
+}
+.ui-sheet[data-dragging] {
+  animation: none !important;
+  transition: none;
+}
+.ui-sheet[data-settling] {
+  animation: none !important;
+  transition: transform var(--motion-base) var(--ease-out);
+}
+@keyframes sheet-rise {
+  from {
+    opacity: var(--motion-fade-from);
+    transform: translateY(calc(100% * var(--motion-distance)));
+  }
+}
+@keyframes sheet-fall {
+  to {
+    opacity: var(--motion-fade-from);
+    transform: translateY(calc(100% * var(--motion-distance)));
+  }
+}
+
+.ui-sheet__grabber {
+  display: none;
+  flex: none;
+  justify-content: center;
+  width: 100%;
+  height: 22px;
+  margin-bottom: -10px;
+  padding-top: 8px;
+  touch-action: none;
+  cursor: grab;
+}
+.ui-sheet__grabber::before {
+  content: '';
+  width: 38px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--color-separator-strong);
+}
+.ui-sheet-layer[data-presentation='sheet'] .ui-sheet__grabber {
+  display: flex;
+}
+
+.ui-sheet__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  flex: none;
+  min-height: 56px;
+  padding: var(--space-1) var(--space-2);
+  touch-action: none;
+}
+.ui-sheet__header[data-divided] {
+  box-shadow: inset 0 -1px 0 var(--color-separator);
+}
+.ui-sheet__title {
+  grid-column: 2;
+  min-width: 0;
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: var(--weight-semibold);
+}
+.ui-sheet__header-leading {
+  display: flex;
+  justify-content: flex-start;
+  min-width: 0;
+}
+/* The way out is quieter than the way forward. */
+.ui-sheet__header-leading .ui-button[data-variant='plain'] {
+  font-weight: var(--weight-regular);
+}
+.ui-sheet__header-trailing {
+  grid-column: 3;
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.ui-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-2) var(--space-5) var(--space-5);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.ui-sheet__body[data-flush] {
+  padding: 0;
+}
+.ui-sheet-layer[data-presentation='sheet'] .ui-sheet__body:last-child {
+  padding-bottom: calc(var(--safe-bottom) + var(--space-5));
+}
+.ui-sheet-layer[data-presentation='sheet'] .ui-sheet__body[data-flush]:last-child {
+  padding-bottom: var(--safe-bottom);
+}
+
+.ui-sheet__footer {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5) var(--space-5);
+  box-shadow: inset 0 1px 0 var(--color-separator);
+}
+.ui-sheet-layer[data-presentation='sheet'] .ui-sheet__footer {
+  flex-direction: column-reverse;
+  padding-bottom: calc(var(--safe-bottom) + var(--space-4));
+}
+.ui-sheet-layer[data-presentation='sheet'] .ui-sheet__footer > .ui-button {
+  width: 100%;
+  min-height: var(--control-height-lg);
+}
+
+/* ---- ConfirmDialog --------------------------------------------------------- */
+
+.ui-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  text-align: center;
+}
+.ui-confirm__title {
+  font-size: var(--text-title-3);
+  line-height: var(--leading-title-3);
+  font-weight: var(--weight-semibold);
+  text-wrap: balance;
+}
+.ui-confirm__message {
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+.ui-confirm__extra {
+  margin-top: var(--space-2);
+  text-align: left;
+}
+.ui-confirm__actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--space-3);
+  padding: 0 var(--space-5) var(--space-5);
+}
+.ui-confirm__actions > .ui-button {
+  min-width: 0;
+  padding: 0 var(--space-3);
+}
+.ui-sheet-layer[data-presentation='sheet'] .ui-confirm {
+  padding-top: var(--space-5);
+}
+.ui-sheet-layer[data-presentation='sheet'] .ui-confirm__actions {
+  grid-auto-flow: row;
+  padding-bottom: calc(var(--safe-bottom) + var(--space-4));
+}
+.ui-sheet-layer[data-presentation='sheet'] .ui-confirm__actions > .ui-button {
+  min-height: var(--control-height-lg);
+}
+/* On a phone the named action comes first and Cancel sits under the thumb's rest. */
+.ui-sheet-layer[data-presentation='sheet'] .ui-confirm__actions > :first-child {
+  order: 2;
+}
+
+/* ---- Menu ------------------------------------------------------------------ */
+
+.ui-menu-layer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-menu);
+}
+.ui-menu {
+  position: absolute;
+  min-width: 200px;
+  max-width: min(320px, calc(100% - 16px));
+  max-height: min(420px, calc(100% - 16px));
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  background: var(--color-material-sheet);
+  box-shadow: var(--shadow-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  outline: none;
+  transform-origin: var(--menu-origin, top left);
+  animation: menu-in var(--motion-fast) var(--ease-out) both;
+}
+.ui-menu[data-state='closing'] {
+  animation: fade-out var(--motion-instant) var(--ease-standard) both;
+  pointer-events: none;
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(calc(1 - 0.06 * var(--motion-distance)));
+  }
+}
+.ui-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--hit-min);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  color: var(--color-text);
+  font-size: var(--text-body);
+  outline: none;
+}
+.ui-menu__item[data-tone='danger'] {
+  color: var(--color-danger);
+}
+.ui-menu__item > svg:first-child {
+  color: var(--color-text-secondary);
+}
+.ui-menu__item[data-tone='danger'] > svg:first-child {
+  color: inherit;
+}
+.ui-menu__item-label {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ui-menu__item-hint {
+  display: block;
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  color: var(--color-text-secondary);
+}
+.ui-menu__item-check {
+  color: var(--color-accent-text);
+}
+.ui-menu__item:focus-visible,
+.ui-menu__item[data-active] {
+  background: var(--color-fill-hover);
+}
+@media (hover: hover) {
+  .ui-menu__item:not(:disabled):hover {
+    background: var(--color-fill-hover);
+  }
+}
+.ui-menu__item:not(:disabled):active {
+  background: var(--color-fill-pressed);
+}
+.ui-menu__item:disabled {
+  opacity: 0.45;
+}
+.ui-menu__separator {
+  height: 1px;
+  margin: 6px 12px;
+  background: var(--color-separator);
+}
+/* The phone presentation: the same items as rows of a bottom sheet. */
+.ui-menu--sheet {
+  padding: 0 var(--space-3) var(--space-2);
+}
+.ui-menu--sheet .ui-menu__item {
+  min-height: 52px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+}
+
+/* ---- Toast ----------------------------------------------------------------- */
+
+.ui-toasts {
+  position: absolute;
+  z-index: var(--z-toast);
+  right: 0;
+  /* A feature with a docked bar raises --toast-offset so toasts clear it. */
+  bottom: calc(var(--safe-bottom) + var(--toast-offset, 0px) + var(--space-4));
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 calc(var(--space-3) + var(--safe-right)) 0 calc(var(--space-3) + var(--safe-left));
+  pointer-events: none;
+}
+.ui-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: fit-content;
+  max-width: min(100%, 460px);
+  min-height: 52px;
+  padding: 6px 6px 6px var(--space-4);
+  border-radius: 18px;
+  background: var(--color-toast);
+  color: var(--color-on-toast);
+  box-shadow: var(--shadow-3);
+  pointer-events: auto;
+  animation: toast-in var(--motion-base) var(--ease-out) both;
+}
+.ui-toast[data-state='closing'] {
+  animation: toast-out var(--motion-fast) var(--ease-in) both;
+  pointer-events: none;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(16px * var(--motion-distance))) scale(calc(1 - 0.04 * var(--motion-distance)));
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(calc(8px * var(--motion-distance)));
+  }
+}
+.ui-toast__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: var(--color-on-toast-secondary);
+}
+.ui-toast[data-kind='success'] .ui-toast__icon {
+  color: #49c07f;
+}
+.ui-toast[data-kind='error'] .ui-toast__icon {
+  color: #ff7a66;
+}
+.ui-toast[data-kind='warning'] .ui-toast__icon {
+  color: #f0a93c;
+}
+:root[data-theme='dark'] .ui-toast[data-kind='success'] .ui-toast__icon {
+  color: #17713f;
+}
+:root[data-theme='dark'] .ui-toast[data-kind='error'] .ui-toast__icon {
+  color: #b92c19;
+}
+:root[data-theme='dark'] .ui-toast[data-kind='warning'] .ui-toast__icon {
+  color: #8a5000;
+}
+.ui-toast__text {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 0;
+}
+.ui-toast__title {
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+.ui-toast__detail {
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  color: var(--color-on-toast-secondary);
+  overflow-wrap: anywhere;
+}
+.ui-toast__action {
+  flex: none;
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: 0 14px;
+  border-radius: 13px;
+  color: var(--color-toast-action);
+  font-size: var(--text-callout);
+  font-weight: var(--weight-semibold);
+  background: rgba(127, 127, 127, 0.18);
+}
+.ui-toast__action:active {
+  opacity: 0.6;
+}
+.ui-toast__close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  margin-left: -8px;
+  border-radius: 50%;
+  color: var(--color-on-toast-secondary);
+}
+.ui-toast__action:focus-visible,
+.ui-toast__close:focus-visible {
+  outline-color: var(--color-on-toast);
+}
+.ui-toast:not(:has(.ui-toast__action, .ui-toast__close)) {
+  padding-right: var(--space-4);
+}

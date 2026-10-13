@@ -1,0 +1,102 @@
+/* Sign-in, first-run setup and the step-up dialog */
+
+.auth {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+  padding: calc(var(--safe-top) + var(--space-6)) calc(var(--space-5) + var(--safe-right)) calc(var(--safe-bottom) + var(--space-6))
+    calc(var(--space-5) + var(--safe-left));
+  background: var(--color-bg);
+}
+/* Centred when there is room, top-aligned and scrollable when there is not (landscape, keyboard open). */
+.auth::before,
+.auth::after {
+  content: '';
+  flex: 1 1 0;
+  min-height: 0;
+}
+.auth::after {
+  flex-grow: 1.6;
+}
+.auth__card {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: 400px;
+}
+:root[data-layout='tablet'] .auth__card,
+:root[data-layout='wide'] .auth__card {
+  max-width: 440px;
+  padding: var(--space-10) var(--space-8) var(--space-8);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-2);
+}
+.auth__head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.auth__head .ui-logo {
+  margin-bottom: var(--space-3);
+}
+.auth__title {
+  font-size: var(--text-title-1);
+  line-height: var(--leading-title-1);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+}
+.auth__lead {
+  color: var(--color-text-secondary);
+  text-wrap: pretty;
+}
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.auth__form > .ui-button {
+  margin-top: var(--space-2);
+}
+/* Other ways to sign in. With none available the block (and its divider) is not there at all. */
+.auth__methods {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.auth__methods:empty {
+  display: none;
+}
+.auth__methods::before {
+  content: attr(data-divider);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  background:
+    linear-gradient(var(--color-separator), var(--color-separator)) left center / calc(50% - 1.6em) 1px no-repeat,
+    linear-gradient(var(--color-separator), var(--color-separator)) right center / calc(50% - 1.6em) 1px no-repeat;
+  justify-content: center;
+}
+.auth__foot {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  text-wrap: pretty;
+}
+
+.reauth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.reauth__lead {
+  color: var(--color-text-secondary);
+}

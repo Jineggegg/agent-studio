@@ -1,0 +1,476 @@
+/* List, ListRow (with swipe-to-reveal), Tabs, NavigationBar, LargeTitle */
+
+/* ---- List ------------------------------------------------------------------ */
+
+.ui-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ui-list + .ui-list {
+  margin-top: var(--space-6);
+}
+.ui-list__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 28px;
+  padding: 0 var(--space-4) 6px;
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+}
+.ui-list__header h2,
+.ui-list__header h3 {
+  font: inherit;
+  letter-spacing: 0.01em;
+}
+/* An action on the heading line sits on its baseline, at the heading's size. */
+.ui-list__header > .ui-button {
+  min-height: 28px;
+  margin: -6px -8px -5px 0;
+  padding: 0 8px;
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.ui-list__header > .ui-button::after {
+  inset: -8px 0;
+}
+.ui-list__group {
+  position: relative;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface);
+  overflow: hidden;
+}
+.ui-list__footer {
+  padding: var(--space-2) var(--space-4) 0;
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  color: var(--color-text-secondary);
+}
+
+/* ---- ListRow --------------------------------------------------------------- */
+
+.ui-row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-height: 52px;
+  background: var(--color-surface);
+  overflow: hidden;
+  /* where the hairline above this row starts */
+  --row-inset: var(--space-4);
+}
+.ui-row[data-leading] {
+  --row-inset: 62px;
+}
+.ui-row + .ui-row::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  left: var(--row-inset);
+  height: 1px;
+  background: var(--color-separator);
+  transform: scaleY(0.75);
+  transform-origin: top;
+  pointer-events: none;
+}
+
+.ui-row__slider {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+  background: inherit;
+  will-change: transform;
+}
+.ui-row[data-settling] .ui-row__slider {
+  transition: transform var(--motion-base) var(--ease-out);
+}
+
+.ui-row__main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  padding: 10px var(--space-4);
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  background: transparent;
+  border-radius: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+div.ui-row__main {
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+label.ui-row__main {
+  cursor: pointer;
+}
+.ui-row[data-interactive] .ui-row__main {
+  cursor: pointer;
+  transition: background-color var(--motion-instant) var(--ease-standard);
+}
+@media (hover: hover) {
+  .ui-row[data-interactive] .ui-row__main:hover {
+    background: var(--color-fill);
+  }
+}
+/* Immediate press feedback. */
+.ui-row[data-interactive] .ui-row__main:active {
+  background: var(--color-fill-hover);
+}
+.ui-row[data-selected] .ui-row__main {
+  background: var(--color-accent-soft);
+}
+.ui-row[data-selected] .ui-row__title {
+  color: var(--color-accent-text);
+  font-weight: var(--weight-semibold);
+}
+.ui-row__main:focus-visible {
+  outline-offset: -3px;
+  border-radius: var(--radius-sm);
+}
+.ui-row[data-disabled] .ui-row__main {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.ui-row__leading {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 30px;
+  color: var(--color-text-secondary);
+}
+.ui-row__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 1px;
+}
+.ui-row__title {
+  overflow-wrap: break-word;
+  color: var(--color-text);
+}
+.ui-row[data-tone='danger'] .ui-row__title {
+  color: var(--color-danger);
+}
+.ui-row[data-tone='accent'] .ui-row__title {
+  color: var(--color-accent-text);
+}
+.ui-row__subtitle {
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+/* The value keeps its natural width up to half the row; the title wraps around it, at word boundaries. */
+.ui-row__value {
+  flex: 0 0 auto;
+  max-width: 50%;
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+  text-align: right;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+.ui-row__trailing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+.ui-row__chevron {
+  margin-right: -6px;
+  color: var(--color-text-tertiary);
+}
+/* A control at the end of a row (a switch): keep it clear of the row's edge. */
+.ui-row__control {
+  display: flex;
+  align-items: center;
+  flex: none;
+  margin-right: -6px;
+}
+
+.ui-row__more {
+  align-self: center;
+  margin-right: 4px;
+}
+/* With a precise pointer the "more" button stays out of the way until wanted. */
+@media (hover: hover) and (pointer: fine) {
+  .ui-row__more {
+    opacity: 0;
+  }
+  .ui-row:hover .ui-row__more,
+  .ui-row:focus-within .ui-row__more,
+  .ui-row__more[aria-expanded='true'] {
+    opacity: 1;
+  }
+}
+
+/* Revealed actions sit under the row's content, at the trailing edge. */
+.ui-row__actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+}
+.ui-row__action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 76px;
+  min-height: var(--hit-min);
+  padding: 0 6px;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: var(--weight-semibold);
+  color: #ffffff;
+  background: #5f6672;
+}
+.ui-row__action[data-tone='accent'] {
+  background: #3142d4;
+}
+.ui-row__action[data-tone='warning'] {
+  background: #a86200;
+}
+.ui-row__action[data-tone='danger'] {
+  background: #c0311d;
+}
+.ui-row__action:active {
+  filter: brightness(0.9);
+}
+.ui-row__action:focus-visible {
+  outline-color: #ffffff;
+  outline-offset: -4px;
+}
+.ui-row__action > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Tabs ------------------------------------------------------------------ */
+
+.ui-tabs {
+  position: relative;
+  display: flex;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  box-shadow: inset 0 -1px 0 var(--color-separator);
+}
+.ui-tabs::-webkit-scrollbar {
+  display: none;
+}
+.ui-tabs[data-stretch] .ui-tab {
+  flex: 1;
+}
+.ui-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: none;
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: 0 var(--space-3);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+.ui-tab::after {
+  content: '';
+  position: absolute;
+  right: var(--space-3);
+  bottom: 0;
+  left: var(--space-3);
+  height: 2.5px;
+  border-radius: 2px 2px 0 0;
+  background: var(--color-accent);
+  opacity: 0;
+  transform: scaleX(0.4);
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-base) var(--ease-out);
+}
+.ui-tab[aria-selected='true'] {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+.ui-tab[aria-selected='true']::after {
+  opacity: 1;
+  transform: none;
+}
+@media (hover: hover) {
+  .ui-tab:hover {
+    color: var(--color-text);
+  }
+}
+.ui-tab:focus-visible {
+  outline-offset: -3px;
+  border-radius: var(--radius-sm);
+}
+.ui-tab:disabled {
+  opacity: 0.45;
+}
+
+/* ---- NavigationBar --------------------------------------------------------- */
+
+.ui-navbar {
+  position: relative;
+  z-index: var(--z-bar);
+  flex: none;
+  padding-top: var(--safe-top);
+  padding-right: var(--safe-right);
+  padding-left: var(--safe-left);
+  background: transparent;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+/* Once content has scrolled under it the bar becomes a material with a hairline. */
+.ui-navbar[data-raised] {
+  background: var(--color-material-bar);
+  -webkit-backdrop-filter: var(--blur-bar);
+  backdrop-filter: var(--blur-bar);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ui-navbar[data-raised] {
+    background: var(--color-bg);
+  }
+}
+.ui-navbar::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  background: var(--color-separator);
+  opacity: 0;
+  transform: scaleY(0.75);
+  transform-origin: bottom;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+.ui-navbar[data-raised]::after {
+  opacity: 1;
+}
+.ui-navbar__inner {
+  display: grid;
+  /* The back control and the actions keep their full width; a long title is what gives way. */
+  grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr);
+  align-items: center;
+  min-height: var(--bar-height);
+  padding: 0 calc(var(--gutter) - 10px);
+}
+.ui-navbar__leading,
+.ui-navbar__trailing {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.ui-navbar__trailing {
+  justify-content: flex-end;
+}
+.ui-navbar__title {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 var(--space-2);
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: var(--weight-semibold);
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-base) var(--ease-out);
+}
+.ui-navbar__subtitle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-secondary);
+}
+/* While the large title is on screen the bar's own title stays out of sight. */
+.ui-navbar[data-title-hidden] .ui-navbar__title {
+  opacity: 0;
+  transform: translateY(calc(6px * var(--motion-distance)));
+  pointer-events: none;
+}
+
+.ui-navbar__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  min-width: var(--hit-min);
+  max-width: min(13em, 52vw);
+  min-height: var(--hit-min);
+  padding: 0 10px 0 4px;
+  border-radius: var(--radius-full);
+  color: var(--color-accent-text);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+}
+.ui-navbar__back > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (hover: hover) {
+  .ui-navbar__back:hover {
+    background: var(--color-accent-soft);
+  }
+}
+.ui-navbar__back:active {
+  opacity: 0.55;
+}
+
+/* ---- LargeTitle ---------------------------------------------------------- */
+
+.ui-large-title {
+  padding: var(--space-1) var(--gutter) var(--space-3);
+}
+.ui-large-title h1 {
+  font-size: var(--text-display);
+  line-height: var(--leading-display);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+.ui-large-title p {
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+}

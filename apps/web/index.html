@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-visual"
+    />
+    <title>Agent Studio</title>
+    <meta name="description" content="A self-hosted work platform for AI coding agents." />
+    <meta name="application-name" content="Agent Studio" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f3f1ec" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Studio" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    <meta name="referrer" content="no-referrer" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/icon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/apple-touch-152.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icons/apple-touch-167.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-180.png" />
+    <!-- Chooses the theme before first paint and owns the launch screen. External because the CSP forbids inline script. -->
+    <script src="/boot.js"></script>
+    <style>
+      /* Launch and launch-error screens. Inline so they need no download and no web font. */
+      html {
+        background: #f3f1ec;
+        color: #1b1916;
+        --l-bg: #f3f1ec;
+        --l-text: #1b1916;
+        --l-dim: #57534b;
+        --l-accent: #3142d4;
+        --l-on-accent: #ffffff;
+        --l-fill: rgba(27, 25, 22, 0.07);
+        --l-spark: #e39a1c;
+      }
+      html[data-theme='dark'] {
+        background: #100f0e;
+        color: #f2efe9;
+        --l-bg: #100f0e;
+        --l-text: #f2efe9;
+        --l-dim: #b9b3a9;
+        --l-accent: #97a3ff;
+        --l-on-accent: #0c0f36;
+        --l-fill: rgba(242, 239, 233, 0.1);
+        --l-spark: #f1b445;
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme]) {
+          background: #100f0e;
+          color: #f2efe9;
+          --l-bg: #100f0e;
+          --l-text: #f2efe9;
+          --l-dim: #b9b3a9;
+          --l-accent: #97a3ff;
+          --l-on-accent: #0c0f36;
+          --l-fill: rgba(242, 239, 233, 0.1);
+          --l-spark: #f1b445;
+        }
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      #launch,
+      #launch-error {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        padding: 24px;
+        padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+          max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+        box-sizing: border-box;
+        background: var(--l-bg);
+        color: var(--l-text);
+        font:
+          16px/1.45 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'PingFang SC',
+          'Microsoft YaHei',
+          sans-serif;
+        text-align: center;
+        -webkit-text-size-adjust: 100%;
+      }
+      #launch-error[hidden] {
+        display: none;
+      }
+      #launch {
+        transition: opacity 180ms ease-out;
+      }
+      #launch[data-leaving] {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .launch-mark {
+        width: 68px;
+        height: 68px;
+        color: var(--l-text);
+      }
+      .launch-mark .spark {
+        fill: var(--l-spark);
+      }
+      /* A start that finishes within 300 ms never shows anything moving. */
+      .launch-mark .ring {
+        transform-origin: 256px 256px;
+        animation: launch-turn 1.5s cubic-bezier(0.45, 0, 0.2, 1) 300ms infinite;
+      }
+      .launch-mark .spark {
+        transform-origin: 256px 256px;
+        animation: launch-turn 1.5s cubic-bezier(0.45, 0, 0.2, 1) 300ms infinite;
+      }
+      @keyframes launch-turn {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .launch-hint {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        bottom: calc(40px + env(safe-area-inset-bottom));
+        margin: 0;
+        color: var(--l-dim);
+        font-size: 14px;
+        opacity: 0;
+        visibility: hidden;
+        animation: launch-hint 240ms ease-out 12s forwards;
+      }
+      @keyframes launch-hint {
+        to {
+          opacity: 1;
+          visibility: visible;
+        }
+      }
+      .launch-hint a,
+      .launch-actions a {
+        color: var(--l-accent);
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .launch-hint a {
+        display: inline-block;
+        padding: 12px 10px;
+      }
+      #launch-error h1 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.25;
+        font-weight: 700;
+      }
+      #launch-error p {
+        margin: 0;
+        max-width: 26em;
+        color: var(--l-dim);
+      }
+      .launch-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .launch-actions a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 132px;
+        min-height: 48px;
+        padding: 0 20px;
+        border-radius: 14px;
+        background: var(--l-fill);
+        box-sizing: border-box;
+      }
+      .launch-actions a:first-child {
+        background: var(--l-accent);
+        color: var(--l-on-accent);
+      }
+      [data-l='zh'],
+      html[lang='zh-CN'] [data-l='en'] {
+        display: none;
+      }
+      html[lang='zh-CN'] [data-l='zh'] {
+        display: revert;
+      }
+      #launch-error [data-when] {
+        display: none;
+      }
+      #launch-error[data-kind='crash'] [data-when='crash'],
+      #launch-error[data-kind='download'] [data-when='download'] {
+        display: block;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .launch-mark .ring,
+        .launch-mark .spark {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="launch" role="status" aria-label="Starting">
+      <svg class="launch-mark" viewBox="0 0 512 512" aria-hidden="true">
+        <path
+          class="ring"
+          d="M374.18 235.16A120 120 0 1 1 276.84 137.82"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="44"
+          stroke-linecap="round"
+        />
+        <circle class="spark" cx="340.85" cy="171.15" r="31" />
+      </svg>
+      <p class="launch-hint">
+        <span data-l="en">The network is slow — still loading… <a href="">Reload</a></span>
+        <span data-l="zh">网络较慢，仍在加载… <a href="">重新加载</a></span>
+      </p>
+    </div>
+
+    <div id="launch-error" role="alert" hidden>
+      <svg class="launch-mark" viewBox="0 0 512 512" aria-hidden="true">
+        <path
+          d="M374.18 235.16A120 120 0 1 1 276.84 137.82"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="44"
+          stroke-linecap="round"
+        />
+        <circle class="spark" cx="340.85" cy="171.15" r="31" />
+      </svg>
+      <div data-when="crash">
+        <h1><span data-l="en">Agent Studio ran into a problem</span><span data-l="zh">Agent Studio 出了点问题</span></h1>
+      </div>
+      <div data-when="download">
+        <h1><span data-l="en">Agent Studio could not finish loading</span><span data-l="zh">Agent Studio 没能加载完成</span></h1>
+      </div>
+      <p data-when="crash">
+        <span data-l="en">Something failed while this screen was starting. Your work on the server is not affected.</span>
+        <span data-l="zh">启动这个页面时发生了错误。服务器上的工作不受影响。</span>
+      </p>
+      <p data-when="download">
+        <span data-l="en">Part of the app did not download. Check the connection, then reload.</span>
+        <span data-l="zh">应用的一部分没有下载下来。请检查网络后重新加载。</span>
+      </p>
+      <div class="launch-actions">
+        <a href=""><span data-l="en">Reload</span><span data-l="zh">重新加载</span></a>
+        <a href="/"><span data-l="en">Go to Home</span><span data-l="zh">回到主屏幕</span></a>
+      </div>
+    </div>
+
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

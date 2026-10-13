@@ -1,0 +1,353 @@
+/*
+ * Design tokens — the only place raw values live.
+ *
+ * Everything else refers to these custom properties. The theme is chosen by
+ * `data-theme` on <html> ("light" | "dark"), which /boot.js sets before first
+ * paint from the saved preference or the system setting.
+ *
+ * Identity: warm paper neutrals, an ultramarine "ink" accent, duotone tints.
+ */
+
+:root {
+  /* ---- type ---------------------------------------------------------- */
+  --font-sans:
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    'Noto Sans CJK SC', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* size / line-height pairs; rem so the browser's text-size setting scales them */
+  --text-display: 2rem; /* 32 */
+  --leading-display: 2.375rem;
+  --text-title-1: 1.625rem; /* 26 */
+  --leading-title-1: 2rem;
+  --text-title-2: 1.375rem; /* 22 */
+  --leading-title-2: 1.75rem;
+  --text-title-3: 1.1875rem; /* 19 */
+  --leading-title-3: 1.5rem;
+  --text-body: 1rem; /* 16 */
+  --leading-body: 1.4375rem;
+  --text-callout: 0.9375rem; /* 15 */
+  --leading-callout: 1.3125rem;
+  --text-footnote: 0.8125rem; /* 13 */
+  --leading-footnote: 1.125rem;
+  --text-caption: 0.75rem; /* 12 */
+  --leading-caption: 1rem;
+  /* never below 16px, so iOS does not zoom into a focused field */
+  --text-field: max(16px, 1rem);
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ---- space (4px grid) ---------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---- shape --------------------------------------------------------- */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-full: 999px;
+
+  /* ---- controls ------------------------------------------------------ */
+  --hit-min: 44px; /* minimum hit area, however small a control is drawn */
+  --control-height: 44px;
+  --control-height-lg: 52px;
+  --control-height-sm: 34px;
+  --bar-height: 52px;
+  --content-max: 720px; /* comfortable reading / form width */
+  --gutter: var(--space-4); /* page side margin; grows with the layout class */
+
+  /* ---- motion -------------------------------------------------------- */
+  --motion-instant: 90ms;
+  --motion-fast: 140ms;
+  --motion-base: 220ms;
+  --motion-slow: 340ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.9, 0.4);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.2, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  /* 1 = full travel. Under reduced motion this is 0 and every slide is a fade. */
+  --motion-distance: 1;
+  /* opacity a sliding layer starts from: 1 normally, 0 when it must cross-fade */
+  --motion-fade-from: 1;
+
+  /* ---- layers -------------------------------------------------------- */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-bar: 20;
+  --z-cue: 60;
+  --z-overlay: 100;
+  --z-sheet: 110;
+  --z-menu: 120;
+  --z-toast: 200;
+  --z-progress: 210;
+  --z-launch: 1000;
+
+  /* ---- safe areas (the keyboard hook zeroes the bottom one while typing) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  --blur-bar: saturate(1.6) blur(18px);
+}
+
+:root[data-layout='tablet'] {
+  --gutter: var(--space-6);
+}
+:root[data-layout='wide'] {
+  --gutter: var(--space-8);
+}
+
+/* ------------------------------------------------------------------ light */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --color-bg: #f3f1ec;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8f6f2;
+  --color-sunken: #e9e6df;
+
+  --color-text: #1b1916;
+  --color-text-secondary: #57534b;
+  --color-text-tertiary: #6b665d;
+  --color-text-disabled: #a09a90;
+
+  --color-separator: rgba(27, 25, 22, 0.11);
+  --color-separator-strong: rgba(27, 25, 22, 0.22);
+
+  --color-fill: rgba(27, 25, 22, 0.06);
+  --color-fill-hover: rgba(27, 25, 22, 0.1);
+  --color-fill-pressed: rgba(27, 25, 22, 0.15);
+
+  --color-accent: #3142d4;
+  --color-accent-hover: #2937bd;
+  --color-accent-pressed: #212da3;
+  --color-on-accent: #ffffff;
+  --color-accent-text: #2c3cc8;
+  --color-accent-soft: rgba(49, 66, 212, 0.1);
+  --color-accent-soft-hover: rgba(49, 66, 212, 0.16);
+
+  --color-danger: #b92c19;
+  --color-danger-soft: rgba(196, 48, 28, 0.1);
+  --color-danger-soft-hover: rgba(196, 48, 28, 0.17);
+  --color-positive: #17713f;
+  --color-positive-soft: rgba(26, 122, 70, 0.12);
+  --color-warning: #8a5000;
+  --color-warning-soft: rgba(214, 136, 0, 0.16);
+  --color-info: #086a7a;
+  --color-info-soft: rgba(10, 114, 132, 0.12);
+
+  /* marks and dots: graphics, held to 3:1 against any surface */
+  --color-mark-running: #0d8ba0;
+  --color-mark-attention: #b96f00;
+  --color-mark-unseen: #3142d4;
+  --color-mark-positive: #1f9655;
+  --color-mark-danger: #d5412c;
+
+  --color-focus: #3142d4;
+  --color-scrim: rgba(20, 18, 14, 0.36);
+  --color-material-bar: rgba(243, 241, 236, 0.78);
+  --color-material-sheet: #ffffff;
+  --color-toast: #24221f;
+  --color-on-toast: #f6f3ee;
+  --color-on-toast-secondary: #c9c3b9;
+  --color-toast-action: #aab4ff;
+  --color-skeleton: rgba(27, 25, 22, 0.08);
+  --color-skeleton-shine: rgba(27, 25, 22, 0.04);
+  --color-selection: rgba(49, 66, 212, 0.22);
+
+  --shadow-1: 0 1px 2px rgba(30, 24, 12, 0.06), 0 1px 1px rgba(30, 24, 12, 0.04);
+  --shadow-2: 0 4px 14px rgba(30, 24, 12, 0.08), 0 1px 3px rgba(30, 24, 12, 0.06);
+  --shadow-3: 0 18px 48px rgba(30, 24, 12, 0.18), 0 4px 12px rgba(30, 24, 12, 0.08);
+  --ring-surface: 0 0 0 1px rgba(27, 25, 22, 0.06);
+
+  /* duotone tints: a soft plate and a strong glyph, one pair per name */
+  --tint-blue-soft: #e1e5fb;
+  --tint-blue-strong: #2f3fc9;
+  --tint-sky-soft: #d9ecfa;
+  --tint-sky-strong: #12629c;
+  --tint-teal-soft: #d5efec;
+  --tint-teal-strong: #0b6b66;
+  --tint-green-soft: #dcf0dc;
+  --tint-green-strong: #1e6f33;
+  --tint-amber-soft: #f8e8c4;
+  --tint-amber-strong: #855200;
+  --tint-orange-soft: #fbe2d2;
+  --tint-orange-strong: #a8440d;
+  --tint-red-soft: #fadedb;
+  --tint-red-strong: #ae2a22;
+  --tint-pink-soft: #fadfeb;
+  --tint-pink-strong: #a3255f;
+  --tint-purple-soft: #ebe1fa;
+  --tint-purple-strong: #6534b3;
+  --tint-slate-soft: #e3e5e8;
+  --tint-slate-strong: #444c59;
+
+  /* code */
+  --code-bg: #f5f3ee;
+  --code-text: #23211d;
+  --code-comment: #6f6a60;
+  --code-keyword: #8a2fa8;
+  --code-string: #1c6b3a;
+  --code-number: #9a4a00;
+  --code-title: #2437b8;
+  --code-attr: #0b6373;
+  --code-deletion: #a8281c;
+}
+
+/* ------------------------------------------------------------------- dark */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #100f0e;
+  --color-surface: #1c1a18;
+  --color-surface-alt: #242220;
+  --color-sunken: #090808;
+
+  --color-text: #f2efe9;
+  --color-text-secondary: #b9b3a9;
+  --color-text-tertiary: #9a948a;
+  --color-text-disabled: #6a655d;
+
+  --color-separator: rgba(242, 239, 233, 0.12);
+  --color-separator-strong: rgba(242, 239, 233, 0.24);
+
+  --color-fill: rgba(242, 239, 233, 0.08);
+  --color-fill-hover: rgba(242, 239, 233, 0.12);
+  --color-fill-pressed: rgba(242, 239, 233, 0.17);
+
+  --color-accent: #97a3ff;
+  --color-accent-hover: #a8b2ff;
+  --color-accent-pressed: #bcc4ff;
+  --color-on-accent: #0c0f36;
+  --color-accent-text: #a6b0ff;
+  --color-accent-soft: rgba(151, 163, 255, 0.16);
+  --color-accent-soft-hover: rgba(151, 163, 255, 0.24);
+
+  --color-danger: #ff8a78;
+  --color-danger-soft: rgba(255, 110, 90, 0.16);
+  --color-danger-soft-hover: rgba(255, 110, 90, 0.24);
+  --color-positive: #6cd197;
+  --color-positive-soft: rgba(95, 203, 140, 0.16);
+  --color-warning: #f0b45a;
+  --color-warning-soft: rgba(240, 176, 80, 0.16);
+  --color-info: #67cedf;
+  --color-info-soft: rgba(92, 200, 218, 0.16);
+
+  --color-mark-running: #45c1d6;
+  --color-mark-attention: #f0a93c;
+  --color-mark-unseen: #97a3ff;
+  --color-mark-positive: #55c585;
+  --color-mark-danger: #ff7964;
+
+  --color-focus: #a6b0ff;
+  --color-scrim: rgba(0, 0, 0, 0.58);
+  --color-material-bar: rgba(16, 15, 14, 0.74);
+  --color-material-sheet: #1f1d1b;
+  --color-toast: #ece8e1;
+  --color-on-toast: #1b1916;
+  --color-on-toast-secondary: #56524a;
+  --color-toast-action: #2c3cc8;
+  --color-skeleton: rgba(242, 239, 233, 0.09);
+  --color-skeleton-shine: rgba(242, 239, 233, 0.05);
+  --color-selection: rgba(151, 163, 255, 0.32);
+
+  /* shadows barely read on dark: surfaces separate by tone and a hairline */
+  --shadow-1: 0 0 0 1px rgba(242, 239, 233, 0.06);
+  --shadow-2: 0 0 0 1px rgba(242, 239, 233, 0.08), 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-3: 0 0 0 1px rgba(242, 239, 233, 0.1), 0 24px 60px rgba(0, 0, 0, 0.6);
+  --ring-surface: 0 0 0 1px rgba(242, 239, 233, 0.07);
+
+  --tint-blue-soft: #232a5c;
+  --tint-blue-strong: #aab3ff;
+  --tint-sky-soft: #173a55;
+  --tint-sky-strong: #8ccbf5;
+  --tint-teal-soft: #123f3c;
+  --tint-teal-strong: #79d8cf;
+  --tint-green-soft: #1b3f22;
+  --tint-green-strong: #8fd99b;
+  --tint-amber-soft: #47340c;
+  --tint-amber-strong: #f1c267;
+  --tint-orange-soft: #4f2a12;
+  --tint-orange-strong: #ffad7d;
+  --tint-red-soft: #521f1b;
+  --tint-red-strong: #ff9d92;
+  --tint-pink-soft: #501c36;
+  --tint-pink-strong: #ff9cc6;
+  --tint-purple-soft: #37245a;
+  --tint-purple-strong: #c9a9ff;
+  --tint-slate-soft: #2c3037;
+  --tint-slate-strong: #bcc4d1;
+
+  --code-bg: #161514;
+  --code-text: #ece8e1;
+  --code-comment: #9a948a;
+  --code-keyword: #d7a3f0;
+  --code-string: #8fd9a5;
+  --code-number: #f2b877;
+  --code-title: #a6b0ff;
+  --code-attr: #7bd3e2;
+  --code-deletion: #ff9d92;
+}
+
+/* ------------------------------------------------- accessibility settings */
+@media (prefers-contrast: more) {
+  :root,
+  :root[data-theme='light'] {
+    --color-text-secondary: #3b3832;
+    --color-text-tertiary: #4a463f;
+    --color-separator: rgba(27, 25, 22, 0.34);
+    --color-separator-strong: rgba(27, 25, 22, 0.55);
+    --color-accent: #2230b0;
+    --color-accent-text: #1f2ca6;
+    --color-fill: rgba(27, 25, 22, 0.1);
+    --ring-surface: 0 0 0 1px rgba(27, 25, 22, 0.4);
+  }
+  :root[data-theme='dark'] {
+    --color-text-secondary: #dcd7ce;
+    --color-text-tertiary: #c9c3b9;
+    --color-separator: rgba(242, 239, 233, 0.36);
+    --color-separator-strong: rgba(242, 239, 233, 0.6);
+    --color-accent: #b6beff;
+    --color-accent-text: #c1c8ff;
+    --color-fill: rgba(242, 239, 233, 0.13);
+    --ring-surface: 0 0 0 1px rgba(242, 239, 233, 0.42);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  :root[data-theme='light'] {
+    --color-material-bar: #f3f1ec;
+    --blur-bar: none;
+  }
+  :root[data-theme='dark'] {
+    --color-material-bar: #100f0e;
+    --blur-bar: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    /* Slides, zooms and springs keep their state change but lose their travel. */
+    --motion-distance: 0;
+    --motion-fade-from: 0;
+    --motion-fast: 120ms;
+    --motion-base: 150ms;
+    --motion-slow: 160ms;
+  }
+}

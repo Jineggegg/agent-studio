@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Offline · Agent Studio</title>
+    <style>
+      :root {
+        --bg: #f3f1ec;
+        --text: #1b1916;
+        --dim: #57534b;
+        --accent: #3142d4;
+        --on-accent: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #100f0e;
+          --text: #f2efe9;
+          --dim: #b9b3a9;
+          --accent: #97a3ff;
+          --on-accent: #0c0f36;
+        }
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 24px;
+        box-sizing: border-box;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          16px/1.45 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          'PingFang SC',
+          'Microsoft YaHei',
+          sans-serif;
+        text-align: center;
+      }
+      svg {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 8px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+      p {
+        margin: 0;
+        max-width: 26em;
+        color: var(--dim);
+      }
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 140px;
+        min-height: 48px;
+        margin-top: 12px;
+        padding: 0 20px;
+        border-radius: 14px;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-weight: 600;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <svg viewBox="0 0 512 512" aria-hidden="true">
+      <path d="M374.18 235.16A120 120 0 1 1 276.84 137.82" fill="none" stroke="currentColor" stroke-width="44" stroke-linecap="round" />
+      <circle cx="340.85" cy="171.15" r="31" fill="#e39a1c" />
+    </svg>
+    <h1>You are offline <span lang="zh-CN">· 当前离线</span></h1>
+    <p>Agent Studio needs a connection to its server. Check your network, then try again.</p>
+    <p lang="zh-CN">Agent Studio 需要连接到它的服务器。请检查网络后重试。</p>
+    <a href="">Try again · 重试</a>
+  </body>
+</html>

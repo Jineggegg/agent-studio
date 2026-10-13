@@ -1,0 +1,551 @@
+/* Button, IconButton, TextField / TextArea, Switch, SegmentedControl, Select trigger, Checkbox */
+
+/* ---- Button ---------------------------------------------------------------- */
+
+.ui-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: var(--hit-min);
+  min-height: var(--control-height);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-md);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  text-decoration: none;
+  background: var(--color-fill);
+  color: var(--color-text);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-instant) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+}
+
+.ui-button[data-block] {
+  display: flex;
+  width: 100%;
+}
+
+.ui-button[data-size='lg'] {
+  min-height: var(--control-height-lg);
+  border-radius: 16px;
+  padding: 0 var(--space-6);
+}
+
+/* Drawn small, still 44 px to the finger. */
+.ui-button[data-size='sm'] {
+  min-height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.ui-button[data-size='sm']::after {
+  content: '';
+  position: absolute;
+  inset: calc((var(--control-height-sm) - var(--hit-min)) / 2) 0;
+}
+
+.ui-button[data-variant='primary'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.ui-button[data-variant='tinted'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+.ui-button[data-variant='plain'] {
+  background: transparent;
+  color: var(--color-accent-text);
+  padding-inline: var(--space-3);
+}
+.ui-button[data-variant='danger'] {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+.ui-button[data-variant='plain-danger'] {
+  background: transparent;
+  color: var(--color-danger);
+  padding-inline: var(--space-3);
+}
+
+@media (hover: hover) {
+  .ui-button:not(:disabled):hover {
+    background: var(--color-fill-hover);
+  }
+  .ui-button[data-variant='primary']:not(:disabled):hover {
+    background: var(--color-accent-hover);
+  }
+  .ui-button[data-variant='tinted']:not(:disabled):hover {
+    background: var(--color-accent-soft-hover);
+  }
+  .ui-button[data-variant='plain']:not(:disabled):hover {
+    background: var(--color-accent-soft);
+  }
+  .ui-button[data-variant='danger']:not(:disabled):hover,
+  .ui-button[data-variant='plain-danger']:not(:disabled):hover {
+    background: var(--color-danger-soft-hover);
+  }
+}
+
+.ui-button:not(:disabled):active {
+  background: var(--color-fill-pressed);
+  transform: scale(0.98);
+}
+.ui-button[data-variant='primary']:not(:disabled):active {
+  background: var(--color-accent-pressed);
+}
+.ui-button[data-variant='tinted']:not(:disabled):active,
+.ui-button[data-variant='plain']:not(:disabled):active {
+  background: var(--color-accent-soft-hover);
+}
+.ui-button[data-variant='danger']:not(:disabled):active,
+.ui-button[data-variant='plain-danger']:not(:disabled):active {
+  background: var(--color-danger-soft-hover);
+}
+
+.ui-button:disabled {
+  opacity: 0.45;
+}
+/* Busy is not the same as unavailable: keep it at full strength. */
+.ui-button[data-loading] {
+  opacity: 1;
+}
+
+.ui-button__content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.ui-button__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ui-button[data-loading] .ui-button__content[data-hide-when-loading] {
+  visibility: hidden;
+}
+.ui-button__spinner {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* ---- IconButton ------------------------------------------------------------ */
+
+.ui-icon-button {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  border-radius: var(--radius-full);
+  color: var(--color-text);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    transform var(--motion-instant) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+}
+.ui-icon-button[data-tone='accent'] {
+  color: var(--color-accent-text);
+}
+.ui-icon-button[data-tone='secondary'] {
+  color: var(--color-text-secondary);
+}
+.ui-icon-button[data-tone='danger'] {
+  color: var(--color-danger);
+}
+/* The drawn disc; the button itself is always the full hit area. */
+.ui-icon-button::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background: transparent;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+.ui-icon-button[data-variant='filled']::before {
+  background: var(--color-fill);
+}
+.ui-icon-button > * {
+  position: relative;
+}
+@media (hover: hover) {
+  .ui-icon-button:not(:disabled):hover::before {
+    background: var(--color-fill-hover);
+  }
+}
+.ui-icon-button:not(:disabled):active::before {
+  background: var(--color-fill-pressed);
+}
+.ui-icon-button:not(:disabled):active {
+  transform: scale(0.94);
+}
+.ui-icon-button:disabled {
+  opacity: 0.4;
+}
+.ui-icon-button[data-busy] > svg {
+  animation: spin 0.9s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-icon-button[data-busy] > svg {
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+}
+
+/* ---- TextField / TextArea ----------------------------------------------- */
+
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ui-field__label {
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+}
+.ui-field__optional {
+  font-weight: var(--weight-regular);
+  color: var(--color-text-tertiary);
+}
+.ui-field__control {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-separator-strong);
+  transition: box-shadow var(--motion-fast) var(--ease-standard);
+  cursor: text;
+}
+.ui-field__control:focus-within {
+  box-shadow:
+    inset 0 0 0 2px var(--color-accent),
+    0 0 0 3px var(--color-accent-soft);
+}
+.ui-field[data-invalid] .ui-field__control {
+  box-shadow: inset 0 0 0 1.5px var(--color-danger);
+}
+.ui-field[data-invalid] .ui-field__control:focus-within {
+  box-shadow:
+    inset 0 0 0 2px var(--color-danger),
+    0 0 0 3px var(--color-danger-soft);
+}
+.ui-field[data-disabled] .ui-field__control {
+  background: var(--color-fill);
+  box-shadow: inset 0 0 0 1px var(--color-separator);
+}
+.ui-field__input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  /* 16 px or more: iOS zooms the page into anything smaller. */
+  font-size: var(--text-field);
+  line-height: 1.4;
+  color: var(--color-text);
+  outline: none;
+  appearance: none;
+}
+.ui-field__input::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 1;
+}
+.ui-field__input:disabled {
+  color: var(--color-text-secondary);
+  -webkit-text-fill-color: var(--color-text-secondary);
+  opacity: 1;
+}
+.ui-field__input[data-mono] {
+  font-family: var(--font-mono);
+  font-size: var(--text-field);
+}
+textarea.ui-field__input {
+  min-height: 96px;
+  resize: none;
+  overscroll-behavior: contain;
+}
+.ui-field__control > .ui-icon-button {
+  margin-right: 2px;
+}
+.ui-field__leading {
+  display: grid;
+  place-items: center;
+  padding-left: 12px;
+  margin-right: -4px;
+  color: var(--color-text-tertiary);
+}
+.ui-field__hint,
+.ui-field__error {
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  color: var(--color-text-secondary);
+}
+.ui-field__error {
+  color: var(--color-danger);
+}
+/* Autofill must not paint its own yellow/blue over the theme. */
+.ui-field__input:-webkit-autofill,
+.ui-field__input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text);
+  transition: background-color 600000s 0s;
+  caret-color: var(--color-text);
+}
+
+/* ---- Switch -------------------------------------------------------------- */
+
+.ui-switch {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  min-height: var(--hit-min);
+  border-radius: var(--radius-full);
+}
+.ui-switch__track {
+  position: relative;
+  width: 50px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  background: var(--color-fill-pressed);
+  box-shadow: inset 0 0 0 1px var(--color-separator);
+  transition: background-color var(--motion-base) var(--ease-standard);
+}
+.ui-switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.28),
+    0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.ui-switch[aria-checked='true'] .ui-switch__track {
+  background: var(--color-accent);
+  box-shadow: none;
+}
+.ui-switch[aria-checked='true'] .ui-switch__thumb {
+  transform: translateX(20px);
+}
+:root[data-theme='dark'] .ui-switch[aria-checked='true'] .ui-switch__thumb {
+  background: var(--color-on-accent);
+}
+.ui-switch:disabled {
+  opacity: 0.45;
+}
+.ui-switch:focus-visible {
+  outline: none;
+}
+.ui-switch:focus-visible .ui-switch__track {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+@media (prefers-contrast: more) {
+  .ui-switch__track {
+    box-shadow: inset 0 0 0 1.5px var(--color-separator-strong);
+  }
+}
+
+/* ---- SegmentedControl ------------------------------------------------------ */
+
+.ui-segmented {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  min-height: var(--hit-min);
+  /* No padding: each option is the full 44 px tall to the finger; only the thumb is inset. */
+  padding: 0 3px;
+  border-radius: var(--radius-md);
+  background: var(--color-fill);
+  isolation: isolate;
+  container-type: inline-size;
+}
+/* Too narrow for icons and words: the words stay. */
+@container (max-width: 300px) {
+  .ui-segmented__option > svg {
+    display: none;
+  }
+}
+.ui-segmented__thumb {
+  position: absolute;
+  z-index: -1;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / var(--count));
+  border-radius: 11px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-1), 0 2px 6px rgba(0, 0, 0, 0.06);
+  transform: translateX(calc(var(--index) * 100%));
+  transition: transform var(--motion-base) var(--ease-out);
+}
+:root[data-theme='dark'] .ui-segmented__thumb {
+  background: var(--color-fill-pressed);
+}
+.ui-segmented__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: var(--hit-min);
+  padding: 0 var(--space-2);
+  border-radius: 11px;
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+.ui-segmented__option > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ui-segmented__option[aria-checked='true'] {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+.ui-segmented__option:disabled {
+  opacity: 0.45;
+}
+.ui-segmented__option:focus-visible {
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-segmented__thumb {
+    transition: none;
+  }
+}
+
+/* ---- Select trigger -------------------------------------------------------- */
+
+.ui-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: var(--hit-min);
+  padding: 0 10px 0 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-fill);
+  color: var(--color-text);
+  font-size: var(--text-field);
+  text-align: left;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+.ui-select[data-block] {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-separator-strong);
+}
+.ui-select[data-quiet] {
+  background: transparent;
+  color: var(--color-text-secondary);
+  padding: 0 4px 0 8px;
+  font-size: var(--text-body);
+}
+.ui-select__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ui-select > svg {
+  color: var(--color-text-tertiary);
+}
+@media (hover: hover) {
+  .ui-select:not(:disabled):hover {
+    background: var(--color-fill-hover);
+  }
+  .ui-select[data-block]:not(:disabled):hover {
+    background: var(--color-surface-alt);
+  }
+}
+.ui-select:not(:disabled):active {
+  background: var(--color-fill-pressed);
+}
+.ui-select:disabled {
+  opacity: 0.45;
+}
+
+/* ---- Checkbox (a labelled tick; used for multi-choice such as token scopes) ----- */
+
+.ui-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: var(--hit-min);
+  padding: 10px 0;
+  cursor: pointer;
+}
+.ui-check__box {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1.5px var(--color-separator-strong);
+  color: transparent;
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
+}
+.ui-check input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+.ui-check input:checked + .ui-check__box {
+  background: var(--color-accent);
+  box-shadow: none;
+  color: var(--color-on-accent);
+}
+.ui-check input:focus-visible + .ui-check__box {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.ui-check input:disabled ~ * {
+  opacity: 0.45;
+}
+.ui-check__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ui-check__label {
+  font-weight: var(--weight-medium);
+}
+.ui-check__hint {
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  color: var(--color-text-secondary);
+}

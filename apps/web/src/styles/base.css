@@ -1,0 +1,319 @@
+/*
+ * Reset, the app frame and a few utilities. Component styles live beside
+ * their components in src/ui; this file knows nothing about any of them.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 100%;
+  line-height: 1.4;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* One finger scrolls; a pinch never zooms the interface as a whole. Content
+     that should zoom under the fingers opts in with `touch-action: pinch-zoom`. */
+  touch-action: pan-x pan-y;
+  overscroll-behavior: none;
+  accent-color: var(--color-accent);
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  background: var(--color-bg);
+}
+
+#root {
+  height: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  margin: 0;
+}
+
+button {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+a {
+  color: var(--color-accent-text);
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+svg {
+  flex: none;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+::selection {
+  background: var(--color-selection);
+}
+
+:focus {
+  outline: none;
+}
+
+/* Keyboard focus is always visible; a touch or click does not leave a ring behind. */
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ---- the app frame ------------------------------------------------------- */
+
+/*
+ * Exactly as large as what the user can see: `platform/viewport.ts` keeps
+ * --app-height / --app-top equal to the visual viewport, so the frame shrinks
+ * above the soft keyboard and reaches the true screen edge in an installed app.
+ */
+.app {
+  position: fixed;
+  top: var(--app-top, 0px);
+  left: 0;
+  width: 100%;
+  height: var(--app-height, 100dvh);
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+@supports not (height: 100dvh) {
+  .app {
+    height: var(--app-height, 100vh);
+  }
+}
+
+/* The home indicator is under the keyboard while it is open. */
+:root[data-keyboard='open'] {
+  --safe-bottom: 0px;
+}
+
+/*
+ * Installed on iOS the status bar is drawn over the page in white. On the
+ * light theme that would be white on paper, so the inset gets an ink band.
+ */
+:root[data-standalone='ios'][data-theme='light'] .app::before {
+  content: '';
+  position: absolute;
+  z-index: var(--z-launch);
+  inset: 0 0 auto 0;
+  height: var(--safe-top);
+  background: #1b1916;
+  pointer-events: none;
+}
+
+.app__content {
+  position: absolute;
+  inset: 0;
+}
+
+.app__overlays {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-overlay);
+  pointer-events: none;
+}
+
+.app__overlays > * {
+  pointer-events: auto;
+}
+
+/* ---- utilities --------------------------------------------------------- */
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* A vertical scroll area that keeps its overscroll to itself. */
+.u-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-separator-strong) transparent;
+}
+
+/*
+ * For anything that can be lifted and dragged: a long press must not select
+ * text, open the system callout, start a native image drag or preview a link.
+ */
+.u-no-callout {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.u-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.u-mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.u-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- text roles ---------------------------------------------------------- */
+
+.text-display {
+  font-size: var(--text-display);
+  line-height: var(--leading-display);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+}
+.text-title-1 {
+  font-size: var(--text-title-1);
+  line-height: var(--leading-title-1);
+  font-weight: var(--weight-bold);
+}
+.text-title-2 {
+  font-size: var(--text-title-2);
+  line-height: var(--leading-title-2);
+  font-weight: var(--weight-semibold);
+}
+.text-title-3 {
+  font-size: var(--text-title-3);
+  line-height: var(--leading-title-3);
+  font-weight: var(--weight-semibold);
+}
+.text-headline {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: var(--weight-semibold);
+}
+.text-body {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+.text-callout {
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.text-footnote {
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.text-caption {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+/* ---- whole-screen theme cross-fade (View Transitions) ------------------- */
+
+:root[data-theme-fade]::view-transition-old(root),
+:root[data-theme-fade]::view-transition-new(root) {
+  animation-duration: 260ms;
+  animation-timing-function: var(--ease-in-out);
+}
+:root[data-theme-fade='reduced']::view-transition-old(root),
+:root[data-theme-fade='reduced']::view-transition-new(root) {
+  animation-duration: 140ms;
+}
+
+/* ---- motion primitives --------------------------------------------------- */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}

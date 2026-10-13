@@ -1,0 +1,304 @@
+/* The app shell: screen stack and its transitions, the screen scaffold, the home layer, cues, loading and crash screens. */
+
+/* ---- ScreenStack ----------------------------------------------------------- */
+
+.stack {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* how far a pushed screen travels, and whether it also fades */
+  --stack-travel: 100%;
+  --stack-fade-from: var(--motion-fade-from);
+  --stack-parallax: -22%;
+}
+/* On larger screens a full-width slide is too much movement: a short glide and a fade. */
+:root[data-layout='tablet'] .stack,
+:root[data-layout='wide'] .stack {
+  --stack-travel: 44px;
+  --stack-fade-from: 0;
+  --stack-parallax: -20px;
+}
+/* A stack whose layers must not paint a background (the app layer over the home screen does; panes do not). */
+.stack[data-pass-through] {
+  pointer-events: none;
+}
+.stack[data-pass-through] > .stack__layer {
+  pointer-events: auto;
+}
+
+.stack__layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--color-bg);
+  z-index: 1;
+}
+.stack__layer[data-phase='enter'][data-kind='push'],
+.stack__layer[data-phase='enter'][data-kind='open'],
+.stack__layer[data-phase='enter'][data-kind='fade'],
+.stack__layer[data-phase='exit'][data-kind='pop'],
+.stack__layer[data-phase='exit'][data-kind='close'] {
+  z-index: 2;
+}
+
+.stack__layer[data-phase='enter'][data-kind='push'] {
+  animation: stack-slide-in var(--motion-slow) var(--ease-out) both;
+  box-shadow: -1px 0 0 var(--color-separator);
+}
+.stack__layer[data-phase='exit'][data-kind='push'] {
+  animation: stack-recede var(--motion-slow) var(--ease-out) both;
+}
+.stack__layer[data-phase='enter'][data-kind='pop'] {
+  animation: stack-return var(--motion-slow) var(--ease-out) both;
+}
+.stack__layer[data-phase='exit'][data-kind='pop'] {
+  animation: stack-slide-out var(--motion-base) var(--ease-in-out) both;
+  box-shadow: -1px 0 0 var(--color-separator);
+}
+.stack__layer[data-phase='enter'][data-kind='open'] {
+  animation: stack-rise var(--motion-slow) var(--ease-out) both;
+}
+.stack__layer[data-phase='exit'][data-kind='open'] {
+  animation: stack-hold var(--motion-slow) linear both;
+}
+.stack__layer[data-phase='exit'][data-kind='close'] {
+  animation: stack-sink var(--motion-base) var(--ease-in-out) both;
+}
+.stack__layer[data-phase='enter'][data-kind='close'] {
+  animation: stack-hold var(--motion-base) linear both;
+}
+.stack__layer[data-phase='enter'][data-kind='fade'] {
+  animation: fade-in var(--motion-base) var(--ease-standard) both;
+}
+.stack__layer[data-phase='exit'][data-kind='fade'] {
+  animation: stack-hold var(--motion-base) linear both;
+}
+
+@keyframes stack-slide-in {
+  from {
+    opacity: var(--stack-fade-from);
+    transform: translate3d(calc(var(--stack-travel) * var(--motion-distance)), 0, 0);
+  }
+}
+@keyframes stack-slide-out {
+  to {
+    opacity: var(--stack-fade-from);
+    transform: translate3d(calc(var(--stack-travel) * var(--motion-distance)), 0, 0);
+  }
+}
+@keyframes stack-recede {
+  to {
+    opacity: 0.6;
+    transform: translate3d(calc(var(--stack-parallax) * var(--motion-distance)), 0, 0);
+  }
+}
+@keyframes stack-return {
+  from {
+    opacity: 0.6;
+    transform: translate3d(calc(var(--stack-parallax) * var(--motion-distance)), 0, 0);
+  }
+}
+@keyframes stack-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, calc(28px * var(--motion-distance)), 0) scale(calc(1 - 0.035 * var(--motion-distance)));
+  }
+}
+@keyframes stack-sink {
+  to {
+    opacity: 0;
+    transform: translate3d(0, calc(20px * var(--motion-distance)), 0) scale(calc(1 - 0.03 * var(--motion-distance)));
+  }
+}
+/* Keeps a layer mounted, unmoved, for the length of its partner's animation. */
+@keyframes stack-hold {
+  from,
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---- the signed-in shell: home underneath, apps on top ------------------- */
+
+.shell {
+  position: absolute;
+  inset: 0;
+}
+.shell__home {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  /* Covered: out of the picture once the app above has settled, back the instant it starts to leave. */
+  transition: visibility 0s linear 0s;
+}
+.shell__home[data-covered] {
+  visibility: hidden;
+  transition-delay: var(--motion-slow);
+}
+
+/* ---- Screen -------------------------------------------------------------- */
+
+.screen {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-bg);
+}
+.screen > .ui-navbar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+}
+.screen__scroll {
+  flex: 1;
+  min-height: 0;
+  /* room for the bar that floats over the top of the scroll area */
+  padding-top: calc(var(--safe-top) + var(--bar-height));
+  scroll-padding-top: calc(var(--safe-top) + var(--bar-height) + var(--space-3));
+  scroll-padding-bottom: var(--space-6);
+}
+.screen[data-toolbar] .screen__scroll {
+  padding-top: 0;
+  scroll-padding-top: var(--space-3);
+}
+.screen__toolbar {
+  flex: none;
+  margin-top: calc(var(--safe-top) + var(--bar-height));
+  padding: 0 calc(var(--gutter) + var(--safe-right)) 0 calc(var(--gutter) + var(--safe-left));
+}
+.screen__content {
+  width: 100%;
+  max-width: calc(var(--content-max) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: var(--space-2) calc(var(--gutter) + var(--safe-right)) calc(var(--space-10) + var(--safe-bottom)) calc(var(--gutter) + var(--safe-left));
+}
+.screen[data-width='wide'] .screen__content {
+  max-width: calc(1080px + 2 * var(--gutter));
+}
+.screen[data-width='full'] .screen__content {
+  max-width: none;
+}
+.screen__title {
+  width: 100%;
+  max-width: calc(var(--content-max) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: 0 var(--safe-right) 0 var(--safe-left);
+}
+.screen[data-width='wide'] .screen__title {
+  max-width: calc(1080px + 2 * var(--gutter));
+}
+.screen[data-width='full'] .screen__title {
+  max-width: none;
+}
+.screen__footer {
+  flex: none;
+  padding: var(--space-3) calc(var(--gutter) + var(--safe-right)) calc(var(--space-3) + var(--safe-bottom)) calc(var(--gutter) + var(--safe-left));
+  background: var(--color-material-bar);
+  -webkit-backdrop-filter: var(--blur-bar);
+  backdrop-filter: var(--blur-bar);
+  box-shadow: inset 0 1px 0 var(--color-separator);
+}
+/* Stacked sections of a page keep an even rhythm. */
+.screen__content > * + * {
+  margin-top: var(--space-6);
+}
+
+/* ---- loading and crash screens --------------------------------------------- */
+
+.screen-status {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: calc(var(--safe-top) + var(--space-6)) calc(var(--space-6) + var(--safe-right)) calc(var(--safe-bottom) + var(--space-6))
+    calc(var(--space-6) + var(--safe-left));
+  background: var(--color-bg);
+  overflow-y: auto;
+}
+.screen-status__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text-secondary);
+  animation: fade-in var(--motion-base) var(--ease-standard) both;
+}
+
+/* ---- connection cue ------------------------------------------------------ */
+
+.cue {
+  position: absolute;
+  z-index: var(--z-cue);
+  top: calc(var(--safe-top) + 6px);
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 32px);
+  min-height: 32px;
+  padding: 4px 14px 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-toast);
+  color: var(--color-on-toast);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-2);
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: cue-in var(--motion-base) var(--ease-out) both;
+}
+.cue[data-state='closing'] {
+  animation: fade-out var(--motion-base) var(--ease-standard) both;
+}
+.cue > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cue[data-tone='ok'] > svg {
+  color: #49c07f;
+}
+:root[data-theme='dark'] .cue[data-tone='ok'] > svg {
+  color: #17713f;
+}
+@keyframes cue-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(calc(-10px * var(--motion-distance)));
+  }
+}
+
+/* ---- edge-swipe indicator ------------------------------------------------ */
+
+.edge-swipe {
+  position: absolute;
+  z-index: var(--z-cue);
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin: -19px 0 0 -44px;
+  border-radius: 50%;
+  background: var(--color-toast);
+  color: var(--color-on-toast);
+  box-shadow: var(--shadow-2);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.edge-swipe[data-armed] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
