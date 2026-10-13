@@ -1,0 +1,96 @@
+#!/usr/bin/env node
+/*
+ * A stand-in for the Codex command-line program, for tests.
+ *
+ * It speaks the protocol of `codex app-server` (line-delimited JSON on
+ * standard input and output; shapes taken from captures of codex-cli 0.160.0),
+ * keeps conversations so that a later process can resume them, honours the
+ * `-c key=value` overrides the way the real CLI does (TOML values, tables
+ * merged into the user's configuration, project `.codex/` layers only for a
+ * trusted project, `prefix_rule(…, decision="allow")` lines pre-approving
+ * commands), and connects as a real MCP client to the `studio` server it is
+ * configured with — so a call of one of the Studio's tools genuinely travels
+ * through the Studio's bridge. It never contacts a model or any service.
+ *
+ * Put this directory first on PATH and the Studio's Codex adapter drives it
+ * exactly as it drives the real program. It is a test double: production code
+ * never looks for it.
+ *
+ * Commands:  codex --version
+ *            codex login status          ("Logged in using ChatGPT" / "Not logged in", on the error stream)
+ *            codex app-server [-c key=value]…
+ *
+ * What it answers is chosen by markers in the prompt. With no marker it
+ * replies with one short, deterministic sentence that repeats the prompt.
+ * Several markers in one prompt are played in order.
+ *
+ *   [[scenario:recall]]                 lists what was said earlier in this conversation (shows that resume or seeding worked)
+ *   [[scenario:echo-prompt]]            repeats the whole prompt exactly as it was received
+ *   [[scenario:thinking]]               shows a reasoning summary in two parts before the answer
+ *   [[scenario:run-command COMMAND]]    a command that must leave the sandbox: asks the client first, then REALLY RUNS
+ *                                       COMMAND with /bin/sh in the project (default: touch codex-standin-ran.txt)
+ *   [[scenario:read-command COMMAND]]   a command inside the read-only sandbox: runs without asking when it is one of
+ *                                       ls cat pwd echo head wc sleep true env printenv printf with no shell operators,
+ *                                       and is otherwise refused by the pretend sandbox (default: ls)
+ *   [[scenario:file-change NAME TEXT…]] writes NAME (default standin-note.txt) in the project — asks the client first
+ *   [[scenario:studio-tool NAME JSON]]  calls the Studio's tool NAME through the bridge
+ *   [[scenario:mcp-elicit SERVER TOOL]] asks the client whether a tool of another MCP server may run
+ *   [[scenario:ask-user]]               asks the user one multiple-choice question and reports the answer
+ *   [[scenario:permissions]]            asks for a wider sandbox and reports what it was granted
+ *   [[scenario:plan]]                   keeps a to-do list of two steps
+ *   [[scenario:web-search QUERY]]       a web search
+ *   [[scenario:sub-agent]]              starts a sub-agent whose own turn ends before the main answer
+ *   [[scenario:long N]]                 streams N short pieces (default 100), 40 ms apart — for stop tests
+ *   [[scenario:steerable]]              works, then waits up to 10 s for a steered message and answers it
+ *   [[scenario:inspect PATH…]]          reports its working directory, arguments, environment variable NAMES, the
+ *                                       settings in force, what it can see of the Codex home, the images it was
+ *                                       given and whether it can read each PATH — as JSON
+ *   [[scenario:compact]]                reports a context compaction, then answers
+ *   [[scenario:retry]]                  reports two connection retries, then answers
+ *   [[scenario:warning]]                reports a warning, then answers
+ *   [[scenario:rename TITLE]]           gives the conversation a name
+ *   [[scenario:unknown-event]]          sends a notification, an item and a request no client knows, then answers
+ *   [[scenario:noise]]                  prints JSON that is not a message, then answers
+ *
+ * Failure modes:
+ *
+ *   [[scenario:not-signed-in]]          the turn fails with 401 (also every turn when standin.json says signedIn: false)
+ *   [[scenario:usage-limit]]            the account's usage limit is reached
+ *   [[scenario:model-unavailable]]      the model does not exist (also any model whose name starts with "unknown")
+ *   [[scenario:stream-lost]]            the connection to the model was lost for good
+ *   [[scenario:fail-turn TEXT]]         the turn fails with TEXT
+ *   [[scenario:crash]]                  exits with code 3 mid-answer, with a secret-looking string on the error stream
+ *   [[scenario:garbage]]                prints a line that is not JSON mid-answer
+ *   [[scenario:die]]                    is killed mid-answer
+ *   [[scenario:stubborn]]               ignores the interrupt request and SIGTERM (only SIGKILL ends it)
+ *   thread/resume with an unknown id    "no rollout found for thread id …"
+ *
+ * A test can also describe the installation by writing `standin.json` into the
+ * Codex home (`$CODEX_HOME`, else `$HOME/.codex`):
+ *
+ *   { "signedIn": false }               nobody is signed in
+ *   { "account": { "type": "chatgpt", "email": "…", "planType": "pro" } }
+ *   { "models": [ … ] }                 what `model/list` returns
+ *   { "version": "9.9.9" }              what `--version` prints
+ *   { "startupError": "…" }             the app-server exits at once with this on the error stream
+ *   { "ignoreThreadSettings": true }    the approval policy and sandbox the client asks for are not taken
+ *
+ * In a home that has a `standin.json` (`{}` will do), `config.toml` and
+ * `rules/*.rules` — and `.codex/config.toml`, `.codex/rules/*.rules` of a
+ * project that configuration trusts — are read as the real CLI reads them.
+ * In any other home (a developer's real `~/.codex`, say) they are not looked
+ * at: there the stand-in is a fresh installation, the same on every machine.
+ *
+ * For assertions, every app-server start, thread and turn is recorded in
+ * `<state>/invocations.jsonl` (arguments, environment variable names, the
+ * parameters of the request), and conversations are kept in `<state>/threads`,
+ * where <state> is
+ * `<tmpdir>/codex-standin-<uid>/<first 16 hex digits of sha256(HOME)>`.
+ */
+import('../codex/main.mjs').then(
+  (standin) => standin.main(process.argv.slice(2)),
+  (error) => {
+    process.stderr.write(`codex stand-in: ${error && error.message ? error.message : error}\n`);
+    process.exit(70);
+  },
+);
