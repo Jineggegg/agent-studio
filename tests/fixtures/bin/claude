@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+/*
+ * A stand-in for the Claude Code command-line program, for tests.
+ *
+ * It speaks the machine-readable protocol of `claude -p --input-format
+ * stream-json --output-format stream-json` (shapes taken from captures of
+ * Claude Code 2.1.283), keeps conversations so that `--resume` works, and
+ * connects as a real MCP client to the servers named by `--mcp-config` — so a
+ * permission prompt, or a call of one of the Studio's tools, genuinely travels
+ * through the Studio's bridge. It never contacts a model or any service.
+ *
+ * Put this directory first on PATH and the Studio's Claude Code adapter drives
+ * it exactly as it drives the real program. It is a test double: production
+ * code never looks for it.
+ *
+ * Commands:  claude --version | --help
+ *            claude auth status [--json|--text] | auth login | auth logout
+ *            claude -p --verbose --input-format stream-json --output-format stream-json …
+ *
+ * What it answers is chosen by markers in the prompt. With no marker it
+ * replies with one short, deterministic sentence that repeats the prompt.
+ * Several markers in one prompt are played in order.
+ *
+ *   [[scenario:recall]]                lists what was said earlier in this conversation (shows that resume worked)
+ *   [[scenario:echo-prompt]]           repeats the whole prompt exactly as it was received
+ *   [[scenario:edit-file NAME]]        writes NAME (default standin-note.txt) in the project — needs approval
+ *   [[scenario:bash COMMAND]]          "runs" COMMAND (nothing is executed) — needs approval unless read-only (pwd, ls, cat, echo)
+ *   [[scenario:read-file PATH]]        reads PATH — needs approval outside the project and the --add-dir folders
+ *   [[scenario:read-attachment]]       reads every file listed under "Files attached to this message"
+ *   [[scenario:studio-tool NAME JSON]] calls the Studio's tool NAME through the bridge
+ *   [[scenario:ask-user]]              asks the user two questions (one multiple-choice) and reports the answers
+ *   [[scenario:plan]]                  presents a plan for approval, then tries to carry it out
+ *   [[scenario:todo]]                  keeps a to-do list of two items (TaskCreate / TaskUpdate)
+ *   [[scenario:todo-legacy]]           the same with the older TodoWrite tool
+ *   [[scenario:sub-agent]]             starts a background sub-agent, ends the turn, and reports in a turn of its own
+ *   [[scenario:thinking]]              shows its reasoning before the answer
+ *   [[scenario:long N]]                streams N short pieces (default 100), 40 ms apart — for stop and steer tests
+ *   [[scenario:steerable]]             works with a tool, then waits up to 10 s for a steered message and answers it
+ *   [[scenario:inspect PATH…]]         reports its working directory, option names, environment variable names
+ *                                      and whether it can read each PATH — as JSON
+ *   [[scenario:compact]]               reports a context compaction, then answers
+ *   [[scenario:retry]]                 reports two API retries, then answers
+ *   [[scenario:rate-warning]]          reports that the usage limit is close, then answers
+ *   [[scenario:unknown-event]]         prints event types no client knows, then answers
+ *   [[scenario:noisy]]                 prints a line that is not JSON, then answers normally
+ *
+ * Failure modes:
+ *
+ *   [[scenario:not-signed-in]]         "Not logged in" (also what every turn does after `claude auth logout`)
+ *   [[scenario:usage-limit]]           the account's usage limit is reached
+ *   [[scenario:overloaded]]            the model service is overloaded
+ *   [[scenario:error-result]]          the turn ends with an error result
+ *   [[scenario:crash]]                 exits with code 3 mid-answer, with a secret-looking string on stderr
+ *   [[scenario:garbage]]               prints something that is not JSON and exits without a result
+ *   [[scenario:die]]                   is killed mid-answer
+ *   [[scenario:stubborn]]              ignores the interrupt request and SIGTERM (only SIGKILL ends it)
+ *   --model anything-unknown           "There's an issue with the selected model"
+ *   --resume an-unknown-id             "No conversation found with session ID"
+ *
+ * For assertions, every conversation it is started for is recorded in
+ * `<state>/invocations.jsonl` (arguments, environment, the MCP configuration it
+ * was given), where <state> is
+ * `<tmpdir>/claude-standin-<uid>/<first 16 hex digits of sha256(HOME)>`.
+ */
+import('../claude/main.mjs').then(
+  (standin) => standin.main(process.argv.slice(2)),
+  (error) => {
+    process.stderr.write(`claude stand-in: ${error && error.message ? error.message : error}\n`);
+    process.exit(70);
+  },
+);

@@ -136,10 +136,13 @@ export interface RunningStudio {
   destroy(): Promise<void>;
 }
 
+/** Stand-in agent CLIs (`claude`, `codex`): always first on the server's PATH, so no test starts a real one. */
+export const STAND_IN_BIN = path.join(repoRoot, 'tests/fixtures/bin');
+
 export interface StartOptions {
   /** Extra AGENT_STUDIO_* settings. */
   readonly env?: Readonly<Record<string, string>>;
-  /** A directory to put first on PATH (fake agent CLIs, a fake gh, …). */
+  /** A further directory to put first on PATH, ahead of the stand-in CLIs (a fake gh, …). */
   readonly binDir?: string;
 }
 
@@ -184,7 +187,7 @@ export async function startStudio(options: StartOptions = {}): Promise<RunningSt
       cwd: repoRoot,
       env: {
         // A deliberately small environment: the server must not need more.
-        PATH: [options.binDir, process.env.PATH].filter(Boolean).join(path.delimiter),
+        PATH: [options.binDir, STAND_IN_BIN, process.env.PATH].filter(Boolean).join(path.delimiter),
         HOME: home,
         LANG: 'C.UTF-8',
         AGENT_STUDIO_PORT: String(port),
