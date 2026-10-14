@@ -41,6 +41,7 @@ describe('a name for a device', () => {
     expect(labelFromEndpoint('https://updates.push.services.mozilla.com/wpush/v2/abc', 'en')).toBe('Firefox');
     expect(labelFromEndpoint('https://db5p.notify.windows.com/w/?token=abc', 'en')).toBe('Windows');
     expect(labelFromEndpoint('http://127.0.0.1:9/push/x', 'en')).toBe('Browser');
+    expect(labelFromEndpoint('https://push.example-googleapis.com/x', 'en')).toBe('Browser'); // a look-alike name is not the service
     expect(labelFromEndpoint('not an address', 'zh-CN')).toBe('浏览器');
   });
 

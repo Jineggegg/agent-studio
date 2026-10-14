@@ -1,9 +1,10 @@
-import { promises as fs, type Dirent } from 'node:fs';
+import { constants, promises as fs, type Dirent, type Stats } from 'node:fs';
+import type { FileHandle } from 'node:fs/promises';
 import path from 'node:path';
 import { PROVIDER_NOTICE } from '@agent-studio/protocol';
 import { z, type ZodType } from 'zod';
 import { StudioError } from '../../../kernel/errors.js';
-import { confine, isInside } from '../../../kernel/paths.js';
+import { confine, isInside, mkdirInside, openInside, withDirectoryInside } from '../../../kernel/paths.js';
 import type { ProcessSupervisor, Sandbox } from '../../../kernel/process.js';
 import type { ApiAgentLimits } from '../limits.js';
 import { MAX_COMMAND_CHARS, parseCommandLine, runsOtherCommands } from './command-line.js';
@@ -21,9 +22,11 @@ import { type ModelTool, type PermissionAsk, type PreparedCall, ToolRefusal, one
  * hook or a config line written there would later run outside any sandbox)
  * and the Studio's data directory. A path is resolved when the call is
  * prepared — so that the permission engine is told the real target — and
- * again when it is carried out, since an approval can take a while. Directory
- * walks never follow links. Sizes are capped and binary files are described,
- * not dumped.
+ * again when it is carried out, since an approval can take a while. Files and
+ * directories are then opened through the kernel's checked descriptors
+ * (`openInside`): a command racing the tool cannot swap a directory on the way
+ * for a link out between the check and the use. Directory walks never follow
+ * links. Sizes are capped and binary files are described, not dumped.
  *
  * **Commands.** A simple command is started directly as an argument array; a
  * line that needs a shell runs as `sh -c`. Either way it goes through the
@@ -106,6 +109,64 @@ async function locate(options: ProjectToolsOptions, requested: string | undefine
   return { real, relative };
 }
 
+/** What no tool may reach even inside the project. */
+async function excluded(options: ProjectToolsOptions): Promise<string[]> {
+  return [await fs.realpath(options.dataDir).catch(() => path.resolve(options.dataDir))];
+}
+
+/** A kernel refusal ("leads outside the project") told to the model as a refusal. */
+function refusalOf(error: unknown): unknown {
+  return error instanceof StudioError ? new ToolRefusal(error.message) : error;
+}
+
+/**
+ * Opens a file of the project for reading through a descriptor checked to be
+ * inside it; null when there is nothing there. Never blocks on a named pipe.
+ */
+async function openForReading(options: ProjectToolsOptions, real: string): Promise<{ handle: FileHandle; info: Stats } | null> {
+  let handle: FileHandle;
+  try {
+    handle = await openInside(options.root, real, constants.O_RDONLY | constants.O_NONBLOCK, { excluded: await excluded(options) });
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return null;
+    throw refusalOf(error);
+  }
+  try {
+    return { handle, info: await handle.stat() };
+  } catch (error) {
+    await handle.close();
+    throw error;
+  }
+}
+
+/** Replaces a file's content, or creates it, through a descriptor checked to be inside the project. */
+async function writeInsideProject(options: ProjectToolsOptions, target: Located, content: string): Promise<void> {
+  let handle: FileHandle;
+  try {
+    await mkdirInside(options.root, path.dirname(target.real), { excluded: await excluded(options) });
+    handle = await openInside(options.root, target.real, constants.O_WRONLY | constants.O_CREAT | constants.O_NONBLOCK, {
+      excluded: await excluded(options),
+      mode: 0o666,
+    });
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENXIO') throw new ToolRefusal(`"${target.relative}" is not a regular file.`);
+    if (code === 'ENOTDIR' || code === 'EEXIST') throw new ToolRefusal(`A part of "${target.relative}" is a file, not a directory.`);
+    throw refusalOf(error);
+  }
+  try {
+    const info = await handle.stat();
+    if (!info.isFile()) throw new ToolRefusal(`"${target.relative}" is not a regular file.`);
+    // Another name for the same file may live outside the project.
+    if (info.nlink > 1) throw new ToolRefusal(`"${target.relative}" has more than one name (a hard link); the file tools do not change it.`);
+    await handle.truncate(0);
+    await handle.writeFile(content, 'utf8');
+  } finally {
+    await handle.close();
+  }
+}
+
 const looksBinary = (buffer: Buffer): boolean => buffer.subarray(0, 8192).includes(0);
 const countLines = (text: string): number => (text === '' ? 0 : text.split('\n').length - (text.endsWith('\n') ? 1 : 0));
 const plural = (count: number, word: string, many = `${word}s`): string => `${count} ${count === 1 ? word : many}`;
@@ -162,9 +223,11 @@ async function* walk(
     const directory = pending.pop()!;
     let entries: Dirent[];
     try {
-      entries = await fs.readdir(directory.absolute, { withFileTypes: true });
+      entries = await withDirectoryInside(options.root, directory.absolute, (pinned) => fs.readdir(pinned, { withFileTypes: true }), {
+        excluded: await excluded(options),
+      });
     } catch {
-      continue; // unreadable or gone: skip it
+      continue; // unreadable, gone, or no longer inside the project: skip it
     }
     entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     const subdirectories: Array<{ absolute: string; relative: string }> = [];
@@ -237,7 +300,18 @@ function readFile(options: ProjectToolsOptions): ModelTool {
         input,
         permissions: [{ toolName: 'read_file', kind: 'read', title, paths: [target.real] }],
         async run() {
-          const buffer = await fs.readFile((await locate(options, target.relative)).real);
+          const file = await openForReading(options, (await locate(options, target.relative)).real);
+          if (!file) throw new ToolRefusal(`There is no file "${target.relative}".`);
+          let buffer: Buffer;
+          try {
+            if (!file.info.isFile()) throw new ToolRefusal(`"${target.relative}" is not a regular file.`);
+            if (file.info.size > options.limits.maxFileBytes) {
+              throw new ToolRefusal(`"${target.relative}" is ${file.info.size} bytes, more than the ${options.limits.maxFileBytes} this tool reads.`);
+            }
+            buffer = await file.handle.readFile();
+          } finally {
+            await file.handle.close();
+          }
           if (looksBinary(buffer)) return { status: 'ok', text: `"${target.relative}" is a binary file (${buffer.length} bytes). Its content is not shown.` };
           const lines = buffer.toString('utf8').split('\n');
           if (lines[lines.length - 1] === '') lines.pop();
@@ -282,17 +356,30 @@ function listDirectory(options: ProjectToolsOptions): ModelTool {
         input,
         permissions: [{ toolName: 'list_directory', kind: 'read', title, paths: [target.real] }],
         async run() {
-          const directory = (await locate(options, target.relative)).real;
-          const entries = await fs.readdir(directory, { withFileTypes: true });
-          entries.sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+          const real = (await locate(options, target.relative)).real;
           const lines: string[] = [];
-          for (const entry of entries.slice(0, MAX_LIST_ENTRIES)) {
-            if (entry.isDirectory()) lines.push(`${entry.name}/`);
-            else if (entry.isSymbolicLink()) lines.push(`${entry.name} (link)`);
-            else {
-              const size = await fs.lstat(path.join(directory, entry.name)).then((info) => info.size, () => null);
-              lines.push(size === null ? entry.name : `${entry.name}  (${size} bytes)`);
-            }
+          let entries: Dirent[];
+          try {
+            entries = await withDirectoryInside(
+              options.root,
+              real,
+              async (directory) => {
+                const found = await fs.readdir(directory, { withFileTypes: true });
+                found.sort((a, b) => Number(b.isDirectory()) - Number(a.isDirectory()) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+                for (const entry of found.slice(0, MAX_LIST_ENTRIES)) {
+                  if (entry.isDirectory()) lines.push(`${entry.name}/`);
+                  else if (entry.isSymbolicLink()) lines.push(`${entry.name} (link)`);
+                  else {
+                    const size = await fs.lstat(path.join(directory, entry.name)).then((info) => info.size, () => null);
+                    lines.push(size === null ? entry.name : `${entry.name}  (${size} bytes)`);
+                  }
+                }
+                return found;
+              },
+              { excluded: await excluded(options) },
+            );
+          } catch (error) {
+            throw refusalOf(error);
           }
           if (lines.length === 0) return { status: 'ok', text: `"${target.relative}" is empty.` };
           const more = entries.length > MAX_LIST_ENTRIES ? `\n… and ${entries.length - MAX_LIST_ENTRIES} more entries.` : '';
@@ -419,13 +506,19 @@ function searchText(options: ProjectToolsOptions): ModelTool {
           let skipped = 0;
 
           const searchFile = async (absolute: string, shown: string): Promise<void> => {
-            const info = await fs.stat(absolute).catch(() => null);
-            if (!info?.isFile()) return;
-            if (info.size > SEARCH_FILE_BYTES) {
-              skipped += 1;
-              return;
+            const file = await openForReading(options, absolute).catch(() => null);
+            if (!file) return;
+            let buffer: Buffer | null;
+            try {
+              if (!file.info.isFile()) return;
+              if (file.info.size > SEARCH_FILE_BYTES) {
+                skipped += 1;
+                return;
+              }
+              buffer = await file.handle.readFile().catch(() => null);
+            } finally {
+              await file.handle.close();
             }
-            const buffer = await fs.readFile(absolute).catch(() => null);
             if (!buffer || looksBinary(buffer)) return;
             const lines = buffer.toString('utf8').split('\n');
             for (let index = 0; index < lines.length; index += 1) {
@@ -471,14 +564,20 @@ function searchText(options: ProjectToolsOptions): ModelTool {
 
 /** The text of an existing file, null when there is none, or a refusal when it cannot be treated as text. */
 async function currentText(options: ProjectToolsOptions, target: Located, purpose: 'replace' | 'edit'): Promise<string | null> {
-  const stat = await fs.stat(target.real).catch(() => null);
-  if (!stat) return null;
-  if (stat.isDirectory()) throw new ToolRefusal(`"${target.relative}" is a directory.`);
-  if (!stat.isFile()) throw new ToolRefusal(`"${target.relative}" is not a regular file.`);
-  if (stat.size > options.limits.maxFileBytes) {
-    throw new ToolRefusal(`"${target.relative}" is ${stat.size} bytes, more than the ${options.limits.maxFileBytes} this tool handles.`);
+  const file = await openForReading(options, target.real);
+  if (!file) return null;
+  let buffer: Buffer;
+  try {
+    const stat = file.info;
+    if (stat.isDirectory()) throw new ToolRefusal(`"${target.relative}" is a directory.`);
+    if (!stat.isFile()) throw new ToolRefusal(`"${target.relative}" is not a regular file.`);
+    if (stat.size > options.limits.maxFileBytes) {
+      throw new ToolRefusal(`"${target.relative}" is ${stat.size} bytes, more than the ${options.limits.maxFileBytes} this tool handles.`);
+    }
+    buffer = await file.handle.readFile();
+  } finally {
+    await file.handle.close();
   }
-  const buffer = await fs.readFile(target.real);
   if (looksBinary(buffer)) {
     throw new ToolRefusal(purpose === 'edit' ? `"${target.relative}" is a binary file and cannot be edited as text.` : `"${target.relative}" is a binary file; this tool does not overwrite it.`);
   }
@@ -519,12 +618,11 @@ function writeFile(options: ProjectToolsOptions): ModelTool {
         input,
         permissions: [{ toolName: 'write_file', kind: 'edit', title, paths: [target.real], diff: diff.patch }],
         async run() {
-          await fs.mkdir(path.dirname(target.real), { recursive: true });
-          // Resolved again now that the directories exist: nothing on the way may have become a link out.
+          // Resolved again: the tree may have changed while the request waited for approval.
           const now = await locate(options, target.relative);
           const previous = await currentText(options, now, 'replace');
           if (previous === input.content) return { status: 'ok', text: `"${now.relative}" already has exactly this content; nothing was changed.` };
-          await fs.writeFile(now.real, input.content, 'utf8');
+          await writeInsideProject(options, now, input.content);
           const made = unifiedDiff(now.relative, previous, input.content);
           const summary = previous === null ? `Created "${now.relative}" (${plural(countLines(input.content), 'line')}).` : `Replaced "${now.relative}" (+${made.added} −${made.removed} lines).`;
           return { status: 'ok', text: summary, diffs: [made] };
@@ -595,7 +693,7 @@ function editFile(options: ProjectToolsOptions): ModelTool {
           const current = await currentText(options, now, 'edit');
           if (current === null) throw new ToolRefusal(`"${now.relative}" no longer exists.`);
           const result = current === before ? after : applyEdit(current, input, now.relative);
-          await fs.writeFile(now.real, result, 'utf8');
+          await writeInsideProject(options, now, result);
           const made = unifiedDiff(now.relative, current, result);
           return { status: 'ok', text: `Edited "${now.relative}" (+${made.added} −${made.removed} lines).`, diffs: [made] };
         },

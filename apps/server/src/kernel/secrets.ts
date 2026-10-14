@@ -1,5 +1,5 @@
 import { hkdfSync, randomBytes } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { StudioConfig } from './config.js';
 import { SecretBox } from './crypto.js';
@@ -20,8 +20,11 @@ export function prepareDataDir(dataDir: string): void {
 export function loadMasterKey(config: Pick<StudioConfig, 'masterKey' | 'dataDir'>): Buffer {
   if (config.masterKey) return Buffer.from(config.masterKey, 'base64');
   const file = path.join(config.dataDir, 'master.key');
-  if (!existsSync(file)) {
+  try {
+    // Created only if absent ("wx"): an existing key is never replaced.
     writeFileSync(file, randomBytes(32).toString('base64') + '\n', { mode: 0o600, flag: 'wx' });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
   }
   const key = Buffer.from(readFileSync(file, 'utf8').trim(), 'base64');
   if (key.length !== 32) throw new Error(`${file} does not contain a 32-byte key.`);

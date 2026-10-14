@@ -98,10 +98,12 @@ export function parseVersion(output: string): string | null {
   return match ? match[1]! : null;
 }
 
+const escapeRegExp = (text: string): string => text.replace(/[\\^$.*+?()[\]{}|/-]/g, '\\$&');
+
 /** The help text of one option, from its name to the next option, on one line. */
 function optionText(help: string, option: string): string | null {
   const lines = help.split('\n');
-  const start = lines.findIndex((line) => new RegExp(`^\\s+(-\\w, )?${option.replace(/[-]/g, '\\-')}(\\b|,|\\s|$)`).test(line));
+  const start = lines.findIndex((line) => new RegExp(`^\\s+(-\\w, )?${escapeRegExp(option)}(\\b|,|\\s|$)`).test(line));
   if (start === -1) return null;
   const collected = [lines[start]!];
   for (let at = start + 1; at < lines.length; at += 1) {

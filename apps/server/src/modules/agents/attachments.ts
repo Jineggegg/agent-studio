@@ -208,23 +208,23 @@ export class AttachmentFiles {
           rejected.push({ name, code: 'attachment_too_large', message: `"${name}" is larger than ${megabytes} MB.` });
           continue;
         }
-        const size = (await stat(target)).size;
+        // One descriptor for the size and the first bytes: both describe the same file.
+        let size: number;
+        const head = Buffer.alloc(16);
+        const handle = await open(target, 'r');
+        try {
+          size = (await handle.stat()).size;
+          await handle.read(head, 0, 16, 0);
+        } finally {
+          await handle.close();
+        }
         if (size === 0) {
           await unlink(target).catch(() => {});
           rejected.push({ name, code: 'attachment_empty', message: `"${name}" is empty.` });
           continue;
         }
         let mediaType = declaredType(part.mimetype);
-        if (RASTER_IMAGE_TYPES.has(mediaType)) {
-          const handle = await open(target, 'r');
-          try {
-            const head = Buffer.alloc(16);
-            await handle.read(head, 0, 16, 0);
-            if (!looksLike(mediaType, head)) mediaType = 'application/octet-stream';
-          } finally {
-            await handle.close();
-          }
-        }
+        if (RASTER_IMAGE_TYPES.has(mediaType) && !looksLike(mediaType, head)) mediaType = 'application/octet-stream';
         const row: AttachmentRow = {
           id,
           session_id: sessionId,

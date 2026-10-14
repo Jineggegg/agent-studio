@@ -145,8 +145,11 @@ describe('the service worker: caching', () => {
     expect([...worker.stores.keys()].sort()).toEqual(['studio-offline-v1', 'unrelated-cache']);
 
     const reply = vi.fn();
-    await worker.dispatch('message', { data: { type: 'clear-caches' }, ports: [{ postMessage: reply }] });
+    await worker.dispatch('message', { origin: 'https://elsewhere.example', data: { type: 'clear-caches' }, ports: [{ postMessage: reply }] });
+    expect(worker.stores.size).toBe(2); // not from one of our pages: ignored
+    await worker.dispatch('message', { origin: ORIGIN, data: { type: 'clear-caches' }, ports: [{ postMessage: reply }] });
     expect([...worker.stores.keys()]).toEqual([]);
+    expect(reply).toHaveBeenCalledTimes(1);
     expect(reply).toHaveBeenCalledWith({ type: 'caches-cleared', removed: 2 });
   });
 });

@@ -64,7 +64,7 @@ so that feature code cannot get it wrong by accident.
 | `realtime.ts` | The WebSocket hub: per-topic authorisation, replay, snapshots, heartbeats, back-pressure, immediate disconnect when a credential is revoked |
 | `database.ts` | `node:sqlite` wrapper: prepared statements only, transactions, per-module numbered migrations |
 | `process.ts` | The only place that spawns processes: argument arrays, allow-listed environment, process-group termination, the bubblewrap sandbox profiles |
-| `paths.ts` | Confines client-supplied paths to a root, following symbolic links |
+| `paths.ts` | Confines client-supplied paths to a root, following symbolic links; opens through checked descriptors where a path may change mid-call |
 | `net.ts` | Outbound HTTP to configured/user-supplied addresses: post-resolution address checks, no redirects |
 | `secrets.ts`, `crypto.ts` | Master key, key derivation, AES-256-GCM secret store, scrypt, tokens |
 | `agent-tools.ts` | Registry of tools the Studio offers to every agent |

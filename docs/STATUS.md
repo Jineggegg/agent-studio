@@ -26,7 +26,7 @@ Last updated: 2026-10-14 (first public release, 2.0.0-beta.1).
 ## Verified at the release commit
 
 Locally, on Linux with bubblewrap available: `npm run typecheck`,
-`npm run lint`, 3,165 unit tests, 1,271 integration tests (12 skipped:
+`npm run lint`, 3,172 unit tests, 1,271 integration tests (12 skipped:
 real-CLI checks that run only on request), `npm run build`,
 `node scripts/smoke.mjs`, 434 black-box acceptance tests against the built
 server, 54 browser tests on Chromium (phone, tablet, desktop), `npm audit`
@@ -38,7 +38,16 @@ tests on Node 22 and 24, and the browser tests also in WebKit at phone size
 (74 in all). The first CI run there found what the local runs could not —
 an ordering bug in attachment lists, a shutdown that could wait minutes for a
 stalled upload, and tests that depended on this machine's set-up — all fixed
-before the release.
+before the release. CodeQL's first analysis found a real gap: the file tools
+of API models checked a path and then used it, so a command racing a tool
+could swap a directory for a link out of the project in between. They now
+open through checked descriptors (`openInside` in `apps/server/src/kernel/paths.ts`).
+Its other findings in shipped code were hardened (push-service names matched on
+domain boundaries, a pattern built from a fully escaped name, the service
+worker checking where a message comes from) or recorded as false positives
+with the reason (high-entropy tokens hashed with SHA-256; a certificate
+pinned by fingerprint; patterns that find secrets in text). Test code is no
+longer analysed.
 
 ## Known gaps and limits
 

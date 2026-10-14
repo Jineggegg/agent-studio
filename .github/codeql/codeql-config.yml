@@ -1,0 +1,10 @@
+# What CodeQL analyses: the code that ships. Test suites, fixtures and test
+# kits build hostile inputs, temporary files and fake credentials on purpose,
+# and are checked by the tests themselves.
+name: Agent Studio CodeQL configuration
+paths-ignore:
+  - tests
+  - apps/server/test
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/testing/**'

@@ -82,10 +82,11 @@ export function labelFromEndpoint(endpoint: string, language: Language): string 
   } catch {
     /* not an address: the fallback below applies */
   }
-  if (host.endsWith('push.apple.com')) return 'Apple';
-  if (host.endsWith('googleapis.com')) return 'Chrome';
-  if (host.endsWith('mozilla.com')) return 'Firefox';
-  if (host.endsWith('windows.com')) return 'Windows';
+  const under = (domain: string): boolean => host === domain || host.endsWith(`.${domain}`);
+  if (under('push.apple.com')) return 'Apple';
+  if (under('googleapis.com')) return 'Chrome';
+  if (under('mozilla.com')) return 'Firefox';
+  if (under('windows.com')) return 'Windows';
   return text(language, 'device.unknown');
 }
 

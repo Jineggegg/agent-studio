@@ -83,7 +83,11 @@ Security fixes go into the latest release only.
 - The data directory is owner-only. Stored credentials (model API keys, push
   keys) are encrypted with AES-256-GCM and are never returned by the API.
 - File, Git and download APIs are confined to the project directory after
-  following symbolic links, for reads as well as writes.
+  following symbolic links, for reads as well as writes. The file tools of API
+  models, whose commands can change the project while a tool runs, go further
+  on Linux: they open files through descriptors and check where those really
+  are, so swapping a directory for a link mid-call leads nowhere. Elsewhere
+  only the last step of a path is protected that way.
 - External programs (`git`, `gh`, `ssh`) are run without a shell, with
   client-supplied values validated and placed after `--`.
 - Outbound requests to addresses that come from configuration or users (model

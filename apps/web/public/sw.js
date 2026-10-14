@@ -189,6 +189,8 @@ self.addEventListener('notificationclick', (event) => {
 // ---- messages from the page ----------------------------------------------------
 
 self.addEventListener('message', (event) => {
+  // Only pages of this origin can reach a service worker; checked all the same.
+  if (event.origin !== self.location.origin) return;
   const data = event.data;
   if (!data || typeof data !== 'object') return;
   if (data.type === 'clear-caches') {

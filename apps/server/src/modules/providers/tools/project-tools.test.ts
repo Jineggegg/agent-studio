@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { linkSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -121,6 +122,28 @@ describe('projectTools', () => {
     expect(found).toBe('1 file match "**/*.ts".\nsrc/deep/module.ts');
     expect(await run(await tool('find_files').prepare({ pattern: 'master.key' }))).toBe('No file matches "master.key".');
     expect(await run(await tool('find_files').prepare({ pattern: 'index.js' }))).toBe('No file matches "index.js".');
+  });
+
+  it('creates folders on the way, and touches only regular files with one name — never waiting on a pipe', async () => {
+    const run = async (prepared: PreparedCall): Promise<string> => (await prepared.run(io)).text;
+    expect(await run(await tool('write_file').prepare({ path: 'made/on/the-way.txt', content: 'hello\n' }))).toContain('Created "made/on/the-way.txt"');
+    expect(readFileSync(path.join(root, 'made', 'on', 'the-way.txt'), 'utf8')).toBe('hello\n');
+
+    // A file approved for reading that became a named pipe by the time the call runs.
+    writeFileSync(path.join(root, 'piped.txt'), 'text\n');
+    const reading = await tool('read_file').prepare({ path: 'piped.txt' });
+    unlinkSync(path.join(root, 'piped.txt'));
+    execFileSync('mkfifo', [path.join(root, 'piped.txt')]);
+    await expect(reading.run(io)).rejects.toThrow('not a regular file');
+    await expect((await tool('write_file').prepare({ path: 'other.txt', content: 'x' })).run(io)).resolves.toBeTruthy();
+    rmSync(path.join(root, 'piped.txt'));
+
+    // A second name outside the project would carry the change out of it.
+    writeFileSync(path.join(root, 'linked.txt'), 'original\n');
+    linkSync(path.join(root, 'linked.txt'), path.join(base, 'outside-name.txt'));
+    const writing = await tool('write_file').prepare({ path: 'linked.txt', content: 'changed\n' });
+    await expect(writing.run(io)).rejects.toThrow('more than one name');
+    expect(readFileSync(path.join(base, 'outside-name.txt'), 'utf8')).toBe('original\n');
   });
 
   it('gives up on a tree that is too large instead of walking it for ever', async () => {
