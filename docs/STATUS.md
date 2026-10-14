@@ -70,13 +70,6 @@ longer analysed.
   markup, notification channels other than Web Push, natural-language
   automation planning, multiple chains per session list group.
 
-## Operational note
-
-This project is developed on a 6 GB machine that also runs other services.
-Heavy commands are serialised machine-wide and at most two development agents
-work at a time; running five in parallel exhausted memory and restarted the
-machine on 2026-10-14.
-
 ## Rules that outlive any one session
 
 - The predecessor system and its repository are read-only and are never read
