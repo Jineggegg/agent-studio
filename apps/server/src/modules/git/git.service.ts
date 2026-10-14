@@ -105,7 +105,7 @@ export class GitService {
 
   constructor(context: ModuleContext) {
     this.#context = context;
-    this.exec = new GitExec(context.processes);
+    this.exec = new GitExec(context.processes, undefined, context.sandbox);
   }
 
   // ---- plumbing ------------------------------------------------------------------
