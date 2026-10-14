@@ -1,3 +1,4 @@
+import os from 'node:os';
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { AgentToolRegistry } from './agent-tools.js';
@@ -27,6 +28,18 @@ export interface Studio {
  * Nothing is global — a test can create as many independent Studios as it
  * likes, each with its own data directory.
  */
+/**
+ * The operator's files that agents must not see either: the installer's
+ * settings folder (it may hold the master key) and the TLS private key.
+ */
+export function operatorPaths(config: Pick<StudioConfig, 'tls'>, env: NodeJS.ProcessEnv = process.env): string[] {
+  const configHome = env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+  const paths = [path.join(configHome, 'agent-studio')];
+  if (env.AGENT_STUDIO_ENV_FILE) paths.push(path.resolve(env.AGENT_STUDIO_ENV_FILE));
+  if (config.tls) paths.push(config.tls.keyFile);
+  return paths;
+}
+
 export async function createStudio(config: StudioConfig, modules: readonly StudioModule[]): Promise<Studio> {
   prepareDataDir(config.dataDir);
   const db = new Database(path.join(config.dataDir, 'studio.db'));
@@ -42,7 +55,7 @@ export async function createStudio(config: StudioConfig, modules: readonly Studi
 
   await http.init();
   const realtime = new RealtimeHub(http, bus, log);
-  const sandbox = await Sandbox.detect(config.sandbox, [config.dataDir]);
+  const sandbox = await Sandbox.detect(config.sandbox, [config.dataDir, ...operatorPaths(config)]);
   if (sandbox.status.mode === 'none') {
     log.warn({ reason: sandbox.status.reason }, 'agent processes will run without a sandbox');
   }
