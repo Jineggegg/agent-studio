@@ -26,7 +26,9 @@ PORT=${TEST_PORT:-7493}
 FILES_PORT=${TEST_FILES_PORT:-7494}
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/agent-studio-test-install.XXXXXX")
 TEST_HOME=$WORK/home
-mkdir -p "$TEST_HOME"
+# The data folder is named in the settings: a background service may run with the real HOME (launchd does).
+mkdir -p "$TEST_HOME/.config/agent-studio"
+printf 'AGENT_STUDIO_DATA_DIR=%s\n' "$TEST_HOME/.agent-studio" >"$TEST_HOME/.config/agent-studio/env"
 SERVER_PID=
 FILES_PID=
 

@@ -252,7 +252,7 @@ jobs:
           - { name: Ubuntu ARM64, runner: ubuntu-24.04-arm }
           - { name: macOS ARM64 with service, runner: macos-latest, service: true }
           - { name: Debian 12, runner: ubuntu-latest, image: 'debian:12', prepare: 'apt-get update -qq && apt-get install -y -qq curl ca-certificates python3 >/dev/null' }
-          - { name: Fedora 42, runner: ubuntu-latest, image: 'fedora:42', prepare: 'dnf install -y -q curl python3 tar gzip gawk findutils procps-ng >/dev/null' }
+          - { name: Fedora 42, runner: ubuntu-latest, image: 'fedora:42', prepare: 'dnf install -y -q curl python3 tar gzip gawk findutils procps-ng util-linux shadow-utils >/dev/null' }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
