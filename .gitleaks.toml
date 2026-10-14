@@ -41,6 +41,9 @@ regexes = [
   # Web Push subscription secrets from published examples (RFC 8291 section 5
   # and the W3C Push API examples), not from any real subscription.
   '''^(?:BTBZMqHH6r4Tts7J_aSIgg|tBHItJI5svbpez7KI4CCXg)$''',
+  # The fixed PKCS#8 header every RSA private key starts with; on its own it
+  # is not secret (tests use it to build a key that must come out redacted).
+  '''^MIIE[vw]QIBADANBgkqhkiG9w0BAQEFAASC[A-Za-z0-9+/]{0,4}$''',
   # The made-up JWTs allowed under the jwt rule further down, which this
   # rule also picks up.
   '''^eyJ[A-Za-z0-9_-]+\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.''',
@@ -178,4 +181,22 @@ regexes = [
   # A block shorter than any real key (RSA and Ed25519 keys run to several
   # hundred characters at least).
   '''^-----BEGIN[A-Z ]*PRIVATE KEY-----[\s\S]{0,170}$''',
+]
+
+[[rules]]
+id = "gcp-api-key"
+[[rules.allowlists]]
+description = "Made-up values in tests"
+condition = "AND"
+paths = [
+  '''\.test\.tsx?$''',
+  '''^apps/server/src/testing/''',
+  '''^apps/server/src/modules/[^/]+/testing/''',
+  '''^apps/server/test/''',
+  '''^tests/''',
+  '''^scripts/gitleaks-canary\.sh$''',
+]
+regexTarget = "secret"
+regexes = [
+  '''123456789|abcdefgh|(?i)test''',
 ]
