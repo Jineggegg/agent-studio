@@ -13,6 +13,37 @@ All notable changes to this project are recorded here. The format follows
   stays between 240 and 480 px and never takes the chat below 380 px; the
   width is remembered on the device. On a phone the list is a sheet and has
   no handle.
+- Before an upgrade changes the database's schema, the database is copied to
+  `<data>/backups` (readable by you only; the last three are kept).
+- The web client's third-party licence notices are shipped with it
+  (`/third-party-licenses.md`).
+
+### Security
+- An agent changing git's own configuration (`.git/`, `.gitattributes`,
+  `.gitmodules`, or a `git config` setting that names a program) now needs the
+  owner's approval in every mode but auto; and the Git panel's commits,
+  switches, pulls and pushes run in the agents' sandbox, so hooks and filters
+  an agent planted cannot reach the Studio's data directory.
+- The installer's settings folder (which may hold the master key) and the TLS
+  private key are hidden from agent processes.
+- An API token can no longer create allow rules, loosen a session's permission
+  mode, switch auto mode or hand agents the owner's credentials; it can still
+  tighten. These now need a signed-in browser.
+- Server logs redact secrets in error stacks, causes and messages whatever the
+  call site does, and the redaction covers more formats (Google and GitLab
+  keys, passwords in URLs, credential query parameters). Provider, agent and
+  plugin error text is redacted before it is shortened.
+- Plugin ids that would replace the plugin host's own files are refused, and
+  a plugin update whose files changed waits for the owner's approval, as ADR
+  0008 says.
+- The installer stops when the GitHub CLI cannot verify where the package was
+  built (`--skip-provenance` to override), accepts only x.y.z versions, keeps
+  the settings file at 0600 and runs nothing if its download is cut short.
+- The server refuses to start on a database a newer version has already
+  upgraded, instead of running on a schema it does not know.
+- Secret scanning ignores made-up credentials in tests only when the value is
+  itself recognisably made up; a CI check proves real-looking keys in test
+  files are still reported.
 
 ## [2.0.0-beta.2] — 2026-10-14
 
