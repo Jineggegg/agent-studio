@@ -1,0 +1,213 @@
+#!/bin/sh
+# The `agent-studio` command of an installed release.
+#
+#   agent-studio [start]                 run the server in the foreground
+#   agent-studio service <action>        install | uninstall | start | stop | restart | status | logs
+#   agent-studio status | setup-token | reset-password <user> | unlock | version | help
+#
+# Settings come from AGENT_STUDIO_* lines in ~/.config/agent-studio/env (the
+# background service reads the same file). The file is read, never executed.
+set -eu
+
+# ---- where things are -------------------------------------------------------
+
+resolve() {
+  target=$1
+  while [ -h "$target" ]; do
+    link=$(readlink "$target")
+    case $link in
+      /*) target=$link ;;
+      *) target=$(dirname "$target")/$link ;;
+    esac
+  done
+  (cd "$(dirname "$target")" && printf '%s/%s\n' "$(pwd -P)" "$(basename "$target")")
+}
+
+SELF=$(resolve "$0")
+APP_DIR=$(dirname "$(dirname "$SELF")")
+# An installed release lives in <install dir>/releases/<version>.
+INSTALL_DIR=${AGENT_STUDIO_INSTALL_DIR:-$(dirname "$(dirname "$APP_DIR")")}
+CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}/agent-studio
+# The service is told which file was meant when it was installed.
+ENV_FILE=${AGENT_STUDIO_ENV_FILE:-$CONFIG_DIR/env}
+SERVICE=${AGENT_STUDIO_SERVICE_NAME:-agent-studio}
+
+say() { printf '%s\n' "$*"; }
+fail() {
+  printf 'agent-studio: %s\n' "$*" >&2
+  exit 1
+}
+
+# ---- settings -----------------------------------------------------------------
+
+load_settings() {
+  [ -f "$ENV_FILE" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    case $line in
+      AGENT_STUDIO_[A-Z0-9_]*=*)
+        key=${line%%=*}
+        case $key in *[!A-Z0-9_]*) continue ;; esac
+        value=${line#*=}
+        # Quotes around a value are allowed, as systemd allows them.
+        case $value in \"*\") value=${value#\"}; value=${value%\"} ;; esac
+        # Variables already set in the environment win over the file.
+        if eval "[ -z \"\${$key+set}\" ]"; then export "$key=$value"; fi
+        ;;
+    esac
+  done <"$ENV_FILE"
+}
+
+# ---- Node.js ------------------------------------------------------------------
+
+find_node() {
+  for candidate in "${AGENT_STUDIO_NODE:-}" "$INSTALL_DIR/runtime/current/bin/node" "$(command -v node 2>/dev/null || true)"; do
+    if [ -z "$candidate" ] || [ ! -x "$candidate" ]; then continue; fi
+    if "$candidate" -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=13)?0:1)' 2>/dev/null; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  fail "Node.js 22.13 or newer was not found. Run the installer again, or set AGENT_STUDIO_NODE."
+}
+
+# ---- background service -------------------------------------------------------
+
+uses_systemd() {
+  [ "$(uname -s)" = Linux ] && command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1
+}
+
+uses_launchd() { [ "$(uname -s)" = Darwin ]; }
+
+launchd_label() { printf 'io.github.jineggegg.%s\n' "$SERVICE"; }
+launchd_plist() { printf '%s/Library/LaunchAgents/%s.plist\n' "$HOME" "$(launchd_label)"; }
+unit_file() { printf '%s/systemd/user/%s.service\n' "${XDG_CONFIG_HOME:-$HOME/.config}" "$SERVICE"; }
+
+# The service starts the release that `current` points to, so an update needs no new service.
+service_command() {
+  if [ -e "$INSTALL_DIR/current/bin/agent-studio" ]; then printf '%s\n' "$INSTALL_DIR/current/bin/agent-studio"; else printf '%s\n' "$SELF"; fi
+}
+
+xml_escape() { printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+
+service_install() {
+  # Agents find the CLIs they run on PATH: the service keeps the PATH of the shell that installs it.
+  path_now=${PATH}
+  # In a unit file "%" starts a specifier.
+  unit_path=$(printf '%s' "$path_now" | sed 's/%/%%/g')
+  command_path=$(service_command)
+  if uses_systemd; then
+    unit=$(unit_file)
+    mkdir -p "$(dirname "$unit")"
+    cat >"$unit" <<EOF
+[Unit]
+Description=Agent Cloud Studio
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart="$command_path" start
+Environment="PATH=$unit_path"
+Environment="AGENT_STUDIO_ENV_FILE=$(printf '%s' "$ENV_FILE" | sed 's/%/%%/g')"
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+EOF
+    systemctl --user daemon-reload
+    systemctl --user enable "$SERVICE" >/dev/null 2>&1
+    # Restarted, not just started: an installation may have replaced the release it was running.
+    systemctl --user restart "$SERVICE"
+    say "Installed and started the $SERVICE user service (systemd)."
+    if command -v loginctl >/dev/null 2>&1 && [ "$(loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null || true)" != yes ]; then
+      say "It runs while you are signed in. To keep it running after you sign out and start it at boot:"
+      say "    sudo loginctl enable-linger $(id -un)"
+    fi
+  elif uses_launchd; then
+    plist=$(launchd_plist)
+    mkdir -p "$(dirname "$plist")" "$HOME/Library/Logs"
+    cat >"$plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>$(launchd_label)</string>
+  <key>ProgramArguments</key>
+  <array><string>$(xml_escape "$command_path")</string><string>start</string></array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>$(xml_escape "$path_now")</string>
+    <key>AGENT_STUDIO_ENV_FILE</key><string>$(xml_escape "$ENV_FILE")</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+  <key>StandardOutPath</key><string>$(xml_escape "$HOME/Library/Logs/$SERVICE.log")</string>
+  <key>StandardErrorPath</key><string>$(xml_escape "$HOME/Library/Logs/$SERVICE.log")</string>
+</dict>
+</plist>
+EOF
+    launchctl bootout "gui/$(id -u)" "$plist" >/dev/null 2>&1 || true
+    launchctl bootstrap "gui/$(id -u)" "$plist"
+    say "Installed and started the $(launchd_label) launch agent."
+  else
+    fail "No service manager was found (systemd for your user, or launchd). Run \`agent-studio start\` yourself; on WSL, enable systemd in /etc/wsl.conf."
+  fi
+}
+
+service_uninstall() {
+  if uses_systemd; then
+    systemctl --user disable --now "$SERVICE" >/dev/null 2>&1 || true
+    rm -f "$(unit_file)"
+    systemctl --user daemon-reload
+  elif uses_launchd; then
+    launchctl bootout "gui/$(id -u)" "$(launchd_plist)" >/dev/null 2>&1 || true
+    rm -f "$(launchd_plist)"
+  fi
+  say "Removed the $SERVICE service. Your data and settings are kept."
+}
+
+service() {
+  action=${1:-status}
+  case $action in
+    install) service_install ;;
+    uninstall) service_uninstall ;;
+    start | stop | restart | status)
+      if uses_systemd; then
+        exec systemctl --user "$action" "$SERVICE"
+      elif uses_launchd; then
+        case $action in
+          start) launchctl kickstart "gui/$(id -u)/$(launchd_label)" ;;
+          stop) launchctl kill TERM "gui/$(id -u)/$(launchd_label)" ;;
+          restart) launchctl kickstart -k "gui/$(id -u)/$(launchd_label)" ;;
+          status) launchctl print "gui/$(id -u)/$(launchd_label)" | sed -n '1,25p' ;;
+        esac
+      else
+        fail "No background service is installed on this system."
+      fi
+      ;;
+    logs)
+      if uses_systemd; then
+        exec journalctl --user -u "$SERVICE" -n 200 -f
+      elif uses_launchd; then
+        exec tail -n 200 -f "$HOME/Library/Logs/$SERVICE.log"
+      else
+        fail "No background service is installed on this system."
+      fi
+      ;;
+    *) fail "Unknown service action \"$action\". Use install, uninstall, start, stop, restart, status or logs." ;;
+  esac
+}
+
+# ---- dispatch -----------------------------------------------------------------
+
+load_settings
+case ${1:-start} in
+  service)
+    shift
+    service "$@"
+    ;;
+  *)
+    NODE=$(find_node)
+    exec "$NODE" "$APP_DIR/apps/server/dist/main.js" "$@"
+    ;;
+esac

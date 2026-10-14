@@ -213,3 +213,67 @@ jobs:
         run: '"$RUNNER_TEMP/gitleaks/gitleaks" git --config .gitleaks.toml --redact --no-banner .'
       - name: Scan the working tree
         run: '"$RUNNER_TEMP/gitleaks/gitleaks" dir --config .gitleaks.toml --redact --no-banner .'
+
+  package:
+    name: Release package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: The shell scripts pass shellcheck
+        run: |
+          shellcheck -s bash packaging/install.sh scripts/test-install.sh
+          shellcheck -s sh packaging/bin/agent-studio
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/package-release.mjs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-package
+          path: dist-release/
+          retention-days: 3
+
+  install:
+    name: Install (${{ matrix.name }})
+    needs: package
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Ubuntu x64, runner: ubuntu-latest }
+          - { name: Ubuntu ARM64, runner: ubuntu-24.04-arm }
+          - { name: macOS ARM64 with service, runner: macos-latest, service: true }
+          - { name: Debian 12, runner: ubuntu-latest, image: 'debian:12', prepare: 'apt-get update -qq && apt-get install -y -qq curl ca-certificates python3 >/dev/null' }
+          - { name: Fedora 42, runner: ubuntu-latest, image: 'fedora:42', prepare: 'dnf install -y -q curl python3 tar gzip gawk findutils procps-ng >/dev/null' }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-package
+          path: dist-release
+      - name: Install the package as a user would, and check it
+        if: ${{ !matrix.image }}
+        run: scripts/test-install.sh ${{ matrix.service && '--service' || '' }}
+      - name: Install the package as a user would, and check it (in a container)
+        if: ${{ matrix.image }}
+        env:
+          IMAGE: ${{ matrix.image }}
+          PREPARE: ${{ matrix.prepare }}
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" "$IMAGE" bash -c "
+            set -e
+            $PREPARE
+            useradd -m tester
+            cp -R /repo /home/tester/repo && chown -R tester /home/tester/repo
+            su tester -c 'cd ~/repo && scripts/test-install.sh'
+          "
