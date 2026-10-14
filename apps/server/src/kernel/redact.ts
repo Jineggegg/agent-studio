@@ -26,7 +26,8 @@ export function redactSecrets(text: string): string {
   for (const pattern of PATTERNS) result = result.replace(pattern, REDACTED);
   result = result.replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/gi, `$1 ${REDACTED}`);
   // https://user:password@host — the password part of a URL.
-  result = result.replace(/\b([a-z][a-z0-9+.-]*:\/\/[^\s/:@]+:)[^\s/@]+@/gi, `$1${REDACTED}@`);
+  // Up to the last "@" before the path, so a password that itself contains "@" goes whole.
+  result = result.replace(/\b([a-z][a-z0-9+.-]*:\/\/[^\s/:@]+:)[^\s/]*@/gi, `$1${REDACTED}@`);
   // ?key=… and similar query parameters that carry a credential.
   result = result.replace(/([?&](?:key|sig|signature|code|auth)=)[^&\s#"']+/gi, `$1${REDACTED}`);
   result = result.replace(

@@ -82,6 +82,7 @@ export async function createStudio(config: StudioConfig, modules: readonly Studi
     if (module.migrations) db.migrate(module.name, module.migrations);
   }
   for (const module of modules) await module.setup(context);
+  if (db.upgradeSnapshot) log.info({ copy: db.upgradeSnapshot }, 'the database was copied before upgrading its schema');
   realtime.mount();
 
   let started = false;
