@@ -872,7 +872,8 @@ export class PluginsService {
     const now = Date.now();
     const limits = this.#limits;
     runtime.failures = [...runtime.failures.filter((at) => now - at < limits.crashWindowMs), now];
-    const message = `The plugin process ${info.reason}.`;
+    // The reason may quote the plugin itself; it is stored, shown to the owner and returned to panels.
+    const message = redactSecrets(`The plugin process ${info.reason}.`);
     runtime.lastFailure = { at: now, message };
     runtime.backoffUntil = now + Math.min(limits.backoffMaxMs, limits.backoffBaseMs * 2 ** (runtime.failures.length - 1));
     runtime.log.add(`[studio] ${message}`);
@@ -992,9 +993,11 @@ export class PluginsService {
 
   #asStudioError(error: unknown): unknown {
     if (!(error instanceof PluginCallError)) return error;
-    if (error.code === 'timeout') return new StudioError(504, 'plugin_timeout', error.message);
+    // The message can carry what the plugin said while failing to start; it goes back to whoever called.
+    const message = redactSecrets(error.message);
+    if (error.code === 'timeout') return new StudioError(504, 'plugin_timeout', message);
     if (error.code === 'too_large') return payloadTooLarge('That is larger than a plugin can be sent.');
-    return unavailable(error.message, 'plugin_unavailable');
+    return unavailable(message, 'plugin_unavailable');
   }
 
   /** Process id of a plugin's running process group, for the watchdog and for tests. */

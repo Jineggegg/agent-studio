@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RunResult } from '../../kernel/process.js';
-import { classifyGitFailure, cleanGitOutput, gitFailure } from './git.errors.js';
+import { appendToTail, classifyGitFailure, cleanGitOutput, gitFailure } from './git.errors.js';
 
 const failed = (stderr: string, extra: Partial<RunResult> = {}): RunResult => ({ code: 1, signal: null, stdout: '', stderr, truncated: false, timedOut: false, ...extra });
 
@@ -64,6 +64,14 @@ describe('cleaning what git printed', () => {
     expect(cleaned).toContain('https://example.org/repo.git/');
   });
 
+  it('removes the whole of a password that itself contains an @', () => {
+    const cleaned = cleanGitOutput("fatal: unable to access 'https://alice:p@ss@w0rd-secret@example.org/repo.git/': failed");
+    expect(cleaned).not.toMatch(/alice|p@ss|w0rd-secret/);
+    expect(cleaned).toBe("fatal: unable to access 'https://example.org/repo.git/': failed");
+    // An @ in the path is not a credential.
+    expect(cleanGitOutput('see https://example.org/team/@scope/pkg')).toBe('see https://example.org/team/@scope/pkg');
+  });
+
   it('removes escape sequences, control characters, progress rewrites and advice lines', () => {
     const cleaned = cleanGitOutput('\u001b[31merror:\u001b[0m bad\u0007 thing\nReceiving objects:  10%\rReceiving objects: 100%\nhint: use --force to override\nhint: or --admin\ndone');
     expect(cleaned).toBe('error: bad thing\nReceiving objects: 100%\ndone');
@@ -71,5 +79,23 @@ describe('cleaning what git printed', () => {
 
   it('caps the length', () => {
     expect(cleanGitOutput('x'.repeat(5000), 100)).toHaveLength(101);
+  });
+});
+
+describe('keeping the tail of what git printed', () => {
+  it('redacts a line while it is whole, before the tail is cut', () => {
+    // The token starts just before where the 100-character cut will fall.
+    const token = 'ghp_ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7';
+    const tail = appendToTail('', `${'a'.repeat(79)} ${token} ${'b'.repeat(69)}`, 100);
+    expect(tail.length).toBeLessThanOrEqual(100);
+    expect(tail).not.toContain('ZQ7');
+    expect(tail).toBe(`${'a'.repeat(19)} [redacted] ${'b'.repeat(69)}`);
+  });
+
+  it('keeps the newest lines within the limit', () => {
+    let tail = '';
+    for (let i = 0; i < 50; i += 1) tail = appendToTail(tail, `line ${i}`, 40);
+    expect(tail.length).toBeLessThanOrEqual(40);
+    expect(tail.endsWith('\nline 49')).toBe(true);
   });
 });

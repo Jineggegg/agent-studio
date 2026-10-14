@@ -22,12 +22,11 @@ import { StudioError, badRequest, conflict, describeError, forbidden, notFound }
 import { RECENT_AUTH_WINDOW_MS } from '../../kernel/http.js';
 import type { ModuleContext } from '../../kernel/module.js';
 import type { Principal } from '../../kernel/principal.js';
-import { redactSecrets } from '../../kernel/redact.js';
 import { ApiModelAdapter, type ProviderAccess } from './api-adapter.js';
 import { defaultModelOf, visibleModels } from './catalogue.js';
 import { checkApiKey } from './key-rules.js';
 import type { ApiAgentLimits } from './limits.js';
-import { ProviderError } from './openai-client.js';
+import { ProviderError, withoutKey } from './openai-client.js';
 import { PROVIDER_PRESETS, findPreset } from './presets.js';
 import { type ProviderRecord, ProviderStore } from './providers.store.js';
 import { type ProviderFailure, type ProviderTarget, checkBaseUrl, describeFailure, readDeepSeekBalance, wireFor } from './wire.js';
@@ -401,10 +400,11 @@ export class ProvidersService {
     }
   }
 
-  #failed(record: ProviderRecord, error: unknown, model?: string | null): ProviderFailure {
+  #failed(record: ProviderRecord, target: ProviderTarget, error: unknown, model?: string | null): ProviderFailure {
     const failure = describeFailure(error, { name: record.name, model: model ?? null });
     if (failure.code === 'provider_error') {
-      this.#context.log.error({ provider: record.id, err: redactSecrets(describeError(error)) }, 'a request to a model provider failed unexpectedly');
+      // The key itself may have no recognisable shape: it is removed by value, before anything else.
+      this.#context.log.error({ provider: record.id, err: withoutKey(describeError(error), target.apiKey) }, 'a request to a model provider failed unexpectedly');
     }
     return failure;
   }
@@ -432,7 +432,7 @@ export class ProvidersService {
     } catch (error) {
       const status = error instanceof ProviderError ? error.upstreamStatus : undefined;
       const noListing = status === 404 || status === 405 || status === 501;
-      if (!noListing) return { ...this.#remember(providerId, { ok: false, ...this.#failed(record, error) }), method: 'models', modelCount: null };
+      if (!noListing) return { ...this.#remember(providerId, { ok: false, ...this.#failed(record, access.target, error) }), method: 'models', modelCount: null };
     }
     const model = defaultModelOf(record) ?? record.models[0]?.id ?? null;
     if (model === null) {
@@ -443,7 +443,7 @@ export class ProvidersService {
       await this.#probe((signal) => wire.probe(access.target, model, signal));
       return { ...this.#remember(providerId, { ok: true, code: 'ok', message: `${record.name} accepted a request to ${model}.` }), method: 'completion', modelCount: null };
     } catch (error) {
-      return { ...this.#remember(providerId, { ok: false, ...this.#failed(record, error, model) }), method: 'completion', modelCount: null };
+      return { ...this.#remember(providerId, { ok: false, ...this.#failed(record, access.target, error, model) }), method: 'completion', modelCount: null };
     }
   }
 
@@ -456,7 +456,7 @@ export class ProvidersService {
     try {
       listed = await this.#probe((signal) => wireFor(record.kind).listModels(access.target, signal));
     } catch (error) {
-      const failure = this.#failed(record, error);
+      const failure = this.#failed(record, access.target, error);
       this.#remember(providerId, { ok: false, ...failure });
       throw new StudioError(502, failure.code, failure.message);
     }
@@ -497,7 +497,7 @@ export class ProvidersService {
       const read = await this.#probe((signal) => readDeepSeekBalance(access.target, signal));
       return { available: true, code: 'ok', message: `Balance as reported by ${record.name}.`, sufficient: read.sufficient, balances: read.balances, checkedAt: Date.now(), estimatedSpend };
     } catch (error) {
-      const failure = this.#failed(record, error);
+      const failure = this.#failed(record, access.target, error);
       return unavailable(failure.code, failure.message);
     }
   }

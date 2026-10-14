@@ -2,7 +2,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Readable } from 'node:stream';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ProviderError, completionsUrl, getJson, listModels, probeCompletion, siblingUrl, sseData, streamChat, type ChatDelta } from './openai-client.js';
+import { ProviderError, completionsUrl, getJson, listModels, probeCompletion, siblingUrl, sseData, streamChat, withoutKey, type ChatDelta } from './openai-client.js';
 
 const local = { allowHttp: true, allowPrivateNetwork: true } as const;
 
@@ -216,6 +216,29 @@ describe('streamChat', () => {
     expect(error).toMatchObject({ code: 'provider_stream_error' });
     expect(error.message).not.toContain(apiKey);
     expect(error.message).toContain('[redacted]');
+  });
+
+  it('removes the key from an error body before cutting it, so no fragment of it survives the cut', async () => {
+    // A key in no well-known shape, echoed in a plain-text body so that it straddles the 300-character cut.
+    const apiKey = 'zq9-local-key-of-no-known-shape-0123456789';
+    respond = (response) => {
+      response.writeHead(500, { 'content-type': 'text/plain' }).end(`${'x'.repeat(290)}${apiKey} and more`);
+    };
+    const error = await probeCompletion({ baseUrl: base, apiKey, model: 'model-a', policy: local }).then(
+      () => null,
+      (thrown: Error) => thrown,
+    );
+    expect(error).toMatchObject({ code: 'provider_unavailable', upstreamStatus: 500 });
+    expect(error!.message).not.toContain(apiKey.slice(0, 6));
+    expect(error!.message).toContain(`${'x'.repeat(290)}[redacted]`);
+  });
+
+  it('removes a key by value before looking for key-shaped text, which could otherwise change part of it', () => {
+    // A pattern matches the end of this key; redacting that first would leave the start, which then matches nothing.
+    const apiKey = 'zq9prefixofthekey.sk-AAAAAAAAAAAAAAAAAAAAAAAA';
+    const text = withoutKey(`request failed: invalid key ${apiKey}; also ghp_abcdefghijklmnopqrstuvwxyz0123456789`, apiKey);
+    expect(text).toBe('request failed: invalid key [redacted]; also [redacted]');
+    expect(withoutKey('nothing secret', null)).toBe('nothing secret');
   });
 
   it('checks a key with one token, not streamed, when asked to', async () => {

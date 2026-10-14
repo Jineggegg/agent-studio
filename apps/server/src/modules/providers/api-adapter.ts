@@ -16,7 +16,7 @@ import {
 import { defaultModelOf, resolveModel, visibleModels } from './catalogue.js';
 import { buildInstructions, fitConversation, historyMessages, inputBudget, promptText } from './conversation.js';
 import { type ApiAgentLimits, MAX_IMAGES_BYTES, MAX_IMAGE_BYTES, MAX_TEXT_ATTACHMENT_BYTES } from './limits.js';
-import type { ChatMessage, TokenUsage, ToolDeclaration } from './openai-client.js';
+import { type ChatMessage, type TokenUsage, type ToolDeclaration, withoutKey } from './openai-client.js';
 import type { ProviderRecord } from './providers.store.js';
 import { PROJECT_TOOL_NAMES, projectTools } from './tools/project-tools.js';
 import { type ModelTool, type PreparedCall, ToolRefusal, type ToolOutcome, boundResult, clipText, oneLine } from './tools/tool.js';
@@ -580,8 +580,8 @@ class Turn {
         : describeFailure(error, { name: record.name, model: model.id });
       this.#access.report({ ok: false, ...failure });
       if (failure.code === 'provider_error') {
-        const detail = redactSecrets(describeError(error));
-        host.log.error({ provider: record.id, err: target.apiKey ? detail.split(target.apiKey).join('[redacted]') : detail }, 'a request to a model provider failed unexpectedly');
+        // The exact key first: redacting patterns first could change part of it so that it no longer matches.
+        host.log.error({ provider: record.id, err: withoutKey(describeError(error), target.apiKey) }, 'a request to a model provider failed unexpectedly');
       } else {
         host.log.warn({ provider: record.id, code: failure.code }, 'a request to a model provider failed');
       }

@@ -7,7 +7,8 @@ import { badRequest, conflict, describeError, forbidden, isStudioError, notFound
 import type { ModuleContext } from '../../kernel/module.js';
 import type { Principal } from '../../kernel/principal.js';
 import { terminate, type ProcessSupervisor } from '../../kernel/process.js';
-import { classifyGitFailure, cleanGitOutput } from './git.errors.js';
+import { redactSecrets } from '../../kernel/redact.js';
+import { appendToTail, classifyGitFailure, cleanGitOutput } from './git.errors.js';
 import type { GitExec } from './git.exec.js';
 import { parseRepositoryAddress } from './git.refs.js';
 
@@ -32,6 +33,8 @@ const FOLDER_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 const MAX_RUNNING = 2;
 const KEEP_FINISHED_MS = 10 * 60_000;
 const PROGRESS_INTERVAL_MS = 250;
+/** Characters of git's output kept for explaining a failure. */
+const TAIL_CHARS = 4000;
 
 function expandHome(value: string): string {
   if (value === '~') return os.homedir();
@@ -182,7 +185,7 @@ export class CloneManager {
       pending = lines.pop() ?? '';
       for (const line of lines) {
         if (line.trim().length === 0) continue;
-        job.tail = `${job.tail}\n${line}`.slice(-4000);
+        job.tail = appendToTail(job.tail, line, TAIL_CHARS);
         const progress = /^(?:remote: )?([A-Za-z][A-Za-z ]{2,40}?):\s+(\d{1,3})%/.exec(line);
         if (progress) {
           const phase = progress[1]!;
@@ -196,11 +199,11 @@ export class CloneManager {
     child.stderr?.on('data', onOutput);
     child.stdout?.on('data', () => {});
     child.once('error', (error) => {
-      job.tail = `${job.tail}\n${describeError(error)}`;
+      job.tail = `${job.tail}\n${redactSecrets(describeError(error))}`;
       void this.#finish(job, null, (error as NodeJS.ErrnoException).code === 'ENOENT');
     });
     child.once('close', (code) => {
-      job.tail = `${job.tail}\n${pending}`.slice(-4000);
+      job.tail = appendToTail(job.tail, pending, TAIL_CHARS);
       void this.#finish(job, code, false);
     });
 
