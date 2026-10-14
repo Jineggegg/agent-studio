@@ -4,6 +4,14 @@ All notable changes to this project are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- A terminal whose program ended in the moment between a browser connecting
+  and attaching (a remote host refusing the connection at once, say) closed
+  that connection without showing why; the attach now still gets the output
+  and the exit reason.
+
 ## [2.0.0-beta.1] — 2026-10-14
 
 First public version: a complete, independently written implementation. It is

@@ -676,6 +676,9 @@ export class TerminalSession {
 
     const closeCode = exit.reason === 'shutdown' ? TERMINAL_CLOSE_CODES.goingAway : TERMINAL_CLOSE_CODES.ended;
     for (const client of [...this.#clients]) {
+      // A connection that has not attached yet is answered when it does: the replay then shows why the terminal
+      // ended (a remote host that refused the connection at once, say). Its attach timeout still applies.
+      if (client.state === 'pending' && exit.reason !== 'shutdown') continue;
       if (client.state === 'attached') this.#send(client, this.#exitFrame(exit));
       this.#close(client, closeCode, exit.reason);
     }

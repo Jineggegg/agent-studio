@@ -356,6 +356,19 @@ live(liveTitle('a terminal session'), () => {
     }
   });
 
+  it('lets a connection that had not attached yet read why the terminal ended', async () => {
+    const bench = await start();
+    const session = await bench.create();
+    const waiting = await bench.connect(session); // connected, its attach frame not sent yet
+    const first = await bench.attach(session);
+    first.type('echo gone-$((1 + 1)); exit 3\r');
+    expect(await first.next('exit')).toMatchObject({ exitCode: 3, reason: 'exited' });
+    waiting.sendFrame({ type: 'attach', cols: 80, rows: 24 });
+    await waiting.next('attached');
+    expect(await waiting.next('exit')).toMatchObject({ exitCode: 3, reason: 'exited' });
+    expect(waiting.text()).toContain('gone-2');
+  });
+
   it('serves two devices at once and follows the size of the one used last', async () => {
     const bench = await start();
     const session = await bench.create();
