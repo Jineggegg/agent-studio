@@ -22,12 +22,62 @@
   --wb-gutter: var(--space-6);
 }
 .wb__list {
+  position: relative;
   display: flex;
   flex: none;
   flex-direction: column;
   min-height: 0;
   box-shadow: inset -1px 0 0 var(--color-separator);
   background: var(--color-bg);
+}
+/*
+ * The list's resize handle: a strip over its trailing edge, drawn as a line
+ * only on hover, focus and while dragged. Above the chat's title bar, which it
+ * overlaps by half its width; a little wider where the pointer is a finger.
+ */
+.wb__list-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -6px;
+  z-index: calc(var(--z-bar) + 1);
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+}
+@media (pointer: coarse) {
+  .wb__list-handle {
+    right: -8px;
+    width: 16px;
+  }
+}
+.wb__list-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 1px);
+  width: 2px;
+  background: transparent;
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+@media (hover: hover) {
+  .wb__list-handle:hover::after {
+    background: var(--color-separator-strong);
+  }
+}
+.wb__list-handle:focus-visible::after,
+.wb__list[data-dragging] .wb__list-handle::after {
+  background: var(--color-accent);
+}
+.wb__list-handle:focus-visible {
+  outline: none;
+}
+/* While the list is dragged nothing is selected, and the pointer keeps its shape over the chat. */
+.wb:has(> .wb__list[data-dragging]) {
+  cursor: col-resize;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .wb__main {
   position: relative;

@@ -227,3 +227,89 @@ test('reloading in the middle of a stream shows every part once', async ({
   expect(parts).toEqual(Array.from({ length: parts.length }, (_, index) => parts[0]! + index));
   await expect(chat.getByText('[[long]]', { exact: true })).toHaveCount(1);
 });
+
+test('the docked conversation list is resized from its edge and keeps its width; a phone has no handle', async ({
+  page,
+  api,
+  unique,
+  freshFolder,
+  layout,
+  viewport,
+}) => {
+  const project = await api.createProject({
+    name: unique('Resize'),
+    rootDir: freshFolder('resize'),
+  });
+  await openNewConversation(page, project.id);
+  const handle = page.getByRole('separator', { name: 'Resize the conversation list' });
+
+  if (layout === 'phone') {
+    // The list is a drawer there: nothing to resize, closed or open.
+    await expect(handle).toHaveCount(0);
+    await page.getByRole('button', { name: /^Show conversations/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Conversations' })).toBeVisible();
+    await expect(handle).toHaveCount(0);
+    return;
+  }
+
+  const list = page.getByRole('navigation', { name: 'Conversations' });
+  const width = () => list.evaluate((element) => Math.round(element.getBoundingClientRect().width));
+  // As wide as the chat can spare, and never wider than 480 px.
+  const max = Math.min(480, viewport!.width - 380);
+  await expect(handle).toHaveAttribute('aria-valuenow', '320');
+  await expect(handle).toHaveAttribute('aria-valuemin', '240');
+  await expect(handle).toHaveAttribute('aria-valuemax', String(max));
+  expect(await width()).toBe(320);
+
+  const drag = async (dx: number) => {
+    const box = (await handle.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + dx / 2, y, { steps: 4 });
+    await page.mouse.move(x + dx, y, { steps: 4 });
+    await page.mouse.up();
+  };
+
+  await test.step('dragging, within its limits', async () => {
+    await drag(60);
+    await expect.poll(width).toBe(380);
+    await expect(handle).toHaveAttribute('aria-valuenow', '380');
+    // Dragging over the chat selected nothing.
+    expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
+    await drag(800);
+    await expect.poll(width).toBe(max);
+    await drag(-800);
+    await expect.poll(width).toBe(240);
+  });
+
+  await test.step('keys and the double click', async () => {
+    await handle.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(handle).toHaveAttribute('aria-valuenow', '264');
+    await page.keyboard.press('ArrowLeft');
+    await expect(handle).toHaveAttribute('aria-valuenow', '240');
+    await handle.dblclick();
+    await expect.poll(width).toBe(320);
+  });
+
+  await test.step('remembered on this device', async () => {
+    await drag(40);
+    await expect.poll(width).toBe(360);
+    await expect
+      .poll(() => page.evaluate(() => window.localStorage.getItem('studio.workbench.device') ?? ''))
+      .toContain('"listWidth":360');
+    await page.reload();
+    await expect(composer(page)).toBeVisible();
+    await expect.poll(width).toBe(360);
+  });
+
+  await test.step('hidden and shown again', async () => {
+    await list.getByRole('button', { name: 'Hide conversations' }).click();
+    await expect(list).toHaveCount(0);
+    await expect(handle).toHaveCount(0);
+    await page.getByRole('button', { name: /^Show conversations/ }).click();
+    await expect.poll(width).toBe(360);
+  });
+});

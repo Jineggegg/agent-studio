@@ -4,6 +4,16 @@ All notable changes to this project are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- The conversation list beside the chat (tablet and wide) can be made wider or
+  narrower by dragging its edge — with a mouse, a pen or a finger — or with ←
+  and → on the focused handle; a double click returns it to the default. It
+  stays between 240 and 480 px and never takes the chat below 380 px; the
+  width is remembered on the device. On a phone the list is a sheet and has
+  no handle.
+
 ## [2.0.0-beta.2] — 2026-10-14
 
 ### Added

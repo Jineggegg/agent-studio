@@ -16,6 +16,18 @@ export const INSPECTOR_MIN_WIDTH = 320;
 export const INSPECTOR_MAX_WIDTH = 1100;
 export const INSPECTOR_DEFAULT_WIDTH = 440;
 
+/**
+ * The docked conversation list (tablet and wide). At 240 px the scope switch
+ * keeps both its labels, "New conversation" keeps its draft badge, the search
+ * field its shortcut hint, and a row a readable part of its title beside the
+ * time; beyond 480 px a row gains nothing but empty space, while the chat
+ * loses the width it reads best at. 320 is what the list was before it could
+ * be resized.
+ */
+export const LIST_MIN_WIDTH = 240;
+export const LIST_MAX_WIDTH = 480;
+export const LIST_DEFAULT_WIDTH = 320;
+
 export interface DeviceMemory {
   /** Which list sits beside the chat. */
   scope: ListScope;
@@ -24,6 +36,8 @@ export interface DeviceMemory {
   lastConversation: Record<string, string>;
   /** The docked list is hidden (tablet and wide). */
   listCollapsed: boolean;
+  /** How wide the docked list was made, in CSS px. What fits beside the chat is decided when it is drawn. */
+  listWidth: number;
   inspector: { open: boolean; panel: string | null; width: number };
   /** What the next new conversation starts with. */
   lastAgentId: string | null;
@@ -42,6 +56,7 @@ export const DEFAULT_MEMORY: DeviceMemory = {
   lastProjectId: null,
   lastConversation: {},
   listCollapsed: false,
+  listWidth: LIST_DEFAULT_WIDTH,
   inspector: { open: false, panel: null, width: INSPECTOR_DEFAULT_WIDTH },
   lastAgentId: null,
   lastModel: {},
@@ -63,6 +78,11 @@ export function clampInspectorWidth(width: number): number {
   return Math.min(INSPECTOR_MAX_WIDTH, Math.max(INSPECTOR_MIN_WIDTH, Math.round(width)));
 }
 
+export function clampListWidth(width: number): number {
+  if (!Number.isFinite(width)) return LIST_DEFAULT_WIDTH;
+  return Math.min(LIST_MAX_WIDTH, Math.max(LIST_MIN_WIDTH, Math.round(width)));
+}
+
 /** Stored data is never trusted to have the right shape: every field is read defensively. */
 export function parseDeviceMemory(raw: unknown): DeviceMemory {
   if (typeof raw !== 'object' || raw === null) return DEFAULT_MEMORY;
@@ -73,6 +93,7 @@ export function parseDeviceMemory(raw: unknown): DeviceMemory {
     lastProjectId: typeof value.lastProjectId === 'string' ? value.lastProjectId : null,
     lastConversation: stringMap(value.lastConversation),
     listCollapsed: value.listCollapsed === true,
+    listWidth: clampListWidth(typeof value.listWidth === 'number' ? value.listWidth : LIST_DEFAULT_WIDTH),
     inspector: {
       open: inspector.open === true,
       panel: typeof inspector.panel === 'string' ? inspector.panel : null,
@@ -166,6 +187,12 @@ export function setNewDraft(projectId: string, text: string): void {
 export function setInspectorMemory(patch: Partial<DeviceMemory['inspector']>): void {
   const current = useDeviceMemory.getState().inspector;
   remember({ inspector: { ...current, ...patch, width: clampInspectorWidth(patch.width ?? current.width) } });
+}
+
+/** Remembers how wide the docked list was made; double-clicking its edge passes the default. */
+export function setListWidth(width: number): void {
+  const next = clampListWidth(width);
+  if (useDeviceMemory.getState().listWidth !== next) remember({ listWidth: next });
 }
 
 function forget(): void {

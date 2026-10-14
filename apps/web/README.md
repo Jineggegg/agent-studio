@@ -256,7 +256,10 @@ registered from its own feature; the workbench supplies the container:
 | phone | a full-screen layer over the chat, closed with its own control or Escape |
 
 Which panel is on show, whether the inspector is open and how wide it is are
-remembered per device. **With no panel registered there is no inspector at
+remembered per device. The conversation list at the leading edge is resized the same
+way on tablet and wide (240–480 px, never taking the chat below 380 px; a
+double click on its handle restores 320 px); `columns.ts` decides how the
+three columns share the width, so a narrower window never squeezes the chat. **With no panel registered there is no inspector at
 all** — no empty column, no toggle in the title bar, no ⌘J.
 
 ```ts
