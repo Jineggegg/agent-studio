@@ -574,6 +574,8 @@ export const en = {
   'workbench.list.showAttention': 'Show conversations — one needs you',
   'workbench.list.showUnseen': 'Show conversations — one has finished',
   'workbench.list.hide': 'Hide conversations',
+  'workbench.list.resize': 'Resize the conversation list',
+  'workbench.list.resizeHint': 'Drag to resize · double-click for the default width',
   'workbench.list.search': 'Search conversations',
   'workbench.list.searchArchived': 'Search archived conversations',
   'workbench.list.clearSearch': 'Clear search',

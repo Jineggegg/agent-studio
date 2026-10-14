@@ -569,6 +569,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'workbench.list.showAttention': '显示会话列表——有会话需要你处理',
   'workbench.list.showUnseen': '显示会话列表——有会话已完成',
   'workbench.list.hide': '隐藏会话列表',
+  'workbench.list.resize': '调整会话列表的宽度',
+  'workbench.list.resizeHint': '拖动调整宽度 · 双击恢复默认宽度',
   'workbench.list.search': '搜索会话',
   'workbench.list.searchArchived': '搜索已归档的会话',
   'workbench.list.clearSearch': '清除搜索',

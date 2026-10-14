@@ -21,9 +21,6 @@ import {
   useInspectorState,
 } from './registry';
 
-/** The chat column never gets narrower than this while the inspector is dragged wider. */
-export const CHAT_MIN_WIDTH = 380;
-
 const loaders = new Map<string, LazyComponent<InspectorPanelProps>>();
 function componentFor(panel: InspectorPanel): LazyComponent<InspectorPanelProps> {
   let component = loaders.get(panel.id);

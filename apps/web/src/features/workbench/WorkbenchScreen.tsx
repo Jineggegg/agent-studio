@@ -20,21 +20,21 @@ import { OverlayPortal, focusableWithin, isAnyOverlayOpen, useOverlayLayer } fro
 import { useAgents } from './agents';
 import { workbenchApi } from './api';
 import { ChatColumn } from './chat/ChatColumn';
+import { arrangeColumns, listPresentation } from './columns';
 import { moveNewAttachments } from './composer/attachmentStore';
 import { moveNewDraft, newChatDraftKey, useDrafts } from './composer/drafts';
 import { restoreOutbox } from './composer/outbox';
 import { type ListScope, forgetConversation, remember, useDeviceMemory } from './device';
-import { CHAT_MIN_WIDTH, Inspector, useInspectorPanels } from './inspector/Inspector';
+import { Inspector, presentationFor, useInspectorPanels } from './inspector/Inspector';
 import { type InspectorContext, toggleInspector, useInspectorState } from './inspector/registry';
 import { InspectorScope } from './inspector/scope';
 import { parseWorkbenchPath, workbenchPaths } from './routes';
+import { ListColumn } from './sessions/ListColumn';
 import { SessionList, type SessionListHandle } from './sessions/SessionList';
 import { listMark } from './sessions/grouping';
 import { flattenSessions, upsertSession, useSessionList, useSessionQuery, useWorkbenchLiveUpdates, workbenchKeys } from './sessions/queries';
 import { onSessionAnnounced } from './transcript/channel';
 import './workbench.css';
-
-const LIST_WIDTH = 320;
 
 /** The conversation list as a sheet from the leading edge (phone): modal, focus kept inside, Escape and the backdrop close it. */
 function ListDrawer({ open, onClose, children }: { open: boolean; onClose: () => void; children: ReactNode }) {
@@ -323,7 +323,7 @@ export default function WorkbenchScreen() {
   // ---- arrangement ---------------------------------------------------------------
 
   const setScope = useCallback((scope: ListScope) => remember({ scope }), []);
-  const listDocked = layout !== 'phone' && !memory.listCollapsed;
+  const listDocked = listPresentation(layout, memory.listCollapsed) === 'docked';
   const hideList = useCallback(() => (layout === 'phone' ? setDrawerOpen(false) : remember({ listCollapsed: true })), [layout]);
   const showList = useCallback(() => (layout === 'phone' ? setDrawerOpen(true) : remember({ listCollapsed: false })), [layout]);
   const toggleList = useCallback(() => {
@@ -532,18 +532,26 @@ export default function WorkbenchScreen() {
   }
 
   const inspectorOpen = inspectorState.open && panels.length > 0;
+  // Fitted again whenever the frame changes size, so a window made narrower never leaves the chat too narrow to use.
+  const columns = arrangeColumns({
+    frameWidth,
+    listDocked,
+    listWidth: memory.listWidth,
+    inspectorDocked: inspectorOpen && presentationFor(layout) === 'docked',
+    inspectorWidth: inspectorState.width,
+  });
   return (
     <div className="wb" ref={frame} data-list={listDocked ? 'docked' : 'hidden'} data-inspector={inspectorOpen ? 'open' : undefined}>
       {listDocked && (
-        <nav className="wb__list" style={{ width: LIST_WIDTH }} aria-label={t('workbench.list.title')}>
+        <ListColumn width={columns.list} maxWidth={columns.listMax}>
           {list('docked')}
-        </nav>
+        </ListColumn>
       )}
       <main className="wb__main" inert={layout === 'phone' && inspectorOpen}>
         {!showsChat && <StageTitle title={stageTitle} />}
         <InspectorScope value={inspectorContext}>{main}</InspectorScope>
       </main>
-      {panels.length > 0 && <Inspector context={inspectorContext} panels={panels} layout={layout} maxWidth={frameWidth - (listDocked ? LIST_WIDTH : 0) - CHAT_MIN_WIDTH} />}
+      {panels.length > 0 && <Inspector context={inspectorContext} panels={panels} layout={layout} maxWidth={columns.inspectorMax} />}
       {layout === 'phone' && (
         <ListDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
           {list('sheet')}
