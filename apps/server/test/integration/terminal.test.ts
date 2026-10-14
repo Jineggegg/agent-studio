@@ -160,6 +160,23 @@ async function run(terminal: TerminalConnection, command: string, timeoutMs = 50
   return text.slice(begin, text.indexOf('<end>', begin)).replaceAll('\r\n', '\n').trim();
 }
 
+/** Waits until a client has received nothing new for a moment: a shell prints its prompt after a command's output. */
+async function quiet(terminal: { readonly seq: number }, restMs = 300): Promise<void> {
+  let seen = terminal.seq;
+  let since = Date.now();
+  await waitUntil(
+    () => {
+      if (terminal.seq !== seen) {
+        seen = terminal.seq;
+        since = Date.now();
+      }
+      return Date.now() - since >= restMs;
+    },
+    5000,
+    'the output to come to rest',
+  );
+}
+
 /** Waits until a client has been told that the terminal now has this size. */
 const toldSize = (terminal: TerminalConnection, cols: number, rows: number) =>
   waitUntil(() => terminal.frames.some((frame) => frame.type === 'resize' && frame.cols === cols && frame.rows === rows), 3000, `a resize to ${cols}x${rows}`);
@@ -318,6 +335,7 @@ live(liveTitle('a terminal session'), () => {
     const session = await bench.create();
     const first = await bench.attach(session);
     await run(first, 'i=0; while [ $i -lt 400 ]; do echo "line $i of filler text that overflows the buffer"; i=$((i+1)); done');
+    await quiet(first);
     const total = first.seq;
     await first.close();
 

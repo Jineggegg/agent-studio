@@ -1,4 +1,4 @@
-/* global URL, fetch, AbortSignal, setTimeout */
+/* global URL, fetch, AbortSignal, setTimeout, setInterval */
 // A hostile plugin. It does not use the SDK — nothing obliges a plugin to —
 // and speaks the line protocol itself so that it can also send what the SDK
 // never would: forged scopes, unknown methods, floods.
