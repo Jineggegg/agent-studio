@@ -43,7 +43,8 @@ test('the launcher shows the day, the apps and the projects, and opens each', as
 
   for (const app of ['Workbench', 'Inbox', 'Memory', 'Usage', 'Settings'])
     await expect(appTile(page, app)).toBeVisible();
-  await expect(appTile(page, 'Inbox')).toHaveAccessibleName(/^Inbox (Nothing waiting|\d+ waiting)/);
+  // What the tile says depends on what earlier tests left in the shared inbox.
+  await expect(appTile(page, 'Inbox')).toHaveAccessibleName(/^Inbox (Nothing waiting|\d+ waiting|\d+ new results?|\d+ in progress)/);
   await expect(launcher(page).getByRole('button', { name: 'New project' })).toBeAttached();
 
   // A system tile opens its app; Back returns to the launcher.

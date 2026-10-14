@@ -41,6 +41,10 @@ const ENGINE_NOTICES: readonly RegExp[] = [
   // A resize observer whose callback changed a size it watches gets its remaining notifications in the next frame —
   // the specified guard against endless loops — and WebKit announces that through window.onerror.
   /^page error: [^:\n]*: ResizeObserver loop completed with undelivered notifications\./,
+  // A same-origin API request still in flight when the test navigates is cancelled, and WebKit logs that as a
+  // JavaScript error ("access control checks"), which Playwright reports as a page error. The app's own handling of
+  // the failed request is unaffected; a real cross-origin failure cannot happen here (the app makes no such request).
+  /^page error: Fetch API cannot load http: ?\/{1,2}127\.0\.0\.1:\d+\/api\/\S* due to access control checks\./,
 ];
 
 /** Runs in every page before the app: reports blocked content in a way every engine records. */
