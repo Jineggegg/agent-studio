@@ -14,7 +14,8 @@ import { CodexProbe } from './status.js';
  * Where to read on:
  *
  * - `adapter.ts`   a run from start to finish, and how Codex's approval requests reach the permission engine
- * - `launch.ts`    the command line, the environment, and how the user's own Codex settings are kept out
+ * - `launch.ts`    the command line, the environment, and what the process is not shown: the account's own
+ *                  Codex settings and instructions, its credentials, and when Codex may run without a sandbox
  * - `translate.ts` Codex's items and notifications → the Studio's events
  * - `client.ts`    the connection; `protocol.ts` the messages; `errors.ts` failures in words
  * - `status.ts`    installed? signed in? which models?
@@ -50,11 +51,23 @@ import { CodexProbe } from './status.js';
  * which does not mean it was reset. Reports with nothing in them are not
  * published.
  */
+/**
+ * Whether an agent working in this project may see the credentials of the
+ * account the Studio runs as: the project's `agentCredentials` feature, which
+ * only the owner can switch on. A session outside any project never may.
+ */
+export function agentCredentialsAllowed(context: ModuleContext, projectId: string | null): boolean {
+  if (projectId === null) return false;
+  const projects = context.services.projects;
+  const project = projects.find(projectId);
+  return project !== null && projects.isFeatureEnabled(project, 'agentCredentials');
+}
+
 export const codexModule: StudioModule = {
   name: 'codex',
 
   setup(context: ModuleContext) {
-    const launcher = new CodexLauncher({ processes: context.processes, sandbox: context.sandbox, dataDir: context.config.dataDir });
+    const launcher = new CodexLauncher({ processes: context.processes, sandbox: context.sandbox, allowWithoutSandbox: context.config.codexWithoutSandbox });
     const log = context.log.child({ module: 'codex' });
     const probe = new CodexProbe({ launcher, processes: context.processes, log });
     context.services.agents.registerAdapter(
@@ -64,6 +77,7 @@ export const codexModule: StudioModule = {
         processes: context.processes,
         bus: context.bus,
         log,
+        credentialsAllowed: (projectId) => agentCredentialsAllowed(context, projectId),
         // The memory module is set up after this one, so it is looked up when a run starts.
         standingInstructions: () => context.services.memory?.agentGuide() ?? null,
       }),

@@ -60,7 +60,8 @@ describe.skipIf(!enabled)('smoke test: the real Codex CLI through the adapter', 
     if (process.env.STUDIO_CODEX_SMOKE_HOME) process.env.CODEX_HOME = process.env.STUDIO_CODEX_SMOKE_HOME;
     kit = await createAgentsKit({
       config: {
-        sandbox: process.env.STUDIO_CODEX_SMOKE_SANDBOX === 'off' ? 'off' : 'auto',
+        // Without the sandbox Codex runs only where the operator said so; asking for "off" here says so.
+        ...(process.env.STUDIO_CODEX_SMOKE_SANDBOX === 'off' ? { sandbox: 'off' as const, codexWithoutSandbox: true } : { sandbox: 'auto' as const }),
         ...(process.env.STUDIO_CODEX_SMOKE_HOME ? { childEnvPassthrough: ['CODEX_HOME'] } : {}),
       },
     });

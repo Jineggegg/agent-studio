@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, lstatSync, readlinkSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readlinkSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { ENV_PREFIX, type SandboxMode } from './config.js';
@@ -66,8 +66,15 @@ export function buildChildEnv(options: {
 }
 
 export type SandboxProfile =
-  /** Hide the server's own data from the process; everything else is as the user sees it. */
-  | { readonly kind: 'mask'; readonly expose?: readonly string[] }
+  /**
+   * Hide the server's own data from the process; everything else is as the
+   * user sees it. `hide` names more that this process must not see: an
+   * existing directory becomes an empty one, an existing file an empty,
+   * read-only file, and a path that does not exist is skipped. `expose` is
+   * applied after `hide`, so a path inside a hidden directory can be let back
+   * in (read-only).
+   */
+  | { readonly kind: 'mask'; readonly expose?: readonly string[]; readonly hide?: readonly string[] }
   /** Read-only file system except `writable`; credentials directories hidden; optional network. */
   | {
       readonly kind: 'confine';
@@ -108,7 +115,7 @@ function contains(outer: string, inner: string): boolean {
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
-/** Places in a home directory that hold credentials. Hidden from confined processes. */
+/** Places in a home directory that hold credentials, relative to it. */
 const CREDENTIAL_PATHS = [
   '.ssh',
   '.gnupg',
@@ -126,6 +133,17 @@ const CREDENTIAL_PATHS = [
   '.codex',
 ] as const;
 
+/**
+ * The places in a home directory that hold credentials: SSH and GPG keys,
+ * cloud and container sign-ins, the GitHub CLI's token, package-registry and
+ * Git credentials, and the agent CLIs' own sign-ins. The `confine` profile
+ * hides all of them; a caller of the `mask` profile passes the ones its
+ * process has no business reading in `hide`.
+ */
+export function credentialPaths(home: string): string[] {
+  return CREDENTIAL_PATHS.map((relative) => path.join(home, relative));
+}
+
 export interface SandboxStatus {
   readonly mode: 'bwrap' | 'none';
   /** Why there is no sandbox, when there is none. */
@@ -135,6 +153,8 @@ export interface SandboxStatus {
 export class Sandbox {
   readonly status: SandboxStatus;
   readonly #protected: readonly string[];
+  /** Where the empty stand-in file is kept when nothing is protected (see {@link Sandbox.#emptyFile}). */
+  #scratch: string | null = null;
 
   private constructor(status: SandboxStatus, protectedPaths: readonly string[]) {
     this.status = status;
@@ -195,19 +215,63 @@ export class Sandbox {
     flags.push('--dev-bind', '/dev', '/dev', '--proc', '/proc');
 
     const hidden = [...this.#protected];
-    if (profile.kind === 'confine') {
-      const home = os.homedir();
-      for (const relative of CREDENTIAL_PATHS) hidden.push(path.join(home, relative));
-    }
+    if (profile.kind === 'confine') hidden.push(...credentialPaths(os.homedir()));
     for (const target of hidden) {
       if (!existsSync(target)) continue;
       if (statSync(target).isDirectory()) flags.push('--tmpfs', target);
       else flags.push('--ro-bind', '/dev/null', target);
     }
+    if (profile.kind === 'mask') flags.push(...this.#hide(profile.hide ?? []));
     for (const exposed of profile.expose ?? []) {
       if (existsSync(exposed)) flags.push('--ro-bind', exposed, exposed);
     }
     return { file: 'bwrap', args: [...flags, '--', file, ...args], sandboxed: true };
+  }
+
+  /**
+   * The flags that put nothing where the listed paths are. A directory gets an
+   * empty file system mounted over it; a file gets an empty regular file bound
+   * over it, read-only — a program that insists on reading its configuration
+   * file then reads an empty one (the `/dev/null` that covers a protected file
+   * cannot even be opened: device nodes are off in these mounts). Symbolic
+   * links are followed first: bubblewrap cannot mount on one, and hiding the
+   * real place hides it under every name.
+   */
+  #hide(paths: readonly string[]): string[] {
+    const flags: string[] = [];
+    let standIn: string | null = null;
+    for (const listed of paths) {
+      if (!path.isAbsolute(listed)) throw new Error(`Sandbox paths must be absolute, got "${listed}".`);
+      const entry = statSync(listed, { throwIfNoEntry: false });
+      if (!entry) continue;
+      const target = realpathSync(listed);
+      if (entry.isDirectory()) {
+        flags.push('--tmpfs', target);
+      } else {
+        standIn ??= this.#emptyFile();
+        flags.push('--ro-bind', standIn, target);
+      }
+    }
+    // With nothing protected the stand-in lives in a temporary folder: keep at least this process out of it.
+    if (standIn !== null && this.#scratch !== null && path.dirname(standIn) === this.#scratch) flags.push('--tmpfs', this.#scratch);
+    return flags;
+  }
+
+  /**
+   * An empty file to stand in for hidden ones. It is kept inside the first
+   * protected directory, which every profile hides, so that no sandboxed
+   * process — of this run or any other — can ever put text into it.
+   */
+  #emptyFile(): string {
+    const home = this.#protected.find((candidate) => statSync(candidate, { throwIfNoEntry: false })?.isDirectory());
+    const directory = home === undefined ? (this.#scratch ??= mkdtempSync(path.join(os.tmpdir(), 'agent-studio-sandbox-'))) : path.join(home, 'sandbox');
+    const file = path.join(directory, 'empty');
+    const existing = lstatSync(file, { throwIfNoEntry: false });
+    if (existing?.isFile() && existing.size === 0) return file;
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    rmSync(file, { recursive: true, force: true });
+    writeFileSync(file, '', { mode: 0o444, flag: 'wx' });
+    return file;
   }
 
   /** Builds the root of an `isolate` profile from nothing: only what is listed gets in. */

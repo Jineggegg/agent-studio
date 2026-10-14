@@ -6,7 +6,7 @@ import { ProcessSupervisor, Sandbox } from '../../kernel/process.js';
 import { AgentRunError } from '../agents/adapter.js';
 import { ProcessEnded, ProtocolError, RequestTimeout, RpcError } from './client.js';
 import { isThreadNotFound, readErrorInfo, runFailure, stderrSummary, tidy, turnFailure } from './errors.js';
-import { CodexLauncher, appServerArguments, isModelCredentialVariable, savedRuleFiles } from './launch.js';
+import { CodexLauncher, appServerArguments, hiddenCredentialPaths, isModelCredentialVariable, savedRuleFiles } from './launch.js';
 import { accountLabel, modelOption } from './status.js';
 import { configOverride, tomlArray, tomlInlineTable, tomlString } from './toml.js';
 
@@ -94,7 +94,7 @@ describe('the environment and the Codex home', () => {
     process.env.CODEX_HOME = '/srv/codex-home';
     process.env.MY_TOOL_SETTING = 'kept';
     try {
-      const launcher = new CodexLauncher({ processes: new ProcessSupervisor(['OPENAI_API_KEY', 'CODEX_HOME', 'MY_TOOL_SETTING']), sandbox: Sandbox.none('test'), dataDir: dir });
+      const launcher = new CodexLauncher({ processes: new ProcessSupervisor(['OPENAI_API_KEY', 'CODEX_HOME', 'MY_TOOL_SETTING']), sandbox: Sandbox.none('test'), allowWithoutSandbox: true });
       const env = launcher.environment({ STUDIO_BRIDGE_TOKEN: 't' });
       expect(env.OPENAI_API_KEY).toBeUndefined();
       expect(env).toMatchObject({ CODEX_HOME: '/srv/codex-home', MY_TOOL_SETTING: 'kept', STUDIO_BRIDGE_TOKEN: 't', NO_COLOR: '1' });
@@ -111,9 +111,42 @@ describe('the environment and the Codex home', () => {
   });
 
   it('without a sandbox runs codex as it is, and says the isolation is only pinned', () => {
-    const launcher = new CodexLauncher({ processes: new ProcessSupervisor(), sandbox: Sandbox.none('test'), dataDir: dir });
+    const launcher = new CodexLauncher({ processes: new ProcessSupervisor(), sandbox: Sandbox.none('test'), allowWithoutSandbox: true });
     expect(launcher.isolation).toBe('pinned');
     expect(launcher.command(['--version'])).toMatchObject({ file: 'codex', args: ['--version'], isolation: 'pinned' });
+  });
+
+  it('may not run without a sandbox unless the operator said so, and says what to do about it', () => {
+    const refused = new CodexLauncher({ processes: new ProcessSupervisor(), sandbox: Sandbox.none('Turned off by configuration.'), allowWithoutSandbox: false });
+    expect(refused.unavailable).toBe(
+      "Codex is switched off here because the Studio's sandbox is not available (Turned off by configuration). Codex runs read-only commands without asking, and without the sandbox those could read the Studio's own data and every credential of the account it runs as. Install bubblewrap and leave AGENT_STUDIO_SANDBOX on auto; or, accepting that risk, set AGENT_STUDIO_CODEX_WITHOUT_SANDBOX=on. Then restart the Studio.",
+    );
+    const allowed = new CodexLauncher({ processes: new ProcessSupervisor(), sandbox: Sandbox.none('Turned off by configuration.'), allowWithoutSandbox: true });
+    expect(allowed.unavailable).toBeNull();
+  });
+
+  it("hides the account's Codex settings and instructions always, and its credentials unless they are allowed", () => {
+    const env = { HOME: '/home/someone' };
+    const personal = ['config.toml', 'hooks.json', 'rules', 'AGENTS.md', 'AGENTS.override.md'].map((name) => `/home/someone/.codex/${name}`);
+    const withCredentials = CodexLauncher.hidden(env, true);
+    expect(withCredentials).toEqual(personal);
+
+    const without = CodexLauncher.hidden(env, false);
+    expect(without.slice(0, personal.length)).toEqual(personal);
+    expect(without).toEqual(expect.arrayContaining(['/home/someone/.ssh', '/home/someone/.gnupg', '/home/someone/.aws', '/home/someone/.config/gh', '/home/someone/.netrc', '/home/someone/.git-credentials', '/home/someone/.claude', '/home/someone/.claude.json']));
+    // Never its own home: the sign-in is in there.
+    expect(without).not.toContain('/home/someone/.codex');
+    expect(without.some((entry) => entry.startsWith('/home/someone/.codex/') && !personal.includes(entry))).toBe(false);
+  });
+
+  it('leaves out of the credential list only what would take its own home away', () => {
+    // A Codex home somewhere else: the default one is somebody's sign-in like any other.
+    expect(hiddenCredentialPaths('/home/someone', '/srv/codex-home')).toContain('/home/someone/.codex');
+    expect(CodexLauncher.hidden({ HOME: '/home/someone', CODEX_HOME: '/srv/codex-home' }, false)).toEqual(expect.arrayContaining(['/srv/codex-home/config.toml', '/srv/codex-home/AGENTS.md', '/home/someone/.codex', '/home/someone/.ssh']));
+    // A Codex home inside a credential folder: that folder stays, the others go.
+    const nested = hiddenCredentialPaths('/home/someone', '/home/someone/.config/gh/codex');
+    expect(nested).not.toContain('/home/someone/.config/gh');
+    expect(nested).toContain('/home/someone/.ssh');
   });
 
   it('finds the rule files that hold rules, and only those', async () => {

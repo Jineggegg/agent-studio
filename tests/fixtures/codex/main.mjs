@@ -121,6 +121,31 @@ function configuration(overrides, cwd) {
   return { effective, layers, trustedProjectDir: projectDir };
 }
 
+/**
+ * The instruction files a thread loads, as the real CLI reports them: from the
+ * Codex home `AGENTS.override.md`, or `AGENTS.md` when there is no override
+ * with text in it — an empty file is not loaded — and the project's own
+ * `AGENTS.md`.
+ */
+function instructionSources(cwd) {
+  const hasText = (file) => {
+    try {
+      return fs.statSync(file).isFile() && fs.readFileSync(file, 'utf8').trim() !== '';
+    } catch {
+      return false;
+    }
+  };
+  const sources = [];
+  if (PREPARED_HOME) {
+    const personal = ['AGENTS.override.md', 'AGENTS.md'].map((name) => path.join(CODEX_HOME, name)).find(hasText);
+    if (personal) sources.push(personal);
+    // A CLI that loads its home's instructions although they were hidden (for the test that the adapter notices).
+    else if (control().claimPersonalInstructions === true) sources.push(path.join(CODEX_HOME, 'AGENTS.md'));
+  }
+  if (cwd && hasText(path.join(cwd, 'AGENTS.md'))) sources.push(path.join(cwd, 'AGENTS.md'));
+  return sources;
+}
+
 /** Command prefixes that `prefix_rule(pattern=[…], decision="allow")` lines pre-approve. */
 function allowRules(trustedProjectDir) {
   const prefixes = [];
@@ -378,7 +403,7 @@ class AppServer {
       disabledPluginIds: [],
       cwd,
       runtimeWorkspaceRoots: [cwd],
-      instructionSources: [],
+      instructionSources: instructionSources(cwd),
       approvalPolicy: thread.approvalPolicy,
       approvalsReviewer: thread.approvalsReviewer,
       sandbox: thread.sandbox === 'read-only' ? { type: 'readOnly', networkAccess: false } : thread.sandbox === 'workspace-write' ? { type: 'workspaceWrite', writableRoots: [], networkAccess: false, excludeTmpdirEnvVar: false, excludeSlashTmp: false } : { type: 'dangerFullAccess' },
@@ -1022,9 +1047,17 @@ class Turn {
             developerInstructions: this.thread.developerInstructions,
             mcpServers: Object.fromEntries(Object.entries(this.config.mcp_servers ?? {}).map(([name, value]) => [name, { command: value.command ?? null, args: value.args ?? null, enabled: value.enabled !== false }])),
             features: this.config.features ?? {},
-            home: { configBytes: size(path.join(CODEX_HOME, 'config.toml')), hooksBytes: size(path.join(CODEX_HOME, 'hooks.json')), rules },
+            home: {
+              configBytes: size(path.join(CODEX_HOME, 'config.toml')),
+              hooksBytes: size(path.join(CODEX_HOME, 'hooks.json')),
+              agentsBytes: size(path.join(CODEX_HOME, 'AGENTS.md')),
+              overrideBytes: size(path.join(CODEX_HOME, 'AGENTS.override.md')),
+              rules,
+            },
+            instructionSources: instructionSources(this.thread.cwd),
             images: this.images.map((file) => ({ path: file, bytes: readable(file) })),
             readable: Object.fromEntries(paths.map((file) => [file, readable(file) !== null])),
+            bytes: Object.fromEntries(paths.map((file) => [file, readable(file)])),
           }),
         );
         return;

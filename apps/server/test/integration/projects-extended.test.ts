@@ -59,7 +59,7 @@ describe('new project fields', () => {
     expect(project.links).toHaveLength(1);
     expect(project.links[0]).toMatchObject({ label: 'Docs', url: 'https://docs.example.org/guide', local: false });
     expect(project.agents).toEqual(['claude-code']);
-    expect(project.features).toEqual({ assistant: true, automation: true, instructions: true });
+    expect(project.features).toEqual({ assistant: true, automation: true, instructions: true, agentCredentials: false });
   });
 
   it('creates nothing when a new project is refused for its settings', async () => {
@@ -408,6 +408,10 @@ describe('agents and feature switches', () => {
     await share(project, member, 'write');
     expect((await member.patch(`/api/projects/${project.id}`, { agents: ['codex'] })).body).toMatchObject({ error: { code: 'owner_required' } });
     expect((await member.patch(`/api/projects/${project.id}`, { features: { automation: true } })).status).toBe(403);
+    // Whether agents may read the account's credentials is off until the owner says otherwise.
+    expect((await member.patch(`/api/projects/${project.id}`, { features: { agentCredentials: true } })).body).toMatchObject({ error: { code: 'owner_required' } });
+    expect((await owner.get<Project>(`/api/projects/${project.id}`)).body.features.agentCredentials).toBe(false);
+    expect((await owner.patch<Project>(`/api/projects/${project.id}`, { features: { agentCredentials: true } })).body.features).toMatchObject({ agentCredentials: true, instructions: true });
     expect((await member.patch(`/api/projects/${project.id}`, { name: 'still allowed' })).status).toBe(200);
   });
 

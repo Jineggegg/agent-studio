@@ -1,7 +1,7 @@
-import { chmodSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { ProcessSupervisor, Sandbox } from '../../kernel/process.js';
+import { type ProcessSupervisor, type Sandbox, credentialPaths } from '../../kernel/process.js';
 import type { BridgeConnection } from '../agents/adapter.js';
 import { configOverride, tomlArray, tomlBoolean, tomlInlineTable, tomlString } from './toml.js';
 
@@ -27,24 +27,43 @@ import { configOverride, tomlArray, tomlBoolean, tomlInlineTable, tomlString } f
  *
  * So the Studio does not rely on overriding. There are two levels:
  *
- * **hidden** — when the Studio's sandbox (bubblewrap) works. Inside the
- * kernel's `mask` profile the adapter adds one more bubblewrap layer in which
- * `config.toml` and `hooks.json` of the Codex home are an empty file and
- * `rules/` is an empty directory. The CLI then runs exactly as with
- * `--ignore-user-config --ignore-rules`: no personal configuration, no saved
- * rules, no trusted project, so no project `.codex/` layer either. The
- * sign-in, the conversations and the rest of the Codex home are untouched,
- * and nothing in it is read, copied or changed by the Studio.
+ * **hidden** — when the Studio's sandbox (bubblewrap) works. The process runs
+ * in the kernel's `mask` profile with, in its `hide` list, the files of the
+ * Codex home that carry the account's own settings: `config.toml` and
+ * `hooks.json` are an empty file, `rules/` is an empty directory, and so are
+ * `AGENTS.md` and `AGENTS.override.md` — the personal instructions of the
+ * account the Studio runs as, which must not reach other people's sessions.
+ * The CLI then runs as with `--ignore-user-config --ignore-rules`: no personal
+ * configuration, no saved rules, no trusted project, so no project `.codex/`
+ * layer either. The sign-in, the conversations and the rest of the Codex home
+ * are untouched, and nothing in it is read, copied or changed by the Studio.
  *
- * **pinned** — without a sandbox nothing can be hidden. The adapter then
- * overrides what can be overridden (below), switches off by name every MCP
+ * **pinned** — without a sandbox nothing can be hidden, and by default Codex
+ * does not run at all then (see below). Where the operator allows it, the
+ * adapter overrides what can be overridden, switches off by name every MCP
  * server the configuration defines, checks the result through the CLI's own
  * `config/read`, and refuses to run when the Codex home has command rules,
- * because those cannot be overridden. The user's other personal settings
+ * because those cannot be overridden. The account's other personal settings
  * (model provider, instructions, …) apply in that case.
  *
  * At both levels every thread and turn is started with an explicit approval
  * policy, reviewer and sandbox, and the CLI's answer is checked against them.
+ *
+ * ## What else the process must not see
+ *
+ * Codex runs read-only commands without asking anybody, so what such a command
+ * can read is decided here, not by the permission engine:
+ *
+ * - The Studio's data directory is hidden by the `mask` profile itself.
+ * - The credentials of the account the Studio runs as (SSH and GPG keys, cloud
+ *   sign-ins, the GitHub CLI's token, Claude Code's sign-in, … — the kernel's
+ *   list) are hidden too, unless the project's owner switched the project's
+ *   `agentCredentials` feature on. Codex's own home is never in that list: it
+ *   needs its sign-in.
+ *
+ * Without the sandbox neither is possible. That is why Codex only runs
+ * unsandboxed when the operator set `AGENT_STUDIO_CODEX_WITHOUT_SANDBOX=on`,
+ * and says so at the start of every conversation.
  */
 
 export type IsolationLevel = 'hidden' | 'pinned';
@@ -66,9 +85,28 @@ export function isModelCredentialVariable(name: string): boolean {
   return /^(OPENAI|AZURE_OPENAI|CODEX)_/i.test(name) || /_API_KEY$/i.test(name);
 }
 
-/** Files of the Codex home that carry the user's own configuration. */
-const HIDDEN_FILES = ['config.toml', 'hooks.json'] as const;
 const RULES_DIRECTORY = 'rules';
+/**
+ * What in a Codex home carries the account's own settings and instructions.
+ * (`AGENTS.override.md` takes the place of `AGENTS.md` when it exists — seen
+ * with codex-cli 0.160.0 in the `instructionSources` of a new thread.)
+ */
+export const PERSONAL_SETTINGS = ['config.toml', 'hooks.json', RULES_DIRECTORY, 'AGENTS.md', 'AGENTS.override.md'] as const;
+
+/** True when `inner` is `outer` or lies beneath it. */
+function isWithin(outer: string, inner: string): boolean {
+  const relative = path.relative(outer, inner);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+/**
+ * The credential locations a Codex process must not see: the kernel's list
+ * for this home directory, without Codex's own home (or a folder that home
+ * lies in) — it needs its sign-in.
+ */
+export function hiddenCredentialPaths(home: string, codexHome: string): string[] {
+  return credentialPaths(home).filter((location) => !isWithin(location, codexHome));
+}
 
 const BRIDGE_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -172,22 +210,43 @@ export function savedRuleFiles(codexHome: string): string[] {
     .filter(hasRules);
 }
 
+export interface CommandOptions {
+  /** Variables to add to the process's environment. */
+  readonly env?: Readonly<Record<string, string>>;
+  /** Files inside the Studio's data directory the process must be able to read (attachments). */
+  readonly expose?: readonly string[];
+  /**
+   * Leave the account's credentials visible to the process. Only for a run in
+   * a project whose owner switched `agentCredentials` on; everything else —
+   * a run outside any project, the questions about the account — hides them.
+   */
+  readonly credentials?: boolean;
+}
+
 export class CodexLauncher {
   readonly #processes: ProcessSupervisor;
   readonly #sandbox: Sandbox;
-  readonly #emptyFile: string;
+  readonly #allowWithoutSandbox: boolean;
 
-  constructor(input: { processes: ProcessSupervisor; sandbox: Sandbox; dataDir: string }) {
+  constructor(input: { processes: ProcessSupervisor; sandbox: Sandbox; allowWithoutSandbox: boolean }) {
     this.#processes = input.processes;
     this.#sandbox = input.sandbox;
-    // Inside the data directory, which agents can neither read nor write: what stands in for the
-    // user's configuration must be something no earlier command could have put text into.
-    this.#emptyFile = path.join(input.dataDir, 'codex', 'empty');
+    this.#allowWithoutSandbox = input.allowWithoutSandbox;
   }
 
   /** What isolation a process started now would get. */
   get isolation(): IsolationLevel {
     return this.#sandbox.status.mode === 'bwrap' ? 'hidden' : 'pinned';
+  }
+
+  /**
+   * Null when Codex may run here; otherwise why not, with the fix, in words
+   * for the person who looks at the agent's status.
+   */
+  get unavailable(): string | null {
+    if (this.isolation === 'hidden' || this.#allowWithoutSandbox) return null;
+    const reason = this.#sandbox.status.reason;
+    return `Codex is switched off here because the Studio's sandbox is not available${reason ? ` (${reason.replace(/\.$/, '')})` : ''}. Codex runs read-only commands without asking, and without the sandbox those could read the Studio's own data and every credential of the account it runs as. Install bubblewrap and leave AGENT_STUDIO_SANDBOX on auto; or, accepting that risk, set AGENT_STUDIO_CODEX_WITHOUT_SANDBOX=on. Then restart the Studio.`;
   }
 
   /**
@@ -221,42 +280,21 @@ export class CodexLauncher {
     return path.join(env.HOME ?? os.homedir(), '.codex');
   }
 
-  /**
-   * `codex <args>`, sandboxed and isolated as far as this machine allows.
-   * `expose` lists files inside the Studio's data directory the process must
-   * be able to read (attachments).
-   */
-  command(args: readonly string[], options: { env?: Readonly<Record<string, string>>; expose?: readonly string[] } = {}): CodexCommand {
+  /** What a process started with this environment is not shown (the kernel skips what does not exist). */
+  static hidden(env: Readonly<Record<string, string>>, credentials: boolean): string[] {
+    const codexHome = CodexLauncher.codexHome(env);
+    return [...PERSONAL_SETTINGS.map((name) => path.join(codexHome, name)), ...(credentials ? [] : hiddenCredentialPaths(env.HOME ?? os.homedir(), codexHome))];
+  }
+
+  /** `codex <args>`, sandboxed and isolated as far as this machine allows. */
+  command(args: readonly string[], options: CommandOptions = {}): CodexCommand {
     const env = this.environment(options.env);
     const codexHome = CodexLauncher.codexHome(env);
-    if (this.#sandbox.status.mode !== 'bwrap') {
-      return { file: 'codex', args: [...args], env, isolation: 'pinned', codexHome };
-    }
-    const hide = this.#hideFlags(codexHome);
-    const inner = hide.length === 0 ? { file: 'codex', args: [...args] } : { file: 'bwrap', args: ['--die-with-parent', '--bind', '/', '/', '--dev-bind', '/dev', '/dev', ...hide, '--', 'codex', ...args] };
-    const wrapped = this.#sandbox.wrap(inner.file, inner.args, { kind: 'mask', expose: [...(hide.length === 0 ? [] : [this.#emptyFile]), ...(options.expose ?? [])] });
-    return { file: wrapped.file, args: wrapped.args, env, isolation: 'hidden', codexHome };
-  }
-
-  /** bubblewrap flags that put nothing where the user's Codex configuration is. Only what exists is covered. */
-  #hideFlags(codexHome: string): string[] {
-    const flags: string[] = [];
-    for (const name of HIDDEN_FILES) {
-      const target = path.join(codexHome, name);
-      if (statSync(target, { throwIfNoEntry: false })?.isFile()) flags.push('--ro-bind', this.#emptyFile, target);
-    }
-    const rules = path.join(codexHome, RULES_DIRECTORY);
-    if (statSync(rules, { throwIfNoEntry: false })?.isDirectory()) flags.push('--tmpfs', rules);
-    if (flags.includes(this.#emptyFile)) this.#ensureEmptyFile();
-    return flags;
-  }
-
-  #ensureEmptyFile(): void {
-    const existing = statSync(this.#emptyFile, { throwIfNoEntry: false });
-    if (existing?.isFile() && existing.size === 0) return;
-    mkdirSync(path.dirname(this.#emptyFile), { recursive: true, mode: 0o700 });
-    if (existing) chmodSync(this.#emptyFile, 0o600);
-    writeFileSync(this.#emptyFile, '', { mode: 0o444 });
-    chmodSync(this.#emptyFile, 0o444);
+    const wrapped = this.#sandbox.wrap('codex', args, {
+      kind: 'mask',
+      hide: CodexLauncher.hidden(env, options.credentials === true),
+      expose: [...(options.expose ?? [])],
+    });
+    return { file: wrapped.file, args: wrapped.args, env, isolation: wrapped.sandboxed ? 'hidden' : 'pinned', codexHome };
   }
 }

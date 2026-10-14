@@ -27,6 +27,7 @@ Nothing is required: with no variables set, the server listens on
 | `AGENT_STUDIO_REMOTE_HOSTS_FILE` | `<data dir>/remote-hosts.json` | Operator-managed list of SSH hosts that projects may use. |
 | `AGENT_STUDIO_PLUGIN_SOURCE_DIR` | *(none)* | A directory on the server from which the owner may install plugins by name. Plugins can also be installed from an https Git address. |
 | `AGENT_STUDIO_PLUGINS_UNSANDBOXED` | `off` | Allow plugins with server-side code to run when no sandbox is available at all. Leave off unless you wrote the plugin yourself. |
+| `AGENT_STUDIO_CODEX_WITHOUT_SANDBOX` | `off` | Allow the Codex agent to run when no sandbox is available. Codex runs read-only commands without asking; without the sandbox those can read the Studio's data directory and every credential of the account the Studio runs as. Leave off, and install bubblewrap instead. |
 | `AGENT_STUDIO_LOG_LEVEL` | `info` | `fatal`, `error`, `warn`, `info`, `debug`, `trace` or `silent`. |
 | `AGENT_STUDIO_WEB_DIR` | the bundled client | Directory of a built web client to serve; empty string serves the API only. |
 | `AGENT_STUDIO_ENV` | `production` | `development` or `test` relax nothing security-relevant; they only change logging and rate-limit ceilings for tests. |

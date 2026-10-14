@@ -30,6 +30,13 @@ export interface StudioConfig {
   readonly pluginSourceDir: string | null;
   /** Let plugins with server code run when no isolation at all is available. Off unless the operator insists. */
   readonly pluginsUnsandboxed: boolean;
+  /**
+   * Let the Codex agent run when the sandbox is not available. Codex runs
+   * read-only commands without asking; without the sandbox those can read the
+   * Studio's own data directory and every credential of this account. Off
+   * unless the operator insists.
+   */
+  readonly codexWithoutSandbox: boolean;
   readonly logLevel: LogLevel;
   /** Base64 of 32 bytes. When absent a key file is created inside the data directory. */
   readonly masterKey: string | null;
@@ -177,6 +184,7 @@ export function loadConfig(
     remoteHostsFile: read('REMOTE_HOSTS_FILE') ? path.resolve(expandHome(read('REMOTE_HOSTS_FILE')!)) : null,
     pluginSourceDir: read('PLUGIN_SOURCE_DIR') ? path.resolve(expandHome(read('PLUGIN_SOURCE_DIR')!)) : null,
     pluginsUnsandboxed: flag(read('PLUGINS_UNSANDBOXED'), false, `${ENV_PREFIX}PLUGINS_UNSANDBOXED`),
+    codexWithoutSandbox: flag(read('CODEX_WITHOUT_SANDBOX'), false, `${ENV_PREFIX}CODEX_WITHOUT_SANDBOX`),
     logLevel: logLevel as LogLevel,
     masterKey,
     setupToken,

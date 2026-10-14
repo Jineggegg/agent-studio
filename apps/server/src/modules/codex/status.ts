@@ -106,7 +106,10 @@ export class CodexProbe {
 
   async capabilities(): Promise<AgentCapabilities> {
     let catalogue = this.#catalogue?.value ?? null;
-    if (!this.#catalogue) {
+    // Where Codex may not run, nothing is started to ask it for its models.
+    if (this.#launcher.unavailable !== null) {
+      /* keep what is known, ask nothing */
+    } else if (!this.#catalogue) {
       if (Date.now() >= this.#catalogueRetryAt) catalogue = await this.#refreshCatalogue();
     }
     // A stale list is still shown; it is refreshed for the next question.
@@ -151,6 +154,10 @@ export class CodexProbe {
             : `The Studio could not find out whether Codex is signed in${login.detail ? ` (${login.detail})` : ''}. ${SIGN_IN_HINT}`,
       };
     }
+    // An agent that may not run here needs no account label and no model list.
+    if (this.#launcher.unavailable !== null) {
+      return { installed: true, version: version.version, signedIn: true, account: null, problem: this.#launcher.unavailable };
+    }
     // Who is signed in comes with the model list; neither is needed to call the agent usable, and
     // neither is asked for again while what is known is fresh.
     const stale = !this.#catalogue || this.#catalogue.until <= Date.now();
@@ -158,8 +165,14 @@ export class CodexProbe {
     return { installed: true, version: version.version, signedIn: true, account: this.#account, problem: this.#isolationProblem() };
   }
 
-  /** At the pinned level a Codex home with command rules cannot be used: say so before a run fails on it. */
+  /**
+   * What would make a run fail before it starts: no sandbox and no word from
+   * the operator, or — where Codex may run unsandboxed — command rules in its
+   * home that cannot be kept out.
+   */
   #isolationProblem(): string | null {
+    const unavailable = this.#launcher.unavailable;
+    if (unavailable !== null) return unavailable;
     if (this.#launcher.isolation === 'hidden') return null;
     return savedRuleFiles(this.#launcher.codexHome).length > 0 ? RULES_PROBLEM : null;
   }

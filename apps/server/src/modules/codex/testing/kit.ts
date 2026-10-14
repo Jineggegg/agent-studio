@@ -42,10 +42,16 @@ export interface Inspection {
   readonly developerInstructions: string | null;
   readonly mcpServers: Record<string, { command: string | null; args: string[] | null; enabled: boolean }>;
   readonly features: Record<string, unknown>;
-  readonly home: { configBytes: number | null; hooksBytes: number | null; rules: string[] };
+  readonly home: { configBytes: number | null; hooksBytes: number | null; agentsBytes: number | null; overrideBytes: number | null; rules: string[] };
+  readonly instructionSources: string[];
   readonly images: Array<{ path: string; bytes: number | null }>;
   readonly readable: Record<string, boolean>;
+  /** Size of each inspected file as the CLI sees it; null when it cannot read it. */
+  readonly bytes: Record<string, number | null>;
 }
+
+/** The notice every conversation begins with when Codex runs without the Studio's sandbox — as it does in most of these tests. */
+export const WITHOUT_SANDBOX_NOTICE = 'codex_without_sandbox';
 
 export interface CodexKit extends AgentsKit {
   /** The throw-away HOME. */
@@ -60,6 +66,13 @@ export interface CodexKit extends AgentsKit {
   writeHome(files: Record<string, string>): Promise<void>;
   /** Everything the stand-in recorded so far. */
   records(): Promise<StandinRecord[]>;
+  /**
+   * The session's events, without the notice that Codex runs unsandboxed: it
+   * opens every conversation here and would be in the way of every assertion
+   * about what a run did. `allEvents` has it; one test checks it.
+   */
+  events(client: TestClient, sessionId: string): Promise<SessionEvent[]>;
+  allEvents(client: TestClient, sessionId: string): Promise<SessionEvent[]>;
   /** A session with the Codex agent. */
   codexSession(overrides?: Record<string, unknown>, client?: TestClient): Promise<Session>;
   /** Waits until the session has `count` approvals waiting. */
@@ -110,7 +123,8 @@ export async function createCodexKit(options: CodexKitOptions = {}): Promise<Cod
 
   let base: AgentsKit;
   try {
-    base = await createAgentsKit(options);
+    // The harness runs without a sandbox, and without one Codex only runs where the operator allows it.
+    base = await createAgentsKit({ ...options, config: { codexWithoutSandbox: true, ...options.config } });
   } catch (error) {
     restore();
     await rm(home, { recursive: true, force: true });
@@ -137,6 +151,8 @@ export async function createCodexKit(options: CodexKitOptions = {}): Promise<Cod
         .filter((line) => line.trim() !== '')
         .map((line) => JSON.parse(line) as StandinRecord);
     },
+    events: async (client, sessionId) => (await base.events(client, sessionId)).filter((event) => !(event.type === 'notice' && event.data.code === WITHOUT_SANDBOX_NOTICE)),
+    allEvents: (client, sessionId) => base.events(client, sessionId),
     codexSession: (overrides = {}, client = base.owner) => base.session(client, { agentId: 'codex', ...overrides }),
     pending: (sessionId, count = 1) =>
       until(

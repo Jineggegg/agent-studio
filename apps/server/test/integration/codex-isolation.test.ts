@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { Agent, Project, Session } from '@agent-studio/protocol';
@@ -9,7 +9,8 @@ import type { BridgeConnection } from '../../src/modules/agents/adapter.js';
 import { PERMISSIONS_GUIDE } from '../../src/modules/codex/adapter.js';
 import { AppServerClient } from '../../src/modules/codex/client.js';
 import { appServerArguments } from '../../src/modules/codex/launch.js';
-import { type CodexKit, FIXTURE_BIN, assistantTexts, createCodexKit, eventsOf, inspection } from '../../src/modules/codex/testing/kit.js';
+import { agentCredentialsAllowed } from '../../src/modules/codex/codex.module.js';
+import { type CodexKit, FIXTURE_BIN, WITHOUT_SANDBOX_NOTICE, assistantTexts, createCodexKit, eventsOf, inspection } from '../../src/modules/codex/testing/kit.js';
 import { until } from '../../src/testing/agents-kit.js';
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
@@ -94,7 +95,7 @@ describe('the command line the adapter builds', () => {
   });
 });
 
-describe("the user's own Codex settings, without the Studio's sandbox", () => {
+describe("without the Studio's sandbox, where the operator allows Codex to run anyway", () => {
   let kit: CodexKit;
   let project: Project;
   let marker: string;
@@ -146,12 +147,22 @@ describe("the user's own Codex settings, without the Studio's sandbox", () => {
     expect(starts[0]!.argv!.join(' ')).not.toContain('evil');
     expect(starts[1]!.argv).toContain('mcp_servers={"evil" = {"enabled" = false}, "odd name" = {"enabled" = false}}');
 
-    // And the person is told, once per session, that the rest of their settings apply.
-    const notices = eventsOf(events, 'notice').map((event) => event.data);
+    // The conversation begins by saying what running without the sandbox means — and, here, that the
+    // account's own Codex settings apply as well. It says so once, not with every turn.
+    const notices = eventsOf(await kit.allEvents(owner, created.id), 'notice').map((event) => event.data);
     expect(notices).toHaveLength(1);
-    expect(notices[0]).toMatchObject({ level: 'info', code: 'codex_personal_settings' });
+    expect(notices[0]).toMatchObject({ level: 'warning', code: WITHOUT_SANDBOX_NOTICE });
+    expect(notices[0]!.text).toBe(
+      "This Studio runs Codex without its sandbox. The commands Codex runs without asking can read any file the Studio's account can read — files outside the project, credentials and the Studio's own data included. Anything that changes something still needs approval. That account's own Codex settings and instructions also apply here; approvals, the sandbox, MCP servers, hooks and project trust are still set by the Studio.",
+    );
+    const all = await kit.allEvents(owner, created.id);
+    expect(all.findIndex((event) => event.type === 'notice')).toBeLessThan(all.findIndex((event) => event.type === 'message.assistant'));
     await kit.turn(owner, created.id, 'again');
-    expect(eventsOf(await kit.events(owner, created.id), 'notice')).toHaveLength(1);
+    expect(eventsOf(await kit.allEvents(owner, created.id), 'notice')).toHaveLength(1);
+    // The next conversation says it again.
+    const next = await session();
+    await kit.turn(owner, next.id, 'hello');
+    expect(eventsOf(await kit.allEvents(owner, next.id), 'notice').map((event) => event.data.code)).toEqual([WITHOUT_SANDBOX_NOTICE]);
   });
 
   it('refuses to run with a CLI that does not take the settings it is given', async () => {
@@ -199,6 +210,37 @@ describe("the user's own Codex settings, without the Studio's sandbox", () => {
   }, 60_000);
 });
 
+describe("without the Studio's sandbox, and without the operator's word", () => {
+  let kit: CodexKit;
+  beforeAll(async () => {
+    // The harness has no sandbox; the kit's usual "the operator allows it" is taken back.
+    kit = await createCodexKit({ config: { sandbox: 'off', codexWithoutSandbox: false } });
+  });
+  afterAll(async () => {
+    await kit.close();
+  });
+
+  const REFUSAL =
+    "Codex is switched off here because the Studio's sandbox is not available (Turned off by configuration). Codex runs read-only commands without asking, and without the sandbox those could read the Studio's own data and every credential of the account it runs as. Install bubblewrap and leave AGENT_STUDIO_SANDBOX on auto; or, accepting that risk, set AGENT_STUDIO_CODEX_WITHOUT_SANDBOX=on. Then restart the Studio.";
+
+  it('says in its status that Codex is switched off, why, and what to do', async () => {
+    const agent = (await kit.owner.get<Agent>('/api/agents/codex')).body;
+    expect(agent.status).toEqual({ installed: true, version: '0.160.0-standin', signedIn: true, account: null, problem: REFUSAL });
+    // Nothing was started to ask a CLI that may not run for its models.
+    expect(agent.capabilities.models).toEqual([]);
+    expect((await kit.records()).filter((record) => record.event === 'app-server')).toHaveLength(0);
+  });
+
+  it('does not run: no process, no conversation, the same words as the failure', async () => {
+    const session = await kit.codexSession();
+    const run = await kit.turn(kit.owner, session.id, '[[scenario:read-command cat /etc/hostname]]');
+    expect(run).toMatchObject({ status: 'failed', error: { code: 'sandbox_required', message: REFUSAL } });
+    expect(await kit.records()).toEqual([]);
+    const events = await kit.allEvents(kit.owner, session.id);
+    expect(events.map((event) => event.type)).toEqual(['message.user', 'run.started', 'run.finished']);
+  });
+});
+
 describe("the user's own Codex settings, inside the Studio's sandbox", () => {
   let kit: CodexKit | null = null;
   let usable = false;
@@ -222,7 +264,12 @@ describe("the user's own Codex settings, inside the Studio's sandbox", () => {
       'config.toml': personalConfig(project.rootDir, marker),
       'rules/default.rules': ALLOW_TOUCH,
       'hooks.json': '{"hooks":{"PermissionRequest":[{"matcher":"*","hooks":[{"type":"command","command":"echo allow"}]}]}}',
+      // The personal instructions of the account the Studio runs as: not for other people's sessions.
+      'AGENTS.md': 'Always sign commits as the owner.\n',
+      'AGENTS.override.md': 'And push straight to main.\n',
     });
+    // The project's own instruction file is the project's, and stays.
+    await writeFile(path.join(project.rootDir, 'AGENTS.md'), 'Run the tests before you say you are done.\n');
     await writeFile(path.join(kit.t.dataDir, 'secret-probe.txt'), 'the Studio keeps this to itself');
 
     // With rules present the unsandboxed adapter refuses to run; here it runs, because the rules are not there.
@@ -243,13 +290,15 @@ describe("the user's own Codex settings, inside the Studio's sandbox", () => {
     const seen = inspection(events);
     // The files are in place for everyone else…
     expect(existsSync(path.join(kit.codexHome, 'rules', 'default.rules'))).toBe(true);
-    // …and empty for Codex: as with --ignore-user-config --ignore-rules.
-    expect(seen.home).toEqual({ configBytes: 0, hooksBytes: 0, rules: [] });
+    // …and empty for Codex: as with --ignore-user-config --ignore-rules, and without the account's instructions.
+    expect(seen.home).toEqual({ configBytes: 0, hooksBytes: 0, agentsBytes: 0, overrideBytes: 0, rules: [] });
+    expect(seen.instructionSources).toEqual([path.join(project.rootDir, 'AGENTS.md')]);
     expect(Object.keys(seen.mcpServers)).toEqual(['studio']);
     // The only instructions are the Studio's own, not the user's "developer_instructions".
     expect(seen).toMatchObject({ approvalPolicy: 'on-request', approvalsReviewer: 'user', sandbox: 'read-only', developerInstructions: `${PERMISSIONS_GUIDE}\n\n${kit.t.studio.context.services.memory.agentGuide()}` });
     expect(existsSync(marker)).toBe(false);
-    expect(eventsOf(events, 'notice')).toHaveLength(0);
+    // Nothing to warn about: this is the sandbox.
+    expect(eventsOf(await kit.allEvents(owner, session.id), 'notice')).toHaveLength(0);
     expect((await kit.records()).filter((record) => record.event === 'app-server' && record.argv!.includes('app-server')).length).toBeGreaterThanOrEqual(1);
 
     // The data directory is hidden — the attachment that goes with this message is not — and the rest of
@@ -257,5 +306,122 @@ describe("the user's own Codex settings, inside the Studio's sandbox", () => {
     expect(seen.readable).toEqual({ [path.join(kit.t.dataDir, 'secret-probe.txt')]: false, [path.join(kit.codexHome, 'standin.json')]: true });
     expect(seen.images).toEqual([{ path: expect.stringContaining(kit.t.dataDir), bytes: PNG.length }]);
     expect(assistantTexts(events).at(-1)).toBe('The command finished. Process exited with code 0.');
+  }, 60_000);
+
+  it('refuses to run with a CLI that says it loaded the personal instructions anyway', async (context) => {
+    if (!usable || !kit) {
+      context.skip('bubblewrap is not usable on this machine, so there is no sandbox to test.');
+      return;
+    }
+    await kit.writeHome({ 'AGENTS.md': 'Always sign commits as the owner.\n' });
+    await kit.control({ claimPersonalInstructions: true });
+    const turns = async (): Promise<number> => (await kit!.records()).filter((record) => record.event === 'turn/start').length;
+    const turnsBefore = await turns();
+    try {
+      const session = await kit.codexSession();
+      const run = await kit.turn(kit.owner, session.id, 'hello');
+      expect(run).toMatchObject({ status: 'failed', error: { code: 'codex_not_isolated', message: expect.stringContaining('personal instruction file') } });
+      // The thread was opened, the answer was read, and no turn was started.
+      expect(await turns()).toBe(turnsBefore);
+    } finally {
+      await kit.control({});
+    }
+  }, 60_000);
+});
+
+/**
+ * Codex runs read-only commands without asking anybody, so what such a command
+ * can read is decided by the sandbox: the credentials of the account the
+ * Studio runs as are not there unless the project's owner says agents may use
+ * them.
+ */
+describe("the account's credentials, inside the Studio's sandbox", () => {
+  let kit: CodexKit | null = null;
+  let usable = false;
+  let files: { key: string; ssh: string; gh: string; claude: string; netrc: string; own: string };
+
+  beforeAll(async () => {
+    usable = (await Sandbox.detect('auto', [])).status.mode === 'bwrap';
+    if (!usable) return;
+    kit = await createCodexKit({ config: { sandbox: 'auto' } });
+    const home = kit.home;
+    files = {
+      ssh: path.join(home, '.ssh'),
+      key: path.join(home, '.ssh', 'id_ed25519'),
+      gh: path.join(home, '.config', 'gh', 'hosts.yml'),
+      claude: path.join(home, '.claude', '.credentials.json'),
+      netrc: path.join(home, '.netrc'),
+      own: path.join(kit.codexHome, 'auth.json'),
+    };
+    for (const [name, file] of Object.entries(files)) {
+      if (name === 'ssh') continue;
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, `secret of ${name}`);
+    }
+  });
+  afterAll(async () => {
+    await kit?.close();
+  });
+
+  /** What a command of the agent can read of each file: its size, or null. */
+  const visible = async (sessionId: string): Promise<Record<string, number | null>> => {
+    const run = await kit!.turn(kit!.owner, sessionId, `[[scenario:inspect ${files.key} ${files.gh} ${files.claude} ${files.netrc} ${files.own}]] [[scenario:read-command cat ${files.key}]]`);
+    expect(run.status).toBe('completed');
+    const seen = inspection(await kit!.events(kit!.owner, sessionId));
+    return { key: seen.bytes[files.key]!, gh: seen.bytes[files.gh]!, claude: seen.bytes[files.claude]!, netrc: seen.bytes[files.netrc]!, own: seen.bytes[files.own]! };
+  };
+  const catOutput = async (sessionId: string): Promise<string> => eventsOf(await kit!.events(kit!.owner, sessionId), 'tool.finished').at(-1)!.data.output;
+
+  it('are not there for a run by default — all but Codex\'s own sign-in', async (context) => {
+    if (!usable || !kit) return context.skip('bubblewrap is not usable on this machine, so hiding credentials could not be tested here.');
+    expect(kit.t.studio.context.sandbox.status.mode).toBe('bwrap');
+    expect(agentCredentialsAllowed(kit.t.studio.context, kit.project.id)).toBe(false);
+    const session = await kit.codexSession();
+    // A hidden folder is empty; a hidden file is an empty file.
+    expect(await visible(session.id)).toEqual({ key: null, gh: null, claude: null, netrc: 0, own: 'secret of own'.length });
+    // The command Codex ran without asking — the case the permission engine never sees — found nothing either.
+    expect(await catOutput(session.id)).toMatch(/No such file or directory/);
+    // Outside the run nothing changed.
+    expect(await readFile(files.key, 'utf8')).toBe('secret of key');
+  }, 60_000);
+
+  it('are there once the owner of the project allows agents to use them', async (context) => {
+    if (!usable || !kit) return context.skip('bubblewrap is not usable on this machine, so hiding credentials could not be tested here.');
+    const { owner, project } = kit;
+    expect((await owner.patch<Project>(`/api/projects/${project.id}`, { features: { agentCredentials: true } })).body.features.agentCredentials).toBe(true);
+    try {
+      expect(agentCredentialsAllowed(kit.t.studio.context, project.id)).toBe(true);
+      const session = await kit.codexSession();
+      const size = 'secret of '.length;
+      expect(await visible(session.id)).toEqual({ key: size + 3, gh: size + 2, claude: size + 6, netrc: size + 5, own: size + 3 });
+      expect(await catOutput(session.id)).toBe('secret of key');
+      // The Studio's own data stays hidden whatever the project allows.
+      const again = await kit.turn(owner, session.id, `[[scenario:inspect ${path.join(kit.t.dataDir, 'studio.db')}]]`);
+      expect(again.status).toBe('completed');
+      expect(inspection((await kit.events(owner, session.id)).slice(-4)).readable).toEqual({ [path.join(kit.t.dataDir, 'studio.db')]: false });
+    } finally {
+      await owner.patch(`/api/projects/${project.id}`, { features: { agentCredentials: false } });
+    }
+  }, 60_000);
+
+  it('are not there for a run outside any project, whatever a project allows', async (context) => {
+    if (!usable || !kit) return context.skip('bubblewrap is not usable on this machine, so hiding credentials could not be tested here.');
+    const { owner, project } = kit;
+    expect(agentCredentialsAllowed(kit.t.studio.context, null)).toBe(false);
+    expect(agentCredentialsAllowed(kit.t.studio.context, 'no-such-project')).toBe(false);
+
+    // The runtime gives a coding agent no session without a project, so the request is made to look like one:
+    // the project allows credentials, and the run reaches the adapter with no project named.
+    await owner.patch(`/api/projects/${project.id}`, { features: { agentCredentials: true } });
+    const adapter = kit.t.studio.context.services.agents.adapter('codex')!;
+    const run = adapter.run.bind(adapter);
+    adapter.run = (request, host) => run({ ...request, projectId: null }, host);
+    try {
+      const session = await kit.codexSession();
+      expect(await visible(session.id)).toEqual({ key: null, gh: null, claude: null, netrc: 0, own: 'secret of own'.length });
+    } finally {
+      adapter.run = run;
+      await owner.patch(`/api/projects/${project.id}`, { features: { agentCredentials: false } });
+    }
   }, 60_000);
 });

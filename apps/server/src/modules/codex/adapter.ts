@@ -64,9 +64,11 @@ import { type RateLimitInfo, TOOL, TurnTranslator, displayPath, patchPaths, patc
  * next command still has to ask.
  *
  * What the engine does not see are commands that run *inside* the read-only
- * sandbox: they can read what the service account can read (minus the
- * Studio's own data directory, which the Studio's sandbox hides), and change
- * nothing.
+ * sandbox. They change nothing; what they can read is therefore decided by
+ * the Studio's sandbox, not by the engine (see `launch.ts`): not the Studio's
+ * own data directory, and not the credentials of the account the Studio runs
+ * as unless the project's owner allows agents to use them. That is also why
+ * Codex does not run without that sandbox unless the operator says so.
  */
 
 type Child = ReturnType<ProcessSupervisor['spawn']>;
@@ -177,6 +179,19 @@ function answerOf<S extends z.ZodType>(schema: S, value: unknown, what: string):
   return parsed.data;
 }
 
+/** True when `file` is `directory` or lies beneath it (symbolic links resolved where the paths exist). */
+function isInside(directory: string, file: string): boolean {
+  const real = (target: string): string => {
+    try {
+      return realpathSync(target);
+    } catch {
+      return path.resolve(target);
+    }
+  };
+  const relative = path.relative(real(directory), real(file));
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
 const record = (value: unknown): Record<string, unknown> => (value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {});
 
 export interface CodexAdapterOptions {
@@ -185,6 +200,8 @@ export interface CodexAdapterOptions {
   readonly processes: ProcessSupervisor;
   readonly bus: EventBus;
   readonly log: FastifyBaseLogger;
+  /** Whether agents working in this project may see the account's credentials (the project's `agentCredentials` feature). False outside any project. */
+  readonly credentialsAllowed: (projectId: string | null) => boolean;
   /** The conventions for the shared memory, when the memory module offers them. */
   readonly standingInstructions: () => string | null;
 }
@@ -196,9 +213,6 @@ export class CodexAdapter implements AgentAdapter {
   readonly displayName = 'Codex';
   readonly kind = 'cli' as const;
   readonly #options: CodexAdapterOptions;
-  /** Sessions already told that the user's own Codex settings apply (pinned level). */
-  readonly #toldAboutSettings = new Set<string>();
-
   constructor(options: CodexAdapterOptions) {
     this.#options = options;
   }
@@ -212,12 +226,7 @@ export class CodexAdapter implements AgentAdapter {
   }
 
   run(request: AgentRunRequest, host: AgentRunHost): AgentRunHandle {
-    return new CodexRun(this.#options, request, host, (sessionId) => {
-      if (this.#toldAboutSettings.has(sessionId)) return false;
-      if (this.#toldAboutSettings.size > 5000) this.#toldAboutSettings.clear();
-      this.#toldAboutSettings.add(sessionId);
-      return true;
-    }).start();
+    return new CodexRun(this.#options, request, host).start();
   }
 
   /** Removes Codex's own copy of a conversation. Codex not knowing it any more is not an error. */
@@ -247,7 +256,6 @@ class CodexRun {
   readonly #options: CodexAdapterOptions;
   readonly #request: AgentRunRequest;
   readonly #host: AgentRunHost;
-  readonly #firstTimeFor: (sessionId: string) => boolean;
   readonly #translator: TurnTranslator;
   readonly #stop = deferred<never>();
   readonly #turnDone = deferred<TurnOutcome>();
@@ -259,6 +267,8 @@ class CodexRun {
   #client: AppServerClient | null = null;
   #isolation: IsolationLevel = 'pinned';
   #codexHome = '';
+  /** The account's own Codex settings are in force (possible only without the sandbox). */
+  #personalSettings = false;
   #threadId: string | null = null;
   #turnId: string | null = null;
   #turnEnded = false;
@@ -268,11 +278,10 @@ class CodexRun {
   /** Earlier conversation to put in front of the prompt, when it could not be given to the thread itself. */
   #preface = '';
 
-  constructor(options: CodexAdapterOptions, request: AgentRunRequest, host: AgentRunHost, firstTimeFor: (sessionId: string) => boolean) {
+  constructor(options: CodexAdapterOptions, request: AgentRunRequest, host: AgentRunHost) {
     this.#options = options;
     this.#request = request;
     this.#host = host;
-    this.#firstTimeFor = firstTimeFor;
     this.#translator = new TurnTranslator({
       emit: (event) => host.emit(event),
       log: host.log,
@@ -314,6 +323,9 @@ class CodexRun {
     const request = this.#request;
     if (request.cwd === null) throw new AgentRunError('no_project', 'Codex works inside a project folder, and this session has none.');
     if (!existsSync(request.cwd)) throw new AgentRunError('project_missing', 'The folder of this project no longer exists.');
+    // Without the Studio's sandbox Codex only runs where the operator said so.
+    const unavailable = this.#options.launcher.unavailable;
+    if (unavailable !== null) throw new AgentRunError('sandbox_required', unavailable);
     if (this.#cancelled) return { status: 'completed' };
 
     // Connect; if the user's own configuration defines MCP servers, connect again with them switched off.
@@ -370,6 +382,8 @@ class CodexRun {
       env: request.bridge.env,
       // Attachments live in the Studio's data directory, which the sandbox hides.
       expose: request.prompt.attachments.map((attachment) => attachment.path),
+      // The account's keys and sign-ins stay out of sight unless this project's owner lets agents use them.
+      credentials: this.#options.credentialsAllowed(request.projectId),
     });
     this.#isolation = command.isolation;
     this.#codexHome = command.codexHome;
@@ -428,14 +442,7 @@ class CodexRun {
     if ('hooks' in features && features.hooks !== false) {
       throw new AgentRunError('codex_not_isolated', 'Codex did not switch its hooks off when the Studio asked, so the run was not started.');
     }
-    if (userSettings && this.#firstTimeFor(request.sessionId)) {
-      this.#host.emit({
-        type: 'notice',
-        level: 'info',
-        code: 'codex_personal_settings',
-        text: "The Studio's sandbox is off, so the Codex settings of the account this Studio runs as (its config.toml) apply to this session. Approvals, the sandbox, MCP servers, hooks and project trust are still set by the Studio.",
-      });
-    }
+    this.#personalSettings = userSettings;
     return Object.entries(record(read.config.mcp_servers))
       .filter(([name, server]) => name !== request.bridge.serverName && record(server).enabled !== false)
       .map(([name]) => name);
@@ -488,6 +495,22 @@ class CodexRun {
     if (response === null) {
       response = answerOf(threadResponseSchema, await this.#ask('thread/start', settings), 'thread/start');
       await this.#seed(response.thread.id, request.history);
+      // A conversation that starts without the Studio's sandbox says so, once, where the person will read it.
+      if (this.#isolation !== 'hidden') {
+        this.#host.emit({
+          type: 'notice',
+          level: 'warning',
+          code: 'codex_without_sandbox',
+          text: `This Studio runs Codex without its sandbox. The commands Codex runs without asking can read any file the Studio's account can read — files outside the project, credentials and the Studio's own data included. Anything that changes something still needs approval.${
+            this.#personalSettings ? " That account's own Codex settings and instructions also apply here; approvals, the sandbox, MCP servers, hooks and project trust are still set by the Studio." : ''
+          }`,
+        });
+      }
+    }
+
+    // In the sandbox the account's own instruction files are hidden: Codex must not report having loaded one.
+    if (this.#isolation === 'hidden' && (response.instructionSources ?? []).some((source) => isInside(this.#codexHome, source))) {
+      throw new AgentRunError('codex_not_isolated', "Codex loaded the personal instruction file of the account the Studio runs as, which the Studio's sandbox should have hidden. The run was not started.");
     }
 
     const sandbox = record(response.sandbox);

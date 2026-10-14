@@ -112,6 +112,8 @@ export type ConfigRead = z.infer<typeof configReadSchema>;
 export const threadResponseSchema = z.looseObject({
   thread: z.looseObject({ id: z.string().min(1) }),
   model: z.string().optional(),
+  /** The instruction files Codex loaded for this thread (`AGENTS.md` of its home, of the project, …). */
+  instructionSources: z.array(z.string()).optional().catch(undefined),
   approvalPolicy: z.unknown(),
   approvalsReviewer: z.unknown(),
   sandbox: z.unknown(),

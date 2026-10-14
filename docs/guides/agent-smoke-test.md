@@ -226,8 +226,10 @@ Optional variables:
   turns with. Take the names from `GET /api/agents/codex` (they come from the
   CLI's `model/list`); without them the CLI's default model is used.
 - `STUDIO_CODEX_SMOKE_STEPS=b,c,e`: only those steps (`d` needs `a`).
-- `STUDIO_CODEX_SMOKE_SANDBOX=off`: run without the Studio's sandbox. The
-  default is `auto` — bubblewrap where it works, as in a production install.
+- `STUDIO_CODEX_SMOKE_SANDBOX=off`: run without the Studio's sandbox (the
+  check then also sets what `AGENT_STUDIO_CODEX_WITHOUT_SANDBOX=on` sets;
+  without that Codex refuses to run unsandboxed). The default is `auto` —
+  bubblewrap where it works, as in a production install.
 - `STUDIO_CODEX_SMOKE_REPORT=<file>`: where to write what was seen (default
   `<tmpdir>/codex-smoke-report.json`). It holds event types, approval titles
   and short pieces of the answers: read it, do not commit it.
@@ -250,6 +252,16 @@ The same by hand, in the product: create a project in an empty folder, start
 a Codex session on a small model with permission mode "ask", and send those
 six messages — allow the approval of the third, deny the fourth, press stop
 during the last. Then look at `ps` for a leftover `codex app-server`.
+
+The project's `agentCredentials` feature decides what an agent can read of
+the account the Studio runs as. It is off unless the owner switches it on
+(`PATCH /api/projects/:id { "features": { "agentCredentials": true } }`): the
+account's SSH and GPG keys, cloud sign-ins, the GitHub CLI's token, `.netrc`,
+`.npmrc`, Git credentials and the other agent's sign-in are then not there for
+the CLI or anything it runs — so an approved `git push` over SSH or a `gh` call
+fails inside a run — and with it on they are. To see it, put a file into
+`~/.ssh` of the account and ask Codex to `cat` it with the feature off and on.
+It needs the Studio's sandbox; the check above passes either way.
 
 ### Checks that cost nothing
 
@@ -332,6 +344,7 @@ built from):
 | Does the user's configuration matter, then? | Yes. With `approval_policy = "never"`, `sandbox_mode = "danger-full-access"`, an MCP server and a trusted project in `config.toml`, a thread started without parameters had exactly those, and the MCP server was started. Parameters given to `thread/start` (`approvalPolicy`, `approvalsReviewer`, `sandbox`) won over the file. |
 | Do saved command rules bypass an approval? | Yes. `prefix_rule(pattern=["touch"], decision="allow")` in `rules/default.rules` made `touch x` run outside the read-only sandbox with no request at all, under `on-request` and under `untrusted`. The same line in a trusted project's `.codex/rules/` did the same. |
 | What makes them go away? | Inside bubblewrap: an empty *regular* file bound over `config.toml` (the CLI refuses `/dev/null`: "is not a file") and an empty directory over `rules/`. Then `config/read` shows a user layer with no keys, the project layer is "disabled until the project is trusted", the MCP server is not started and `touch x` fails in the sandbox. The sign-in keeps working. Without bubblewrap: `-c projects={"<dir>" = {trust_level = "untrusted"}}` switches the project layer off and `-c mcp_servers={"<name>" = {enabled = false}}` a server; nothing switches the user's rules off. |
+| Which instruction files does it load by itself? | `AGENTS.md` of its home, or `AGENTS.override.md` there when that one has text in it (an empty override falls back to `AGENTS.md`; an empty file is not loaded at all), and the project's `AGENTS.md`. A new thread lists them under `instructionSources`. |
 | Does Codex's own sandbox work inside the Studio's? | Yes: under the kernel's `mask` profile plus one more bubblewrap layer, a command in the read-only sandbox still got "Read-only file system", an escalated one ran, and the data directory was empty for both except the one file exposed. |
 | When does Codex ask? | `on-request`: a command runs in the sandbox unasked; one sent with `sandbox_permissions: "require_escalated"` produces `item/commandExecution/requestApproval` (`command` is the shell line, `/bin/bash -lc '…'`, `reason` the model's justification). A command the sandbox refused produces no item at all — the model just sees the failure. `untrusted` asks about every command, `ls` included, and what is approved runs outside the sandbox. |
 | What can be answered? | `accept`, `decline` (the turn goes on; the model is told "rejected by user" and nothing more), `cancel` (the turn ends as `interrupted`). `decline` works although the request's `availableDecisions` does not list it. |
@@ -350,8 +363,28 @@ permissions), `item/tool/requestUserInput`, a network approval, a context
 compaction, `model/rerouted`, `thread/name/updated`, and a usage limit reached
 on a real account.
 
-Worth knowing: with the sandbox the service account's `~/.codex/config.toml`,
-`hooks.json` and `rules/` do not exist for a Studio run, but its
-`~/.codex/AGENTS.md` does (`thread/start` listed it under
-`instructionSources`): instructions, not permissions. And every run leaves the
-CLI's own record of the conversation in `~/.codex`, as any use of it does.
+Worth knowing: every run leaves the CLI's own record of the conversation in
+`~/.codex`, as any use of it does.
+
+#### codex-cli 0.160.0 — 2026-10-14, the sandbox reworked (no paid turns)
+
+The hidden level now uses the `hide` list of the kernel's `mask` profile — one
+bubblewrap layer instead of two — and hides more: the Codex home's `AGENTS.md`
+and `AGENTS.override.md` (the personal instructions of the account the Studio
+runs as), and the account's credentials unless the project allows them.
+Checked with the real program, a throw-away home and a scripted model, so
+without an account:
+
+- With the default (credentials hidden): the user layer of `config/read` had
+  no keys although `config.toml` said `approval_policy = "never"`;
+  `instructionSources` was empty and the model never saw the text of
+  `AGENTS.md`; a command Codex ran **without asking** got "No such file or
+  directory" for a key in `~/.ssh`, for the GitHub CLI's `hosts.yml` and for
+  the Studio's database, an empty `.netrc`, an empty `rules/`, and "Read-only
+  file system" for `touch` although a saved rule allowed `touch`.
+- With credentials allowed: the same command read the key, `hosts.yml` and
+  `.netrc`; everything else as before.
+
+Without the sandbox Codex no longer runs unless the operator set
+`AGENT_STUDIO_CODEX_WITHOUT_SANDBOX=on`; then every conversation begins with a
+notice that files outside the project, credentials included, are readable.

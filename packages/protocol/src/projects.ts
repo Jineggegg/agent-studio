@@ -69,7 +69,7 @@ export const projectLinkStatusResponseSchema = z.object({ links: z.array(project
 /** Identifier of an agent adapter ("claude-code", "codex", …). */
 export const agentIdSchema = z.string().regex(/^[a-z][a-z0-9-]{0,39}$/, 'Not a valid agent id.');
 
-export const PROJECT_FEATURES = ['assistant', 'automation', 'instructions'] as const;
+export const PROJECT_FEATURES = ['assistant', 'automation', 'instructions', 'agentCredentials'] as const;
 export const projectFeatureSchema = z.enum(PROJECT_FEATURES);
 export type ProjectFeature = z.infer<typeof projectFeatureSchema>;
 
@@ -84,10 +84,20 @@ export const projectFeaturesSchema = z.object({
    * folder, for Claude Code. On unless the owner switches it off.
    */
   instructions: z.boolean(),
+  /**
+   * Coding agents working in this project may read the credentials of the
+   * account the Studio runs as: SSH and GPG keys, cloud and container
+   * sign-ins, the GitHub CLI's token, package-registry and Git credentials,
+   * and the other agent's sign-in. Off unless the owner switches it on: an
+   * agent then cannot read them into a conversation, and a command that needs
+   * them — `git push` over SSH, `gh` — fails inside an agent run even when it
+   * was approved. Takes effect where the Studio's sandbox is available.
+   */
+  agentCredentials: z.boolean(),
 });
 export type ProjectFeatures = z.infer<typeof projectFeaturesSchema>;
 
-export const DEFAULT_PROJECT_FEATURES: ProjectFeatures = { assistant: true, automation: false, instructions: true };
+export const DEFAULT_PROJECT_FEATURES: ProjectFeatures = { assistant: true, automation: false, instructions: true, agentCredentials: false };
 
 // ---- the project ---------------------------------------------------------------
 

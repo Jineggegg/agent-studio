@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describeError } from '../../kernel/errors.js';
 import type { ModuleContext } from '../../kernel/module.js';
-import { type ProcessSupervisor, terminate } from '../../kernel/process.js';
+import { type ProcessSupervisor, credentialPaths, terminate } from '../../kernel/process.js';
 import { AgentRunError, type AgentRunHost, type AgentRunRequest, type AgentRunResult, type PromptAttachment } from '../agents/adapter.js';
 import type { ClaudeCli, CliInstallation } from './cli.js';
 import { type ExitFacts, NOT_INSTALLED_MESSAGE, errorFromExit, errorFromResult, isResumeNotFound, presentable } from './errors.js';
@@ -250,9 +250,19 @@ export class ClaudeRun {
         appendSystemPrompt: this.#systemPrompt,
         addDirs: folders,
       });
+      // The credentials of the account the Studio runs as (SSH keys, cloud sign-ins, the GitHub CLI's
+      // token, the other agent's sign-in, …) are hidden from the CLI unless the project's owner lets
+      // agents use them — all but Claude Code's own configuration, which holds its sign-in. A session
+      // outside any project never sees them.
+      const projects = context.services.projects;
+      const project = request.projectId === null ? null : projects.find(request.projectId);
+      const credentialsVisible = project !== null && projects.isFeatureEnabled(project, 'agentCredentials');
+      const home = os.homedir();
+      const ownConfiguration = new Set([path.join(home, '.claude'), path.join(home, '.claude.json')]);
       // Attachments live in the Studio's data directory, which the sandbox hides: let exactly these back in.
       const wrapped = context.sandbox.wrap(installation.executable, args, {
         kind: 'mask',
+        hide: credentialsVisible ? [] : credentialPaths(home).filter((location) => !ownConfiguration.has(location)),
         expose: [...folders, ...request.prompt.attachments.map((attachment) => attachment.path)],
       });
       this.#deps.tap?.({ runId: request.runId, stream: 'argv', text: JSON.stringify({ file: wrapped.file, args: wrapped.args }) });
