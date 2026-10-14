@@ -47,6 +47,34 @@ export interface SessionAccess {
   readonly project: ProjectRecord | null;
 }
 
+/**
+ * What only the server may decide about a new session. None of this is part of
+ * the request a client sends: a module passes it when it creates a session
+ * for a purpose of its own.
+ */
+export interface SessionOptions {
+  /**
+   * A helper session: one the Studio runs for itself (the summary of a
+   * handoff, say). It is in nobody's lists — sessions, runs, search, activity —
+   * nothing about it is published on `user:<id>` or `internal:runs`, and its
+   * runs are offered none of the Studio's tools. It is still an ordinary
+   * session to the permission engine, and what it uses is recorded in
+   * `agent_usage`. Whoever creates one removes it when it has served.
+   */
+  readonly hidden?: boolean;
+  /**
+   * Background the agent is given in front of the first message it gets in
+   * this session (the brief of a handoff). The transcript keeps the person's
+   * own words; adapters that are handed the conversation as history find the
+   * seed at its start. The caller frames it as data — the runtime passes it
+   * on as written.
+   */
+  readonly seed?: string;
+}
+
+/** Characters of background one session may be created with. */
+export const SESSION_SEED_CHARS = 60_000;
+
 const sessionNotFound = () => notFound('No such session.', 'session_not_found');
 
 /**
@@ -63,6 +91,8 @@ export class SessionService {
   /** user → tab → what is on screen there. */
   readonly #presence = new Map<string, Map<string, { sessions: Set<string>; at: number }>>();
   #pending: Array<() => void> | null = null;
+  /** Ids of the helper sessions, read once and kept in step: they are asked about on every announcement. */
+  #hidden: Set<string> | null = null;
 
   constructor(deps: { context: ModuleContext; store: AgentStore; presenceTtlMs: number }) {
     this.#context = deps.context;
@@ -118,12 +148,31 @@ export class SessionService {
     this.#announce(() => this.#bus.publish(sessionTopic(sessionId), type, data));
   }
 
+  /** Whether a session is a helper session (see {@link SessionOptions.hidden}). */
+  isHidden(sessionId: string): boolean {
+    this.#hidden ??= new Set(this.#store.hiddenSessionIds());
+    return this.#hidden.has(sessionId);
+  }
+
+  /**
+   * True for an announcement about a helper session. Every payload sent to a
+   * user or to the other modules names its session in one of three places.
+   */
+  #aboutHidden(data: unknown): boolean {
+    const value = (data ?? {}) as { sessionId?: unknown; session?: { id?: unknown } | null; approval?: { sessionId?: unknown } | null };
+    const sessionId = value.sessionId ?? value.session?.id ?? value.approval?.sessionId;
+    return typeof sessionId === 'string' && this.isHidden(sessionId);
+  }
+
+  /** Tells one user's devices. Nothing is said about a helper session. */
   toUser(userId: string, type: string, data: unknown): void {
+    if (this.#aboutHidden(data)) return;
     this.#announce(() => this.#bus.publish(userTopic(userId), type, data));
   }
 
-  /** For the notification and automation modules; see the top of agents.module.ts. */
+  /** For the notification and automation modules; see the top of agents.module.ts. Nothing is said about a helper session. */
   internal(type: string, data: unknown): void {
+    if (this.#aboutHidden(data)) return;
     this.#announce(() => this.#bus.publish('internal:runs', type, data));
   }
 
@@ -288,8 +337,9 @@ export class SessionService {
 
   // ---- create, read, change, remove ----------------------------------------
 
-  async create(principal: Principal, input: CreateSessionRequest, adapter: AgentAdapter | undefined): Promise<Session> {
+  async create(principal: Principal, input: CreateSessionRequest, adapter: AgentAdapter | undefined, options: SessionOptions = {}): Promise<Session> {
     if (!adapter) throw unprocessable('That agent is not available on this Studio.', 'agent_unavailable');
+    if (options.seed !== undefined && options.seed.length > SESSION_SEED_CHARS) throw new Error('The background for a new session is too long.');
     let project: ProjectRecord | null = null;
     if (input.projectId === null) {
       // Only a plain chat model may work outside a project: it has no working directory to be confined to.
@@ -337,11 +387,49 @@ export class SessionService {
       last_user_message_at: null,
       created_at: now,
       updated_at: now,
+      hidden: options.hidden === true ? 1 : 0,
+      seed: options.seed === undefined || options.seed === '' ? null : options.seed,
     };
     this.#store.insertSession(row);
+    // Known as a helper before anything is announced about it.
+    if (row.hidden === 1) (this.#hidden ??= new Set(this.#store.hiddenSessionIds())).add(row.id);
     const session = this.present(row, project);
     this.toUser(principal.userId, USER_AGENT_EVENT.sessionCreated, { session });
     return session;
+  }
+
+  /**
+   * The conversation a session belongs to after handoffs, oldest first: the
+   * session the chain started from and every session created as a
+   * continuation of it — those the caller may see. A session that was never
+   * handed over is a chain of one. Sessions deleted since are simply absent:
+   * the ones that remain keep their order.
+   */
+  chain(principal: Principal, sessionId: string): Session[] {
+    const { row } = this.requireSession(principal, sessionId, 'view');
+    const rootId = row.chain_id ?? row.id;
+    const projects = new Map<string, ProjectRecord | null>();
+    const projectOf = (member: SessionRow): ProjectRecord | null => {
+      if (member.project_id === null) return null;
+      if (!projects.has(member.project_id)) projects.set(member.project_id, this.#context.services.projects.find(member.project_id));
+      return projects.get(member.project_id) ?? null;
+    };
+    const members = this.#store
+      .chain(rootId, principal.userId, principal.role === 'owner')
+      .filter((member) => member.project_id === null || this.#context.services.projects.accessOf(principal, member.project_id) !== null);
+    // A session comes after the one it continues. Creation times alone would do, were they not
+    // milliseconds: two sessions made in the same one have no order of their own.
+    const known = new Set(members.map((member) => member.id));
+    const placed = new Set<string>();
+    const ordered: SessionRow[] = [];
+    let waiting = [...members.filter((member) => member.id === rootId), ...members.filter((member) => member.id !== rootId)];
+    while (waiting.length > 0) {
+      const next = waiting.find((member) => member.parent_session_id === null || !known.has(member.parent_session_id) || placed.has(member.parent_session_id)) ?? waiting[0]!;
+      ordered.push(next);
+      placed.add(next.id);
+      waiting = waiting.filter((member) => member !== next);
+    }
+    return ordered.map((member) => this.present(member, projectOf(member)));
   }
 
   /** Accepts the Studio's id or — for links copied from a terminal — the agent's own id. */
@@ -506,5 +594,6 @@ export class SessionService {
   deleteRow(row: SessionRow): void {
     this.#store.deleteSession(row.id);
     this.toUser(row.user_id, USER_AGENT_EVENT.sessionRemoved, { sessionId: row.id, projectId: row.project_id });
+    this.#hidden?.delete(row.id);
   }
 }

@@ -216,4 +216,20 @@ export const AGENTS_MIGRATIONS: readonly Migration[] = [
       CREATE INDEX agent_usage_session ON agent_usage(session_id, at);
     `,
   },
+  {
+    version: 2,
+    name: 'helper sessions, session seeds, chain lookup',
+    sql: `
+      -- A helper session is one the Studio runs for its own purposes (writing the summary of a
+      -- handoff, say). It is in nobody's lists and announces nothing; what its runs use is
+      -- recorded in agent_usage like any other run's.
+      ALTER TABLE agent_sessions ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
+      -- Background the server gives the agent in front of the session's first message (the brief
+      -- of a handoff). Written once, by the server, when the session is created; never sent to clients.
+      ALTER TABLE agent_sessions ADD COLUMN seed TEXT;
+      CREATE INDEX agent_sessions_chain ON agent_sessions(chain_id) WHERE chain_id IS NOT NULL;
+      -- Usage reports across users (the instance owner's) read by time alone.
+      CREATE INDEX agent_usage_at ON agent_usage(at);
+    `,
+  },
 ];

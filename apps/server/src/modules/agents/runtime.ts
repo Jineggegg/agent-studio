@@ -396,6 +396,9 @@ export class RunService {
     const now = Date.now();
     const sessionId = session.id;
     const attachments = spec.attachmentIds.map((id) => this.#store.attachment(sessionId, id)).filter((row): row is AttachmentRow => row !== undefined);
+    // Background the session was created with goes out in front of the first message the agent really gets.
+    const seed = this.#undeliveredSeed(sessionId);
+    const promptText = seed === null ? spec.promptText : `${seed}\n\n${spec.promptText}`;
 
     try {
       this.#sessions.atomic(() => {
@@ -416,7 +419,7 @@ export class RunService {
           wait_for_approval: spec.waitForApproval ? 1 : 0,
           status: 'accepted',
           source_text: spec.text,
-          prompt: JSON.stringify({ text: spec.promptText, attachmentIds: spec.attachmentIds, quote: spec.quote }),
+          prompt: JSON.stringify({ text: promptText, attachmentIds: spec.attachmentIds, quote: spec.quote }),
           model: spec.model ?? session.model,
           effort: spec.effort ?? session.effort,
           permission_mode: mode,
@@ -482,6 +485,19 @@ export class RunService {
     this.#sessions.refreshAttention(sessionId, { announce: true });
     setImmediate(() => void this.#launch(run));
     return this.#presentReceipt(this.#store.receipt(userId, spec.requestId) ?? this.#syntheticReceipt(userId, spec, sessionId, runId, now), false);
+  }
+
+  /**
+   * The background a session was created with (see `SessionOptions.seed`), as
+   * long as the agent has not had it: until the agent has a conversation of
+   * its own to resume, or has answered once. A first run that failed before
+   * the agent took anything in therefore does not lose it.
+   */
+  #undeliveredSeed(sessionId: string): string | null {
+    const session = this.#store.session(sessionId);
+    if (!session || session.seed === null || session.seed === '') return null;
+    if (session.native_session_id !== null || this.#store.hasCompletedRun(sessionId)) return null;
+    return session.seed;
   }
 
   #syntheticReceipt(userId: string, spec: { requestId: string; hash: string }, sessionId: string, runId: string, at: number): ReceiptRow {
@@ -635,7 +651,7 @@ export class RunService {
           return { status: 'cancelled', answers: [] };
         }),
       studioTools: {
-        list: () => this.studioTools(),
+        list: () => this.studioToolsFor(run.id),
         call: (name, input) => this.callStudioTool(run.id, name, input),
       },
       log: this.#log.child({ runId: run.id, agent: run.agentId }),
@@ -734,6 +750,11 @@ export class RunService {
       if (event.type === SESSION_EVENT.messageAssistant && data.parentToolCallId) continue;
       if (data.text.trim() === '') continue;
       history.push({ role: event.type === SESSION_EVENT.messageUser ? 'user' : 'assistant', text: data.text });
+    }
+    // The transcript keeps the person's own words, so the background the session began with is not in
+    // it. An adapter that is handed the conversation as history finds it where it was said: at the start.
+    if (session.seed !== null && session.seed !== '' && history.length > 0 && !prompt.text.startsWith(session.seed)) {
+      history.unshift({ role: 'user', text: session.seed });
     }
     const token = this.#tokens.mint({ runId: run.id, sessionId: run.sessionId, projectId: run.projectId, userId: run.userId, agentId: run.agentId });
     return {
@@ -1889,10 +1910,22 @@ export class RunService {
     }));
   }
 
+  /**
+   * The tools one run is offered: all of them, except that a run in a helper
+   * session gets none — it is there to write one answer from what it was
+   * given, not to look things up or to change anything.
+   */
+  studioToolsFor(runId: string): StudioToolDescription[] {
+    const run = this.#active.get(runId);
+    if (!run || this.#sessions.isHidden(run.sessionId)) return [];
+    return this.studioTools();
+  }
+
   /** Calls a registered tool with the identity of one run. `write` tools go through the permission engine first. */
   async callStudioTool(runId: string, name: string, input: unknown): Promise<AgentToolResult> {
     const run = this.#active.get(runId);
     if (!run || run.phase === 'finished') return { text: 'This run has ended.', isError: true };
+    if (this.#sessions.isHidden(run.sessionId)) return { text: 'This run has no tools.', isError: true };
     const tool = this.#context.agentTools.get(name);
     if (!tool) return { text: `There is no tool named "${name}".`, isError: true };
     let effective = input;

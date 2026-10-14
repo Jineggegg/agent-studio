@@ -18,7 +18,7 @@ import { BridgeTokens, registerBridgeRoutes } from './bridge.js';
 import { registerAgentRoutes } from './routes.js';
 import { RunService, type RuntimeOptions, type SendOptions } from './runtime.js';
 import { AGENTS_MIGRATIONS } from './schema.js';
-import { SessionService } from './sessions.js';
+import { type SessionOptions, SessionService } from './sessions.js';
 import { AgentStore } from './store.js';
 
 /**
@@ -53,6 +53,29 @@ import { AgentStore } from './store.js';
  * event happened (they reported it through `PUT /api/sessions/presence`).
  * A notifier should stay quiet for a user in that list: they are looking at
  * it. A finished result is already marked as seen for its owner in that case.
+ *
+ * ## Helper sessions
+ *
+ * A module that needs an agent's answer for a purpose of its own (the summary
+ * of a handoff) creates a session with `createSession(user, input, { hidden:
+ * true })`, sends it one message and removes it with `removeSession`. Such a
+ * session is nobody's conversation: it is left out of the session list, the
+ * run lists, search and the activity summary; nothing about it is published
+ * on `user:<id>` or on `internal:runs` (so no inbox row and no notification);
+ * and its runs are offered none of the Studio's tools. Everything else is as
+ * for any session: the permission engine decides, the events are recorded on
+ * `session:<id>` (which is how its creator follows it), and what it uses is
+ * written to `agent_usage`, which outlives the session. A helper session that
+ * its creator did not get to remove (the server stopped first) is removed
+ * when the server starts.
+ *
+ * ## Background for a new session
+ *
+ * `createSession(user, input, { seed })` stores text the agent is given in
+ * front of the first message it gets in that session — and only until it has
+ * a conversation of its own or has answered once. The transcript records the
+ * person's own words; an adapter that is handed the conversation as `history`
+ * finds the seed as the first entry. A client can neither set nor read it.
  */
 
 /** How long an approval waits for an answer before it is denied. Change it per deployment here. */
@@ -89,8 +112,27 @@ export interface AgentsService {
    * is gone or disabled — then nothing may be started for it.
    */
   principalFor(userId: string): Principal | null;
-  createSession(user: Principal, input: CreateSessionInput): Promise<Session>;
+  /**
+   * Creates a session exactly like `POST /api/sessions`. `options` is for what
+   * only the server may decide: a helper session that no list shows, and
+   * background to put in front of the session's first message (see
+   * {@link SessionOptions}).
+   */
+  createSession(user: Principal, input: CreateSessionInput, options?: SessionOptions): Promise<Session>;
   getSession(user: Principal, sessionId: string): Session;
+  /**
+   * Deletes a session exactly like `DELETE /api/sessions/:id`: its run is
+   * stopped, then its rows, its files and the agent's own copy of the
+   * conversation go. For its creator and the instance owner. What it used
+   * stays in `agent_usage`.
+   */
+  removeSession(user: Principal, sessionId: string): Promise<void>;
+  /**
+   * Copies files the caller uploaded and has not sent yet into another of
+   * their sessions, so that one upload can go out in several. Returns the ids
+   * of the copies, to be named in `sendMessage`.
+   */
+  copyAttachments(user: Principal, attachmentIds: readonly string[], toSessionId: string): Promise<string[]>;
   /**
    * Sends a message exactly like the workbench does. For a run nobody is
    * watching pass `origin: 'scheduled'` or `'automation'`: whatever would need
@@ -112,7 +154,7 @@ declare module '../../kernel/module.js' {
 
 export function createAgentsModule(options: AgentsModuleOptions = {}): StudioModule {
   // One module object may serve several Studios in one process (tests do this), so nothing is kept per module.
-  const instances = new WeakMap<ModuleContext, { runs: RunService; files: AttachmentFiles; store: AgentStore }>();
+  const instances = new WeakMap<ModuleContext, { runs: RunService; files: AttachmentFiles; store: AgentStore; removeSession: (sessionId: string) => Promise<void> }>();
 
   return {
     name: 'agents',
@@ -139,8 +181,6 @@ export function createAgentsModule(options: AgentsModuleOptions = {}): StudioMod
         },
         attachmentPath: (row) => attachments.pathOf(row),
       });
-      instances.set(context, { runs: runService, files: attachments, store: agentStore });
-
       /** Deletes a session: its run is stopped first, then its rows, its files and the agent's own copy go. */
       const removeSession = async (sessionId: string): Promise<void> => {
         await runService.stopForRemoval(sessionId);
@@ -156,6 +196,7 @@ export function createAgentsModule(options: AgentsModuleOptions = {}): StudioMod
             .catch((error: unknown) => log.warn({ sessionId, agent: adapter.id, err: describeError(error) }, "removing the agent's own transcript failed"));
         }
       };
+      instances.set(context, { runs: runService, files: attachments, store: agentStore, removeSession });
 
       context.services.agents = {
         registerAdapter: (adapter) => runService.registerAdapter(adapter),
@@ -163,11 +204,16 @@ export function createAgentsModule(options: AgentsModuleOptions = {}): StudioMod
         adapters: () => runService.adapters(),
         adapter: (id) => runService.adapter(id),
         principalFor: (userId) => runService.principalFor(userId),
-        createSession: (user, input) => {
+        createSession: (user, input, sessionOptions) => {
           const parsed: CreateSessionRequest = createSessionRequestSchema.parse(input);
-          return sessions.create(user, parsed, runService.adapter(parsed.agentId));
+          return sessions.create(user, parsed, runService.adapter(parsed.agentId), sessionOptions);
         },
         getSession: (user, sessionId) => sessions.find(user, sessionId),
+        removeSession: async (user, sessionId) => {
+          sessions.requireSession(user, sessionId, 'control');
+          await removeSession(sessionId);
+        },
+        copyAttachments: async (user, attachmentIds, toSessionId) => (await attachments.copyTo(user, attachmentIds, toSessionId)).map((attachment) => attachment.id),
         sendMessage: (user, sessionId, input, sendOptions) => {
           const parsed: SendMessageRequest = sendMessageRequestSchema.parse(input);
           return runService.send(user, sessionId, parsed, sendOptions);
@@ -242,6 +288,11 @@ export function createAgentsModule(options: AgentsModuleOptions = {}): StudioMod
       const instance = instances.get(context);
       if (!instance) return;
       instance.runs.recover();
+      // A helper session does not outlive the process that made it: whoever created it removes it when it
+      // has served, and what a crash left behind is removed here. What it used stays in the usage records.
+      for (const sessionId of instance.store.hiddenSessionIds()) {
+        await instance.removeSession(sessionId).catch((error: unknown) => context.log.warn({ sessionId, err: describeError(error) }, 'removing a leftover helper session failed'));
+      }
       await instance.files
         .sweep(instance.store.allSessionIds())
         .catch((error: unknown) => context.log.warn({ err: describeError(error) }, 'removing attachments failed'));

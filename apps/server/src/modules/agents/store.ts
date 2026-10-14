@@ -41,6 +41,10 @@ export interface SessionRow {
   last_user_message_at: number | null;
   created_at: number;
   updated_at: number;
+  /** 1 for a helper session: one the Studio runs for itself, which no list shows and nobody is told about. */
+  hidden: number;
+  /** Background the server puts in front of the first message the agent gets. Never sent to clients. */
+  seed: string | null;
 }
 
 export interface EventRow {
@@ -247,8 +251,8 @@ export class AgentStore {
     this.#db.run(
       `INSERT INTO agent_sessions (id, project_id, user_id, agent_id, model, effort, permission_mode, title, title_source,
          native_session_id, pinned, archived_at, chain_id, parent_session_id, attention, draft, draft_updated_at,
-         last_seq, last_activity_at, last_user_message_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         last_seq, last_activity_at, last_user_message_at, created_at, updated_at, hidden, seed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       row.id,
       row.project_id,
       row.user_id,
@@ -271,6 +275,8 @@ export class AgentStore {
       row.last_user_message_at,
       row.created_at,
       row.updated_at,
+      row.hidden,
+      row.seed,
     );
   }
 
@@ -302,7 +308,8 @@ export class AgentStore {
     offset: number;
   }): SessionRow[] {
     const visible = this.#visibility(options.visibility, 's');
-    const clauses = [visible.sql];
+    // Helper sessions are nobody's conversation: no list shows them.
+    const clauses = [visible.sql, 's.hidden = 0'];
     const params = [...visible.params];
     if (options.projectId !== undefined) {
       clauses.push('s.project_id = ?');
@@ -330,7 +337,29 @@ export class AgentStore {
 
   /** Sessions of one user that carry an attention mark or are running. */
   activeSessions(userId: string): SessionRow[] {
-    return this.#db.all<SessionRow>("SELECT * FROM agent_sessions WHERE user_id = ? AND attention != 'none' AND archived_at IS NULL", userId);
+    return this.#db.all<SessionRow>("SELECT * FROM agent_sessions WHERE user_id = ? AND attention != 'none' AND archived_at IS NULL AND hidden = 0", userId);
+  }
+
+  /** Ids of the helper sessions, which announce nothing. */
+  hiddenSessionIds(): string[] {
+    return this.#db.all<{ id: string }>('SELECT id FROM agent_sessions WHERE hidden = 1').map((row) => row.id);
+  }
+
+  /**
+   * The sessions of one handed-over conversation, oldest first: the session the
+   * chain started from and every session that names it as its chain. Only the
+   * caller's own — or everyone's, for the instance owner.
+   */
+  chain(rootId: string, userId: string, isOwner: boolean): SessionRow[] {
+    return this.#db.all<SessionRow>(
+      `SELECT * FROM agent_sessions
+       WHERE (id = ? OR chain_id = ?) AND hidden = 0 AND (user_id = ? OR ? = 1)
+       ORDER BY created_at, id`,
+      rootId,
+      rootId,
+      userId,
+      toSql(isOwner),
+    );
   }
 
   updateSession(id: string, patch: SessionPatch, now: number): void {
@@ -446,7 +475,7 @@ export class AgentStore {
     at: number;
   }> {
     const visible = this.#visibility(options.visibility, 's');
-    const clauses = [visible.sql, 's.archived_at IS NULL'];
+    const clauses = [visible.sql, 's.archived_at IS NULL', 's.hidden = 0'];
     const params = [...visible.params];
     if (options.projectId !== undefined) {
       clauses.push('s.project_id = ?');
@@ -565,6 +594,9 @@ export class AgentStore {
     if (options.sessionId !== undefined) {
       clauses.push('session_id = ?');
       params.push(options.sessionId);
+    } else {
+      // The runs of helper sessions belong to no list; they are reached only by naming their session.
+      clauses.push('session_id NOT IN (SELECT id FROM agent_sessions WHERE hidden = 1)');
     }
     return this.#db.all<RunRow>(
       `SELECT * FROM agent_runs ${clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''} ORDER BY created_at DESC, id DESC LIMIT ?`,
@@ -579,6 +611,11 @@ export class AgentStore {
          AND dismissed_at IS NULL AND continued_by_run_id IS NULL ORDER BY created_at DESC`,
       sessionId,
     );
+  }
+
+  /** Whether the agent has answered in this session at least once. */
+  hasCompletedRun(sessionId: string): boolean {
+    return this.#db.get("SELECT 1 AS x FROM agent_runs WHERE session_id = ? AND status = 'completed' LIMIT 1", sessionId) !== undefined;
   }
 
   hasUnseenResult(sessionId: string): boolean {
@@ -884,6 +921,11 @@ export class AgentStore {
 
   attachment(sessionId: string, id: string): AttachmentRow | undefined {
     return this.#db.get<AttachmentRow>('SELECT * FROM agent_attachments WHERE id = ? AND session_id = ?', id, sessionId);
+  }
+
+  /** Lookup by id alone, with no access check: the caller decides who may use what it finds. */
+  attachmentById(id: string): AttachmentRow | undefined {
+    return this.#db.get<AttachmentRow>('SELECT * FROM agent_attachments WHERE id = ?', id);
   }
 
   attachmentsOfSession(sessionId: string, pendingOnly: boolean): AttachmentRow[] {

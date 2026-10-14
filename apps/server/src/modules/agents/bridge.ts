@@ -184,10 +184,11 @@ export function registerBridgeRoutes(context: ModuleContext, tokens: BridgeToken
     url: '/api/bridge/tools/list',
     access: 'self',
     handler: ({ request }) => {
-      identify(request);
+      const identity = identify(request);
       return {
         tools: [
-          ...runs.studioTools().map((tool) => ({ name: tool.name, description: tool.description, inputSchema: tool.inputSchema })),
+          // What this run is offered: nothing but the permission prompt for a run in a helper session.
+          ...runs.studioToolsFor(identity.runId).map((tool) => ({ name: tool.name, description: tool.description, inputSchema: tool.inputSchema })),
           { name: PERMISSION_PROMPT_TOOL, description: PERMISSION_PROMPT_DESCRIPTION, inputSchema: PERMISSION_PROMPT_SCHEMA },
         ],
       };

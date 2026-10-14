@@ -1,5 +1,5 @@
-import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, open, readdir, rm, stat, unlink } from 'node:fs/promises';
+import { constants, createReadStream, createWriteStream } from 'node:fs';
+import { copyFile, mkdir, open, readdir, rm, stat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import multipart from '@fastify/multipart';
@@ -7,7 +7,7 @@ import { AGENT_LIMITS, type Attachment, type RejectedAttachment, type UploadAtta
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { newId } from '../../kernel/crypto.js';
-import { StudioError, badRequest, conflict, describeError, notFound, payloadTooLarge, unauthorized } from '../../kernel/errors.js';
+import { StudioError, badRequest, conflict, describeError, notFound, payloadTooLarge, unauthorized, unprocessable } from '../../kernel/errors.js';
 import type { RouteConfig } from '../../kernel/http.js';
 import type { ModuleContext } from '../../kernel/module.js';
 import type { Principal } from '../../kernel/principal.js';
@@ -105,6 +105,60 @@ export class AttachmentFiles {
     if (row.sent_at !== null) throw conflict('That attachment has already been sent with a message.', 'attachment_already_sent');
     this.#store.deleteAttachment(sessionId, attachmentId);
     await unlink(this.pathOf(row)).catch(() => {});
+  }
+
+  /**
+   * Gives another session its own copies of files the caller uploaded and has
+   * not sent yet, so one upload can go out with messages in several sessions.
+   * The originals stay where they are, unsent. Both ends are the caller's own:
+   * a file of somebody else's session answers exactly like one that does not
+   * exist. Returns the copies, in the order asked for.
+   */
+  async copyTo(principal: Principal, attachmentIds: readonly string[], targetSessionId: string): Promise<Attachment[]> {
+    this.#sessions.requireSession(principal, targetSessionId, 'write');
+    const missing = () => unprocessable('An attachment of this message was not found.', 'attachment_not_found');
+    const sources: AttachmentRow[] = [];
+    for (const id of new Set(attachmentIds)) {
+      const row = this.#store.attachmentById(id);
+      if (!row || row.user_id !== principal.userId) throw missing();
+      try {
+        this.#sessions.requireSession(principal, row.session_id, 'write');
+      } catch {
+        throw missing();
+      }
+      if (row.sent_at !== null) throw unprocessable('An attachment of this message was already sent.', 'attachment_already_sent');
+      sources.push(row);
+    }
+    if (sources.length > AGENT_LIMITS.attachmentsPerMessage) {
+      throw unprocessable(`A message can carry at most ${AGENT_LIMITS.attachmentsPerMessage} files.`, 'too_many_attachments');
+    }
+    if (this.#store.attachmentsOfSession(targetSessionId, true).length + sources.length > MAX_PENDING_PER_SESSION) {
+      throw unprocessable('Too many unsent files are waiting in that session.', 'too_many_attachments');
+    }
+    const directory = path.join(this.#root, targetSessionId);
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    const copies: AttachmentRow[] = [];
+    // Lists show a session's files in the order they arrived: the copies keep the order they were asked for in.
+    const now = Date.now();
+    try {
+      for (const [index, source] of sources.entries()) {
+        const id = newId();
+        const extension = /\.([a-z0-9]{1,10})$/.exec(source.stored_name)?.[1];
+        const copy: AttachmentRow = { ...source, id, session_id: targetSessionId, stored_name: extension ? `${id}.${extension}` : id, sent_at: null, created_at: now + index };
+        copies.push(copy);
+        await copyFile(this.pathOf(source), this.pathOf(copy), constants.COPYFILE_EXCL);
+        this.#store.insertAttachment(copy);
+      }
+    } catch (error) {
+      // Nothing half-copied is left behind: neither a row nor a file.
+      for (const copy of copies) {
+        this.#store.deleteAttachment(targetSessionId, copy.id);
+        await unlink(this.pathOf(copy)).catch(() => {});
+      }
+      if (error instanceof StudioError) throw error;
+      throw unprocessable('An attachment of this message could not be read.', 'attachment_not_found');
+    }
+    return copies.map(presentAttachment);
   }
 
   /** Stores the files of one multipart request. Files over a limit are refused one by one; the rest are kept. */
