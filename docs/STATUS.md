@@ -4,7 +4,7 @@ A running record of what is done, what is in flight and what comes next, kept
 so that work can resume after an interruption. It is updated at every
 integration point; nothing is listed as done unless its tests pass.
 
-Last updated: 2026-10-14 (adapters, providers, inbox and automation integrated; workbench UI in progress).
+Last updated: 2026-10-14 (all server modules and the workbench UI integrated; project tools UI and acceptance suites in progress).
 
 ## Phases
 
@@ -15,7 +15,7 @@ Last updated: 2026-10-14 (adapters, providers, inbox and automation integrated; 
 | 3 New project | **Done** | Workspace, tooling, CI definitions, licence and lockfile checks |
 | 4 Backend foundation, auth, database | **Done** | Kernel + auth (passkeys, tokens, lockout, audit, operator CLI) + projects + preferences; unit, integration and 21 black-box acceptance tests |
 | 5 Agent runtime (Claude Code, Codex) | **Done** (server) | Runtime core; Claude Code adapter (stream-json; verified against Claude Code 2.1.283: attachments, resume, approved and denied writes, steering, stop); Codex adapter (app-server protocol; verified against codex-cli 0.160.0: status, turn, resume, bridge tool, approved and denied changes, stop). See `docs/guides/agent-smoke-test.md` for what was and was not seen from the real CLIs |
-| 6 Workbench, sessions, tasks | In progress | Server side done with the runtime core; workbench UI in progress |
+| 6 Workbench, sessions, tasks | **Done** | Runtime; workbench UI (transcript, composer with durable delivery, approvals, queue, recovery) verified in headless Chromium at four widths, not on a physical device; handoff, multi-agent tasks and a running-work view on the server (UI pending) |
 | 7 Projects, GitHub, terminal, files | Server **done** | Files, Git, worktrees, GitHub (automated tests use a stand-in `gh`; the read paths — account, repositories, pull-request inbox, repository page, pull-request detail, CI runs — were checked by hand against a real account on 2026-10-14; merge and the other write actions were not), terminal with real PTY tests, remote hosts, plugins. UI pending |
 | 8 Memory, API models, automation | Server **done** | Memory; API-model providers with a confined tool loop (never run against a real provider — preset model ids are unverified); inbox, notifications, Web Push (never sent to a real push service), automation with exactly-once scheduling. UI pending |
 | 9 Mobile UI, PWA, remote access | In progress | Web foundation **done** (design system, shell, auth and settings screens, launcher, PWA; verified in headless Chromium at phone, tablet and desktop sizes — not yet on a real device). Feature screens pending |
@@ -40,8 +40,10 @@ Wave 2 (needs the runtime core and the web foundation):
 - [x] Codex adapter (official CLI; app-server protocol for approvals)
 - [x] API-model providers: configuration, encrypted keys, OpenAI-compatible adapter, confined built-in tools
 - [x] Inbox, notifications, Web Push delivery, automation and deferred runs
-- [ ] Usage aggregation; handoff between models, summaries, multi-agent tasks
-- [ ] Workbench UI; project tools UI (files, editor, Git, GitHub, terminal); memory, inbox, automation and usage UI; settings pages; launcher customisation
+- [x] Usage aggregation; handoff between models, summaries, multi-agent tasks (server)
+- [x] Workbench UI
+- [ ] Project tools UI (files, editor, Git, GitHub, terminal, project settings)
+- [ ] Memory, inbox, automation, models, plugins, usage, handoff and task screens; launcher customisation
 
 Wave 3:
 
