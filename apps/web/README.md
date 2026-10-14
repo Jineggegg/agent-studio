@@ -82,6 +82,8 @@ apps/web
       auth/               sign-in, setup, step-up dialog, passkeys
       home/               launcher, project sheets, folder picker
       settings/           settings shell and the foundation's pages
+      workbench/          the chat surface: conversations, transcript, composer, approvals, runs,
+                          and the inspector that other features add their panels to
       dev/                component gallery (development builds only)
     test/                 test set-up and helpers (renderInApp, jsonResponse, errorResponse)
 ```
@@ -230,6 +232,116 @@ tiles come from `/api/projects`; they are not registered.
 `{ disabled, onBusyChange, onMessage }` and returns `null` where it cannot
 work, so the sign-in screen never shows a dead button. Passkeys are done this
 way (`features/auth/PasskeySignIn.tsx`).
+
+### A project tool beside the chat (the workbench's inspector)
+
+The workbench (`features/workbench/`) owns the chat and an area beside it for
+a project's tools — files, a terminal, Git, a preview. A tool is a **panel**
+registered from its own feature; the workbench supplies the container:
+
+| Layout | The inspector is… |
+| --- | --- |
+| wide | a docked column right of the chat, resized by dragging its edge (or ←/→ on the handle); the chat keeps at least 380 px |
+| tablet | a panel floating over the chat's trailing side |
+| phone | a full-screen layer over the chat, closed with its own control or Escape |
+
+Which panel is on show, whether the inspector is open and how wide it is are
+remembered per device. **With no panel registered there is no inspector at
+all** — no empty column, no toggle in the title bar, no ⌘J.
+
+```ts
+// src/features/files/index.ts
+import { FolderTree } from 'lucide-react';
+import { registerInspectorPanel } from '@/features/workbench/inspector/registry';
+
+registerInspectorPanel({
+  id: 'files',
+  title: 'files.title',
+  icon: FolderTree,
+  order: 10,
+  handles: ['open-file', 'reveal-folder'],
+  load: () => import('./FilesPanel'),
+});
+```
+
+```ts
+registerInspectorPanel(...panels: InspectorPanel[]): void
+
+interface InspectorPanel {
+  id: string;                    // lower-case, stable: 'files', 'terminal', 'git', 'preview'
+  title: MessageKey;
+  icon: LucideIcon;
+  order?: number;                // among the tabs, default 100
+  load: () => Promise<{ default: ComponentType<InspectorPanelProps> }>;
+  available?: (context: InspectorContext) => boolean;   // default: only inside a project
+  handles?: readonly InspectorRequestType[];            // the chat's requests this panel answers
+  keepAlive?: boolean;           // stay mounted (hidden) once opened — a terminal keeps its shell
+  useBadge?: (context: InspectorContext) => { count?: number; mark?: ActivityKind; label: string } | null;
+}
+
+interface InspectorContext { project: Project | null; sessionId: string | null; role: Role }
+
+interface InspectorPanelProps {
+  project: Project | null;       // the project on show
+  sessionId: string | null;      // the open conversation; null before its first message
+  active: boolean;               // this panel is the one on show — pause polling and animation otherwise
+  presentation: 'docked' | 'floating' | 'fullscreen';
+  request: InspectorRequest | null;   // something the chat asked for; handle it in an effect…
+  onRequestHandled: () => void;       // …then say so
+  close: () => void;             // closes the inspector
+}
+
+type InspectorRequest =
+  | { type: 'open-file'; path: string; line?: number }
+  | { type: 'reveal-folder'; path: string }
+  | { type: 'run-command'; text: string }
+  | { type: 'show-changes'; path?: string };
+```
+
+The panel's default export renders only its content and fills the area it is
+given (`height: 100%`, its own scrolling); the container draws the tabs, the
+close control and the resize handle. A panel with its own keys (an editor, a
+terminal) sets `data-keys="own"` on its root, as everywhere else.
+
+**The chat talks to panels through requests.** A control that needs a tool is
+drawn only when an available panel `handles` that request, so nothing in the
+transcript is ever a dead button:
+
+```tsx
+import { useInspectorAction } from '@/features/workbench/inspector/scope';
+
+const openFile = useInspectorAction('open-file');   // null when no panel handles it
+{openFile && <button onClick={() => openFile({ type: 'open-file', path })}>…</button>}
+```
+
+Today the transcript asks for `open-file` (a read or an edit's file, each file
+of a diff, and a link to a file in what the agent wrote — which copies the
+path while no panel can open it) and `run-command` (a command an agent ran).
+Outside React:
+`panelHandling(type, context)` and `requestInspector(request, context)` (returns
+false and does nothing when no panel answers). Also exported:
+`inspectorPanels(context)`, `showInspectorPanel(id)`, `setInspectorOpen(open)`,
+`toggleInspector()`, `setInspectorWidth(px)`, `useInspectorState()`.
+
+In a development build the workbench registers two stand-in panels
+(`features/workbench/dev/`) so the container can be looked at; a production
+build contains neither.
+
+**Workbench addresses** — everything is under `/workbench`, and the helpers in
+`features/workbench/routes.ts` build them (`workbenchPaths.session(projectId, sessionId)`):
+
+```
+/workbench                         where the user left off (or a new conversation)
+/workbench/p/<project>             that project: its last conversation, or a new one
+/workbench/p/<project>/new         a new conversation there
+/workbench/p/<project>/s/<session> a conversation
+/workbench/s/<session>             the same, when only the session is known — corrected to the full address
+/projects/<project>                redirects to /workbench/p/<project>  (this is what `projectPath(id)` gives)
+```
+
+Link to a conversation from anywhere with `workbenchPaths.lookup(sessionId)`; an
+address that names the wrong project, or a session that is gone, corrects
+itself or says so with a way on.
 
 ---
 

@@ -97,8 +97,38 @@ export interface RequestOptions<T = unknown> {
   keepalive?: boolean;
 }
 
+/** For sending files. The body is a `FormData`; progress is reported as it goes out. */
+export interface UploadOptions<T = unknown> {
+  query?: Record<string, QueryValue>;
+  schema?: ZodType<T>;
+  signal?: AbortSignal;
+  /** Milliseconds before the upload is abandoned. Default 5 minutes: files are large and phones are slow. */
+  timeoutMs?: number;
+  /** Called with the fraction of the body sent so far, 0–1. */
+  onProgress?: (fraction: number) => void;
+  noReauth?: boolean;
+}
+
+/** The part of `XMLHttpRequest` an upload needs (so tests can supply their own). */
+export interface UploadRequest {
+  open(method: string, url: string): void;
+  setRequestHeader(name: string, value: string): void;
+  send(body: FormData): void;
+  abort(): void;
+  readonly status: number;
+  readonly responseText: string;
+  timeout: number;
+  upload: { onprogress: ((event: { lengthComputable: boolean; loaded: number; total: number }) => void) | null };
+  onload: (() => void) | null;
+  onerror: (() => void) | null;
+  ontimeout: (() => void) | null;
+  onabort: (() => void) | null;
+}
+
 export interface HttpClientDeps {
   fetch: typeof fetch;
+  /** Creates the request an upload is sent with. Default: a new `XMLHttpRequest` (fetch cannot report upload progress). */
+  createUploadRequest?: () => UploadRequest;
   /** The anti-forgery token of the current session, or null when signed out. */
   getCsrfToken: () => string | null;
   /** The server said the session is over. */
@@ -122,9 +152,15 @@ export interface HttpClient {
   put<T = unknown>(path: string, body?: unknown, options?: RequestOptions<T>): Promise<T>;
   patch<T = unknown>(path: string, body?: unknown, options?: RequestOptions<T>): Promise<T>;
   delete<T = unknown>(path: string, options?: RequestOptions<T>): Promise<T>;
+  /**
+   * POSTs files as `multipart/form-data`, reporting progress. Everything else is as for `post`: same-origin only,
+   * the anti-forgery header, sign-out on 401, the step-up dialog, the same `ApiError`s.
+   */
+  upload<T = unknown>(path: string, form: FormData, options?: UploadOptions<T>): Promise<T>;
 }
 
 const DEFAULT_TIMEOUT_MS = 20_000;
+const DEFAULT_UPLOAD_TIMEOUT_MS = 5 * 60_000;
 
 function buildUrl(baseUrl: string, path: string, query: RequestOptions['query']): string {
   if (!path.startsWith('/') || path.startsWith('//')) {
@@ -141,6 +177,28 @@ function buildUrl(baseUrl: string, path: string, query: RequestOptions['query'])
   return baseUrl + path + (text ? (path.includes('?') ? '&' : '?') + text : '');
 }
 
+function errorFrom(status: number, parsed: unknown): ApiError {
+  const body = apiErrorSchema.safeParse(parsed);
+  if (body.success) {
+    return new ApiError(status, body.data.error.code, body.data.error.message, body.data.error.details);
+  }
+  const code =
+    status === 401
+      ? 'unauthorized'
+      : status === 403
+        ? 'forbidden'
+        : status === 404
+          ? 'not_found'
+          : status === 413
+            ? 'too_large'
+            : status === 429
+              ? 'rate_limited'
+              : status >= 500
+                ? 'server_error'
+                : 'request_failed';
+  return new ApiError(status, code, `The server answered ${status}.`);
+}
+
 async function readError(response: Response): Promise<ApiError> {
   let parsed: unknown = null;
   try {
@@ -148,23 +206,7 @@ async function readError(response: Response): Promise<ApiError> {
   } catch {
     /* not JSON: a proxy's error page, most likely */
   }
-  const body = apiErrorSchema.safeParse(parsed);
-  if (body.success) {
-    return new ApiError(response.status, body.data.error.code, body.data.error.message, body.data.error.details);
-  }
-  const code =
-    response.status === 401
-      ? 'unauthorized'
-      : response.status === 403
-        ? 'forbidden'
-        : response.status === 404
-          ? 'not_found'
-          : response.status === 429
-            ? 'rate_limited'
-            : response.status >= 500
-              ? 'server_error'
-              : 'request_failed';
-  return new ApiError(response.status, code, `The server answered ${response.status}.`);
+  return errorFrom(response.status, parsed);
 }
 
 export function createHttpClient(deps: HttpClientDeps): HttpClient {
@@ -231,9 +273,10 @@ export function createHttpClient(deps: HttpClientDeps): HttpClient {
     return checked.data;
   }
 
-  async function request<T = unknown>(method: HttpMethod, path: string, options: RequestOptions<T> = {}): Promise<T> {
+  /** Runs one attempt and applies the rules every request shares: step-up, a refreshed anti-forgery token, sign-out on 401. */
+  async function withRecovery<T>(attempt: () => Promise<T>, options: { noReauth?: boolean | undefined; expectUnauthorized?: boolean | undefined }): Promise<T> {
     try {
-      return await send(method, path, options);
+      return await attempt();
     } catch (error) {
       if (!isApiError(error)) throw error;
 
@@ -241,11 +284,11 @@ export function createHttpClient(deps: HttpClientDeps): HttpClient {
         const confirmed = await deps.requestReauth();
         if (!confirmed) throw new ApiError(403, 'reauth_cancelled', 'This needs your password to continue.');
         // Once only: if the server still refuses, the caller hears about it.
-        return await send(method, path, options);
+        return await attempt();
       }
 
       if (error.status === 403 && error.code === 'csrf_failed' && deps.refreshSession) {
-        if (await deps.refreshSession()) return await send(method, path, options);
+        if (await deps.refreshSession()) return await attempt();
         throw error;
       }
 
@@ -256,8 +299,71 @@ export function createHttpClient(deps: HttpClientDeps): HttpClient {
     }
   }
 
+  function request<T = unknown>(method: HttpMethod, path: string, options: RequestOptions<T> = {}): Promise<T> {
+    return withRecovery(() => send(method, path, options), options);
+  }
+
+  function sendUpload<T>(path: string, form: FormData, options: UploadOptions<T>): Promise<T> {
+    const url = buildUrl(baseUrl, path, options.query);
+    return new Promise<T>((resolve, reject) => {
+      const xhr = deps.createUploadRequest ? deps.createUploadRequest() : (new XMLHttpRequest() as unknown as UploadRequest);
+      const signal = options.signal;
+      let settled = false;
+      const onOuterAbort = () => xhr.abort();
+      const finish = (action: () => void) => {
+        if (settled) return;
+        settled = true;
+        signal?.removeEventListener('abort', onOuterAbort);
+        action();
+      };
+
+      xhr.open('POST', url);
+      xhr.setRequestHeader('accept', 'application/json');
+      const token = deps.getCsrfToken();
+      if (token) xhr.setRequestHeader(HEADER_CSRF, token);
+      xhr.timeout = options.timeoutMs ?? DEFAULT_UPLOAD_TIMEOUT_MS;
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && event.total > 0) options.onProgress?.(Math.min(1, event.loaded / event.total));
+      };
+      xhr.onerror = () => finish(() => reject(new ApiError(0, 'network_error', 'The server could not be reached.')));
+      xhr.ontimeout = () => finish(() => reject(new ApiError(0, 'timeout', 'The server took too long to answer.')));
+      xhr.onabort = () => finish(() => reject(new ApiError(0, 'aborted', 'The request was cancelled.')));
+      xhr.onload = () =>
+        finish(() => {
+          let data: unknown;
+          let readable = true;
+          try {
+            data = xhr.responseText === '' ? undefined : JSON.parse(xhr.responseText);
+          } catch {
+            readable = false;
+          }
+          if (xhr.status < 200 || xhr.status >= 300) return reject(errorFrom(xhr.status, readable ? data : null));
+          if (!readable) return reject(new ApiError(xhr.status, 'invalid_response', 'The server sent something that is not JSON.'));
+          options.onProgress?.(1);
+          if (!options.schema) return resolve(data as T);
+          const checked = options.schema.safeParse(data);
+          if (!checked.success) {
+            return reject(new ApiError(xhr.status, 'invalid_response', 'The server sent an answer this app does not understand.', checked.error.issues));
+          }
+          resolve(checked.data);
+        });
+
+      if (signal?.aborted) {
+        finish(() => reject(new ApiError(0, 'aborted', 'The request was cancelled.')));
+        return;
+      }
+      signal?.addEventListener('abort', onOuterAbort, { once: true });
+      try {
+        xhr.send(form);
+      } catch (error) {
+        finish(() => reject(new ApiError(0, 'network_error', error instanceof Error ? error.message : 'The server could not be reached.')));
+      }
+    });
+  }
+
   return {
     request,
+    upload: (path, form, options = {}) => withRecovery(() => sendUpload(path, form, options), options),
     get: (path, options) => request('GET', path, options),
     post: (path, body, options) => request('POST', path, { ...options, ...(body === undefined ? {} : { body }) }),
     put: (path, body, options) => request('PUT', path, { ...options, ...(body === undefined ? {} : { body }) }),

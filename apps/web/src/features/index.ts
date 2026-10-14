@@ -10,3 +10,4 @@
  */
 import './auth';
 import './settings';
+import './workbench';

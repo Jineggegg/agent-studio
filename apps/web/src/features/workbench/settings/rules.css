@@ -1,0 +1,20 @@
+/* The permission rules page (settings). */
+
+.wb-rules__intro {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+.wb-rules__add {
+  display: flex;
+  justify-content: flex-start;
+}
+.wb-rules__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.wb-rules__where {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
