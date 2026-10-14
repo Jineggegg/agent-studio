@@ -403,9 +403,11 @@ const attacks = {
     process.exit(3);
   },
 
-  /** Stops reading what the Studio sends, so that it piles up. */
+  /** Stops reading what the Studio sends, so that it piles up — and stays alive, as a stuck plugin would. */
   stopReading() {
     process.stdin.pause();
+    // A paused stdin does not keep the event loop alive; without this the process may simply exit.
+    setInterval(() => {}, 60_000);
     return { paused: true };
   },
 

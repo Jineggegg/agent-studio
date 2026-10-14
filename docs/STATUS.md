@@ -4,7 +4,7 @@ A running record of what is done, what is in flight and what comes next, kept
 so that work can resume after an interruption. It is updated at every
 integration point; nothing is listed as done unless its tests pass.
 
-Last updated: 2026-10-14 (release candidate).
+Last updated: 2026-10-14 (first public release, 2.0.0-beta.1).
 
 ## Phases
 
@@ -18,20 +18,27 @@ Last updated: 2026-10-14 (release candidate).
 | 6 Workbench, sessions, tasks | **Done** | Workbench UI; handoff, multi-agent tasks, running work |
 | 7 Projects, GitHub, terminal, files | **Done** | GitHub read paths checked against a real account; merge and other write actions never run against the real service |
 | 8 Memory, API models, automation | **Done** | API-model providers never run against a real provider; Web Push never sent to a real push service |
-| 9 Mobile UI, PWA, remote access | **Done** | Verified in headless Chromium at phone, tablet and desktop sizes; **not on a physical iPhone or iPad**; WebKit runs only in CI |
+| 9 Mobile UI, PWA, remote access | **Done** | Verified in headless Chromium at phone, tablet and desktop sizes and in WebKit at phone size (in CI); **not on a physical iPhone or iPad** |
 | 10 Hardening, integration tests, docs | **Done** | AI-assisted security review: no critical/high/medium findings, two lows fixed; guides in `docs/guides/` |
 | 11 Compliance and similarity review | **Done** | `docs/licenses/THIRD_PARTY_LICENSES.md`, `docs/clean-room/SIMILARITY.md` |
-| 12 GitHub release | In progress | |
+| 12 GitHub release | **Done** | Public repository; every CI job green on GitHub-hosted runners at the release commit, plus CodeQL; release `v2.0.0-beta.1` |
 
 ## Verified at the release commit
 
-On Linux with bubblewrap available: `npm run typecheck`, `npm run lint`,
-3,165 unit tests, 1,270 integration tests (12 skipped: real-CLI checks that
-run only on request), `npm run build`, `node scripts/smoke.mjs`, 434
-black-box acceptance tests against the built server, 54 browser tests on
-Chromium (phone, tablet, desktop), `npm audit` (0 vulnerabilities), the
-lockfile and licence checks (562 packages, all on the allow-list), and a
-gitleaks scan of every commit (no leaks).
+Locally, on Linux with bubblewrap available: `npm run typecheck`,
+`npm run lint`, 3,165 unit tests, 1,271 integration tests (12 skipped:
+real-CLI checks that run only on request), `npm run build`,
+`node scripts/smoke.mjs`, 434 black-box acceptance tests against the built
+server, 54 browser tests on Chromium (phone, tablet, desktop), `npm audit`
+(0 vulnerabilities), the lockfile and licence checks (562 packages, all on
+the allow-list), and a gitleaks scan of every commit (no leaks).
+
+In CI on GitHub-hosted runners: the same checks, with unit and integration
+tests on Node 22 and 24, and the browser tests also in WebKit at phone size
+(74 in all). The first CI run there found what the local runs could not —
+an ordering bug in attachment lists, a shutdown that could wait minutes for a
+stalled upload, and tests that depended on this machine's set-up — all fixed
+before the release.
 
 ## Known gaps and limits
 

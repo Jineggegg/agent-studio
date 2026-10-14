@@ -67,6 +67,12 @@ The following limitations are real and a reader should weigh them:
    rows were removed mechanically before the documents were published here;
    the raw versions were kept outside this repository and away from the
    development group.
+7. **The published history was edited once.** Early drafts of the
+   requirement documents described how the still-running predecessor behaves
+   where security is concerned. Before this repository was made public, its
+   history was rewritten so that every commit carries the documents as
+   published (no code changed); the earlier drafts are kept privately by the
+   owner.
 
 Because of points 1 and 2 this project does not claim to be a strict
 clean-room implementation in the legal sense. It claims that it was written
