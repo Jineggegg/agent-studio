@@ -27,6 +27,9 @@ INSTALL_DIR=${AGENT_STUDIO_INSTALL_DIR:-$HOME/.local/share/agent-studio}
 BIN_DIR=${AGENT_STUDIO_BIN_DIR:-$HOME/.local/bin}
 CONFIG_DIR=${XDG_CONFIG_HOME:-$HOME/.config}/agent-studio
 VERSION=${AGENT_STUDIO_VERSION:-}
+# Where releases are listed and downloaded from (tests and mirrors point these elsewhere).
+RELEASES_URL=${AGENT_STUDIO_RELEASES_URL:-https://api.github.com/repos/$REPO/releases?per_page=20}
+DOWNLOAD_URL=${AGENT_STUDIO_DOWNLOAD_URL:-https://github.com/$REPO/releases/download}
 PORT=
 SERVICE=1
 ANSWER=${AGENT_STUDIO_ANSWER:-ask}
@@ -122,7 +125,7 @@ fi
 # The sum listed for <file> in a SHA256SUMS-style list must match the file.
 verify() {
   local file=$1 sums=$2 expected actual
-  expected=$(awk -v name="$(basename "$file")" '$2 == name || $2 == "*" name { print $1 }' "$sums" | head -n 1)
+  expected=$(awk -v name="$(basename "$file")" '($2 == name || $2 == "*" name) && !found { print $1; found = 1 }' "$sums")
   [ -n "$expected" ] || fail "$(basename "$file") is not listed in $(basename "$sums")."
   actual=$(sha256 "$file")
   [ "$actual" = "$expected" ] || fail "$(basename "$file") does not match its published SHA-256 sum. Nothing was installed."
@@ -138,18 +141,19 @@ if [ -n "${AGENT_STUDIO_RELEASE_BASE:-}" ]; then
   BASE=${AGENT_STUDIO_RELEASE_BASE%/}
   if [ -z "$VERSION" ]; then
     fetch "$BASE/SHA256SUMS" "$WORK/SHA256SUMS"
-    VERSION=$(sed -n 's/.*agent-studio-\(.*\)\.tar\.gz$/\1/p' "$WORK/SHA256SUMS" | head -n 1)
+    VERSION=$(sed -n 's/.*agent-studio-\(.*\)\.tar\.gz$/\1/p' "$WORK/SHA256SUMS")
   fi
 else
   if [ -z "$VERSION" ]; then
     step "Finding the newest release"
-    # Pre-releases count: the API lists every release, newest first.
-    VERSION=$(fetch_text "https://api.github.com/repos/$REPO/releases?per_page=20" |
-      awk -F'"' '/"tag_name":/ { tag = $4 } /"name": "agent-studio-.*\.tar\.gz"/ && tag != "" { print tag; exit }')
+    # Pre-releases count: the list has every release, newest first. The newest one with a package wins.
+    fetch "$RELEASES_URL" "$WORK/releases.json"
+    VERSION=$({ grep -oE '"tag_name": *"[^"]*"|"name": *"agent-studio-[^"]*\.tar\.gz"' "$WORK/releases.json" || true; } |
+      awk -F'"' '/"tag_name"/ { tag = $4 } /agent-studio-/ && tag != "" && !found { print tag; found = 1 }')
     VERSION=${VERSION#v}
     [ -n "$VERSION" ] || fail "No release with an installable package was found on github.com/$REPO."
   fi
-  BASE=https://github.com/$REPO/releases/download/v$VERSION
+  BASE=$DOWNLOAD_URL/v$VERSION
 fi
 [ -n "$VERSION" ] || fail "Could not tell which version to install."
 ARCHIVE=agent-studio-$VERSION.tar.gz
@@ -317,7 +321,7 @@ fi
 
 printf '\n%sAgent Cloud Studio %s is installed.%s\n\n' "$BOLD" "$VERSION" "$RESET"
 if [ "$STARTED" = 1 ]; then
-  TOKEN=$("$STUDIO" setup-token 2>/dev/null | head -n 1) || TOKEN=
+  TOKEN=$("$STUDIO" setup-token 2>/dev/null) || TOKEN=
   printf '  Open      http://127.0.0.1:%s   (on this machine)\n' "$LISTEN_PORT"
   if [ -n "$TOKEN" ]; then
     printf '  Token     %s   (once, to create the owner account)\n' "$TOKEN"

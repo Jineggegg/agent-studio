@@ -271,6 +271,9 @@ live(liveTitle('a terminal session'), () => {
     const bench = await start();
     const terminal = await bench.attach(await bench.create());
     const sample = 'héllo→世界🙂';
+    // At its prompt first: input that arrives before the shell reads it is echoed by the terminal driver
+    // byte by byte, and a character split across frames would then be echoed in two pieces.
+    await run(terminal, 'true');
 
     // Input: cut the command in the middle of a three-byte character.
     const command = Buffer.from(`printf '<%s>' be"gin"; printf '%s' '${sample}' | od -An -v -tx1 | tr -d ' \\n'; printf '<%s>\\n' e"nd"\r`, 'utf8');
