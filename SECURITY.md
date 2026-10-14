@@ -128,8 +128,10 @@ Security fixes go into the latest release only.
 - **Plugins without bubblewrap** are restricted only by Node's permission
   model, which does not cover network access; the app says so and refuses to
   treat such a plugin's tools as read-only.
-- This project has had an internal security review and an adversarial test
-  suite, but **no independent professional audit**.
+- This project has had an AI-assisted security review by a reviewer that had
+  not written the code (no critical, high or medium findings; the two low ones
+  are fixed) and an adversarial test suite, but **no independent professional
+  audit**.
 
 ## Hardening checklist for operators
 
