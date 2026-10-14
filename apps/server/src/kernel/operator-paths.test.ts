@@ -42,7 +42,7 @@ describe('agents cannot read the operator settings or the TLS key', () => {
     await rm(base, { recursive: true, force: true });
   });
 
-  it.each(['mask', 'confine'] as const)('in the %s profile', async (kind, context) => {
+  it.for(['mask', 'confine'] as const)('in the %s profile', async (kind, context) => {
     if (sandbox.status.mode !== 'bwrap') return context.skip();
     const profile = kind === 'mask' ? { kind } : { kind, writable: [base], network: false };
     const command = sandbox.wrap('sh', ['-c', `cat "${env}" "${key}" 2>&1; echo done`], profile);
