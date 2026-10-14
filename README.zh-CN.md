@@ -8,7 +8,7 @@ Agent Cloud Studio 跑在你自己的机器上（工作站、家用服务器或 
 手机 / 平板 / 电脑 ──HTTPS──▶ 你的服务器（Agent Cloud Studio）──▶ Claude Code CLI · Codex CLI · 模型 API
 ```
 
-[English](README.md) · [架构](docs/architecture/ARCHITECTURE.md) · [安全](SECURITY.md) · [进度](docs/STATUS.md)
+[English](README.md) · [使用指南（英文）](docs/guides/README.md) · [架构](docs/architecture/ARCHITECTURE.md) · [安全](SECURITY.md) · [进度](docs/STATUS.md)
 
 > **状态：beta。** 服务器、安全模型和测试是最成熟的部分。客户端已在桌面浏览器和模拟的手机/平板尺寸下验证，尚未在真机上验证。正式依赖之前请先看[哪些已完成、哪些没有](docs/STATUS.md)。
 
@@ -17,7 +17,7 @@ Agent Cloud Studio 跑在你自己的机器上（工作站、家用服务器或 
 **和 Agent 一起工作**
 - 通过官方 CLI 使用 **Claude Code** 和 **Codex**（沿用你已有的登录），也可以接入**任何 OpenAI 兼容的 API 模型**（DeepSeek、OpenAI、你自己机器上的模型服务），密钥加密保存在服务器上。
 - 文字、思考过程、工具调用和代码差异实时流式显示。运行属于服务器：锁屏、断网、换设备都不影响，回来时对话从断点补齐。
-- **决定权在你手里。** Agent 想做的每个有副作用的操作都要经过服务器上的同一个权限引擎；有风险的操作会等你批准——在对话里、收件箱里或推送通知里，任何一台设备都能处理。
+- **决定权在你手里。** Agent 想做的每个有副作用的操作都要经过服务器上的同一个权限引擎；有风险的操作会等你批准——收件箱和推送通知会提醒你，在对话里作出决定，任何一台设备都可以。
 - Agent 忙的时候可以排队发消息、中途插话、停止，也可以接着跑被重启打断的任务。
 - 同一个项目可以用多个 Agent，带着摘要把对话交接给另一个模型，并查看每个会话的 Token 用量和费用。
 

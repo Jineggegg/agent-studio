@@ -8,7 +8,9 @@ phone ──HTTPS──▶ something that terminates TLS ──▶ 127.0.0.1:742
 
 Model requests are made by the server. Your phone never talks to a model
 provider and never holds an API key. The Studio is not a public AI proxy: every
-API route except sign-in and a bare health check requires a signed-in session.
+API route except sign-in, first-run setup and a bare health check requires a
+signed-in session or an API token (the agents' bridge and plugin panels use
+tokens the server issues for one run or one panel).
 
 Two rules make every option below safe:
 
@@ -148,6 +150,13 @@ Run it under an ordinary, unprivileged account — the one whose projects and
 agent sign-ins you want it to use. Never run it as root: agents and terminals
 have the permissions of the service account.
 
+The service usually gets systemd's default `PATH`, not your shell's. The
+Studio looks for `claude`, `codex`, `gh` and `bwrap` on that `PATH`, so if
+they (or `node`) live elsewhere — `~/.local/bin`, for example — give
+`ExecStart` the full path of `node` and add a line such as
+`Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin`; otherwise those
+agents show as not installed.
+
 ## Installing it on the phone
 
 Open the address in Safari (iOS/iPadOS) or Chrome (Android) and choose **Add to
@@ -156,6 +165,6 @@ or later).
 
 ## Checking the result
 
-After signing in, **Settings → About** lists anything about the configuration
-that deserves a second look (plain-http exposure, a missing sandbox, a data
-directory other accounts can read).
+After signing in as the owner, **Settings → About** lists anything about the
+configuration that deserves a second look (plain-http exposure, a missing
+sandbox, a data directory other accounts can read).

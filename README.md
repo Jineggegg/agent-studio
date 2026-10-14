@@ -11,7 +11,7 @@ on *your* files with *your* sign-ins; your phone only ever talks to your server.
 phone / tablet / laptop ──HTTPS──▶ your server (Agent Cloud Studio) ──▶ Claude Code CLI · Codex CLI · model APIs
 ```
 
-[简体中文](README.zh-CN.md) · [Architecture](docs/architecture/ARCHITECTURE.md) · [Security](SECURITY.md) · [Status](docs/STATUS.md)
+[简体中文](README.zh-CN.md) · [Guides](docs/guides/README.md) · [Architecture](docs/architecture/ARCHITECTURE.md) · [Security](SECURITY.md) · [Status](docs/STATUS.md)
 
 > **Status: beta.** The server, its security model and its test suites are the
 > most mature parts. The client has been verified in desktop and emulated
@@ -29,9 +29,9 @@ phone / tablet / laptop ──HTTPS──▶ your server (Agent Cloud Studio) �
   server: lock your phone, lose signal, switch devices — the run carries on and
   the transcript catches up exactly where it left off.
 - **You stay in control.** Every side effect an agent asks for passes through
-  one permission engine. Risky actions wait for your approval — in the
-  conversation, in the inbox, or from a push notification — and you can answer
-  from any device.
+  one permission engine. Risky actions wait for your approval — the inbox and a
+  push notification point you to them — and you answer in the conversation,
+  from any of your devices.
 - Queue messages while an agent is busy, steer a running turn, stop it, and
   continue a run that a restart interrupted.
 - Use several agents on the same project, hand a conversation from one model to

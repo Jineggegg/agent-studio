@@ -46,13 +46,18 @@ in the app and stored encrypted.
 ```
 agent-studio status                     # is it answering, and where is its data
 agent-studio setup-token                # the one-time token for creating the first account
-agent-studio reset-password <username>  # new password; signs the account out everywhere
+agent-studio reset-password <username>  # new password; signs the account out everywhere, revokes its
+                                        # API tokens, re-enables it if disabled, clears sign-in locks
 agent-studio unlock                     # clear sign-in locks
 agent-studio version
 ```
 
-These act on the data directory directly, so they work while the service is
-stopped — and only for someone who already has a shell on the host.
+`agent-studio` is the server program, `apps/server/dist/main.js`: from the
+repository folder, `node apps/server/dist/main.js status`. Run it with the same
+`AGENT_STUDIO_*` variables as the service, or it looks at the default data
+directory and address. These act on the data directory directly, so they work
+while the service is stopped — and only for someone who already has a shell on
+the host.
 
 ## Backup and moving to another machine
 
@@ -62,7 +67,13 @@ Stop the service, then copy the whole data directory. It contains:
 - `master.key` — without it the stored credentials cannot be decrypted (not
   present if you supply `AGENT_STUDIO_MASTER_KEY`; then back up that value),
 - `memory/` — your notes, as plain Markdown,
-- `attachments/`.
+- `attachments/`,
+- `plugins/` and `plugin-data/` — installed plugins and their own data,
+- `remote-hosts.json`, if you keep the list of remote hosts there,
+- `sandbox/` — an empty stand-in file the sandbox uses.
+
+Project folders are not in it: the Studio only records their paths, so back
+them up separately and keep them at the same paths on a new machine.
 
 Treat a backup like a password manager export. On the new machine keep the
 directory permissions at `700`.
