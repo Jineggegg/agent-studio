@@ -21,17 +21,17 @@ What it measures, from coarse to strict:
 
 ## Result
 
-Latest run: 2026-10-14, on the release commit.
+Latest run: 2026-10-14, on the commit released as `v2.0.0-beta.1` (`ed9e07f`).
 
 | Measure | Result |
 |---|---|
 | Files compared | 862 here, 1,496 there |
-| Significant lines | 94,390 unique here, 143,672 there |
-| Identical significant lines | 409 — **0.43 %** of this code base |
+| Significant lines | 94,606 unique here, 143,672 there |
+| Identical significant lines | 411 — **0.43 %** of this code base |
 | Regions sharing six or more consecutive lines | **0** |
 | Files here with any three-line window found in a file there | **0** |
 | Files here with ≥ 10 % three-line overlap with one file there | **0** |
-| Distinctive identifiers declared here that occur there | 95 of 2,517 |
+| Distinctive identifiers declared here that occur there | 95 of 2,529 |
 
 The identical lines are idioms (timers, standard HTML meta tags, `if
 (typeof value === 'string') return value;`). The shared identifiers are names
