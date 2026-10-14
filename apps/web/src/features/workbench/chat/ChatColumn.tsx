@@ -5,6 +5,8 @@ import { isApiError } from '@/data/api';
 import { useConnectionState } from '@/data/connection';
 import { describeError, errorKind } from '@/data/errors';
 import { useIsOwner, useUser } from '@/data/session';
+import { DeferredList } from '@/features/automation/DeferredList';
+import { SendLater } from '@/features/automation/SendLater';
 import { useT } from '@/i18n';
 import { useLayoutClass } from '@/platform/layout';
 import { isApplePlatform, useCanHover } from '@/platform/media';
@@ -668,6 +670,7 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
           />
         )}
         {sessionId && <Queue sessionId={sessionId} queue={transcript.queue} arriving={queued} busy={busy} canSteer={agent?.capabilities.steering === true} editable={mine && writable} onChanged={resync} />}
+        {sessionId && <DeferredList sessionId={sessionId} editable={mine && writable} />}
         {question ? (
           <ApprovalDock approval={question} agentName={agentName} more={pendingApprovals.length - 1} onStale={resync} onDetails={() => setSheetApproval(question.id)} />
         ) : readOnly !== null ? (
@@ -692,6 +695,11 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
             mentions={mentions}
             onContentChange={setComposerHasContent}
             autoFocus={focusComposer && (canHover || sessionId === null)}
+            accessory={
+              sessionId ? (
+                <SendLater sessionId={sessionId} draftKey={draftKey} project={project} options={{ model, effort, permissionMode: mode }} hasQuote={quote !== null} blocked={blocked} />
+              ) : undefined
+            }
             controls={
               <>
                 <AgentModelChip agents={agents} project={project} agentId={agentId} model={model} locked={sessionId !== null} disabled={busy && sessionId !== null} onChoose={chooseModel} />

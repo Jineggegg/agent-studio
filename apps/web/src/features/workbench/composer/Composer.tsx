@@ -51,6 +51,8 @@ export interface ComposerProps {
   /** Whether the field holds anything (text, a file, a quote): lets the caller decide where Stop lives. */
   onContentChange?: (hasContent: boolean) => void;
   autoFocus?: boolean;
+  /** A control drawn just before Send — "send later", from the automation feature. */
+  accessory?: ReactNode;
   ref?: Ref<ComposerHandle>;
 }
 
@@ -124,6 +126,7 @@ export function Composer({
   mentions,
   onContentChange,
   autoFocus,
+  accessory,
   ref,
 }: ComposerProps) {
   const t = useT();
@@ -521,6 +524,7 @@ export function Composer({
             />
           </>
         )}
+        {accessory}
         <button
           type="button"
           className="wb-send"

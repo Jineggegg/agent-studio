@@ -1,0 +1,421 @@
+/* Usage: filters, figures, the chart, breakdowns, plans, budgets, providers. Tokens only. */
+
+.use-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.use-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+.use-filters > .ui-segmented {
+  /* A segmented control takes no width from its words (it is a size container): room for each, in bold. */
+  flex: 0 1 auto;
+  width: calc(var(--count) * 92px + 6px);
+  min-width: 0;
+}
+:root[data-layout='phone'] .use-filters > .ui-segmented {
+  flex: 1 1 100%;
+}
+.use-report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  transition: opacity var(--motion-fast) var(--ease-standard);
+}
+.use-report[data-pending] {
+  opacity: 0.6;
+}
+.use-range {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.use-note {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+
+/* ---- headline figures --------------------------------------------------------------------------- */
+
+.use-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+:root[data-layout='phone'] .use-kpis {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+:root[data-layout='phone'] .use-kpi[data-lead] {
+  grid-column: 1 / -1;
+}
+.use-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface);
+}
+.use-kpi__label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-weight: var(--weight-medium);
+}
+.use-kpi__value {
+  font-size: var(--text-title-1);
+  line-height: var(--leading-title-1);
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.use-kpi[data-lead] .use-kpi__value {
+  font-size: var(--text-display);
+  line-height: var(--leading-display);
+}
+.use-kpi[data-coverage='unknown'] .use-kpi__value,
+.use-kpi[data-coverage='none'] .use-kpi__value {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+.use-kpi__detail {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+
+/* ---- cards and the chart ------------------------------------------------------------------------ */
+
+.use-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface);
+}
+.use-card__title {
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+  font-weight: var(--weight-semibold);
+}
+.use-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+.use-chart__title {
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+  font-weight: var(--weight-semibold);
+}
+.use-chart__readout {
+  min-height: var(--leading-footnote);
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-variant-numeric: tabular-nums;
+}
+.use-chart__frame {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  touch-action: pan-y;
+}
+.use-chart__frame:focus-visible {
+  outline-offset: 4px;
+}
+.use-chart__frame > svg {
+  display: block;
+  overflow: visible;
+}
+.use-chart__tick line {
+  stroke: var(--color-separator);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.use-chart__tick text,
+.use-chart__label {
+  fill: var(--color-text-tertiary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.use-chart__baseline {
+  stroke: var(--color-separator-strong);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+.use-chart__band {
+  fill: var(--color-fill);
+}
+.use-chart__bar {
+  fill: var(--color-accent);
+}
+.use-chart__column[data-current] .use-chart__bar {
+  fill-opacity: 0.55;
+}
+.use-chart__column[data-state='partial'] .use-chart__bar {
+  fill-opacity: 0.7;
+}
+.use-chart__floor {
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.use-chart__unknown circle {
+  fill: var(--color-surface);
+  stroke: var(--color-text-tertiary);
+  stroke-width: 1.5;
+}
+.use-chart__unknown text {
+  fill: var(--color-text-secondary);
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+}
+.use-chart__hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+.use-chart__column[data-picked] .use-chart__label {
+  fill: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+.use-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+}
+.use-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.use-legend__item > span {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  box-shadow: inset 0 0 0 1.5px var(--color-text-tertiary);
+}
+.use-legend__item[data-kind='partial'] > span {
+  border-radius: 3px;
+  box-shadow: none;
+  background: var(--color-accent);
+  opacity: 0.7;
+}
+.use-figures > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--hit-min);
+  cursor: pointer;
+  color: var(--color-accent-text);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-medium);
+}
+.use-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-variant-numeric: tabular-nums;
+}
+.use-table th,
+.use-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--color-separator);
+  text-align: right;
+}
+.use-table th:first-child {
+  text-align: left;
+  font-weight: var(--weight-regular);
+}
+.use-table thead th {
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-semibold);
+}
+.use-table td[data-coverage='unknown'] {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+/* ---- breakdowns: a table with a bar on its first figure -------------------------------------------- */
+
+.use-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+:root[data-layout='wide'] .use-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.use-bars {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.use-bars thead th {
+  padding: 0 0 6px;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+}
+.use-bars th[scope='row'] {
+  width: 100%;
+  /* Takes what the figures leave, and a long name gives way (it is cut short) instead of widening the table. */
+  max-width: 0;
+  padding: 8px 0;
+  font-weight: var(--weight-regular);
+  text-align: left;
+}
+.use-bars tbody tr + tr th,
+.use-bars tbody tr + tr td {
+  border-top: 1px solid var(--color-separator);
+}
+.use-bars__label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.use-bars__detail {
+  display: block;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.use-bars__track {
+  display: block;
+  height: 6px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-fill);
+}
+.use-bars__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transform: scaleX(var(--share, 0));
+  transform-origin: left center;
+}
+.use-bars__num {
+  padding: 8px 0 8px var(--space-4);
+  color: var(--color-text);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  vertical-align: top;
+}
+.use-bars thead .use-bars__num {
+  padding-top: 0;
+  text-align: right;
+}
+.use-bars td.use-bars__num:last-child:not(:nth-child(2)) {
+  color: var(--color-text-secondary);
+}
+
+/* ---- sections: plans, budgets, providers ------------------------------------------------------------- */
+
+.use-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.use-section__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--hit-min);
+}
+.use-section__head h2 {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-title-3);
+  line-height: var(--leading-title-3);
+  font-weight: var(--weight-semibold);
+}
+.use-plans,
+.use-providers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+:root:not([data-layout='phone']) .use-plans,
+:root:not([data-layout='phone']) .use-providers {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+:root[data-layout='wide'] .use-plans {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.use-budgets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.use-budget {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface);
+}
+.use-budget__line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-right: -10px;
+}
+.use-budget__who {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px var(--space-2);
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--weight-semibold);
+}
+.use-budget__metric {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-regular);
+}
+.use-budget__text {
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-variant-numeric: tabular-nums;
+}
+.use-budget[data-state='warning'] .use-budget__text {
+  color: var(--color-warning);
+}
+.use-budget[data-state='exceeded'] .use-budget__text {
+  color: var(--color-danger);
+}
+.use-budget__caveat {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}

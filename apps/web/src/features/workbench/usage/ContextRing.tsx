@@ -1,6 +1,7 @@
 import type { Agent, ModelUsage } from '@agent-studio/protocol';
 import { Gauge } from 'lucide-react';
 import { type CSSProperties, useRef, useState } from 'react';
+import { PlanSummary } from '@/features/usage/PlanWindows';
 import { type Translator, useT } from '@/i18n';
 import { findModel, modelLabel } from '../agents';
 import { AdaptivePopover } from '../chat/parts';
@@ -138,6 +139,8 @@ export function ContextRing({ context, totals, agent }: ContextRingProps) {
               {totals.length > 1 && <p className="wb-usage__line">{t.list(totals.map((usage) => modelLabel(agent, usage.model) ?? usage.model))}</p>}
             </section>
           )}
+          {/* The agent's plan windows, as its program last reported them (from the usage feature). */}
+          {agent?.kind === 'cli' && <PlanSummary agentId={agent.id} />}
         </div>
       </AdaptivePopover>
     </>

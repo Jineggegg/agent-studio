@@ -1,0 +1,193 @@
+/* Usage pieces that also appear elsewhere — meters, plan windows (the context ring's details), provider spend (the Models page). Tokens only. */
+
+/* ---- a meter: one ratio against a limit ----------------------------------------------------- */
+
+.use-meter {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-soft);
+}
+.use-meter__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transform: scaleX(var(--fraction, 0));
+  transform-origin: left center;
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.use-meter[data-tone='warning'] {
+  background: var(--color-warning-soft);
+}
+.use-meter[data-tone='warning'] .use-meter__fill {
+  background: var(--color-mark-attention);
+}
+.use-meter[data-tone='danger'] {
+  background: var(--color-danger-soft);
+}
+.use-meter[data-tone='danger'] .use-meter__fill {
+  background: var(--color-mark-danger);
+}
+.use-meter[data-tone='unknown'] {
+  background: var(--color-fill);
+}
+
+/* ---- plan windows ----------------------------------------------------------------------------- */
+
+.use-plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface);
+}
+.use-plan__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.use-plan__head h3 {
+  margin-right: auto;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: var(--weight-semibold);
+}
+.use-plan__windows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.use-window {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.use-window[data-stale] {
+  opacity: 0.7;
+}
+.use-window__line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.use-window__label {
+  font-weight: var(--weight-medium);
+}
+.use-window__value {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.use-window__resets {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.use-plan__fresh {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.use-plan__fresh[data-stale] {
+  color: var(--color-warning);
+}
+.use-plan__fresh > svg {
+  flex: none;
+}
+.use-plan__note {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.use-plan__note[data-tone='warning'] {
+  color: var(--color-warning);
+}
+.use-plan-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.use-plan-summary > h3 {
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-weight: var(--weight-semibold);
+}
+
+/* ---- money with an API provider ---------------------------------------------------------------- */
+
+.use-spend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.use-spend__block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.use-spend__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.use-spend__title {
+  flex: 1 1 160px;
+  min-width: 0;
+  font-weight: var(--weight-medium);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.use-spend__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: calc(28px + var(--space-2));
+}
+.use-spend__figure {
+  font-size: var(--text-title-3);
+  line-height: var(--leading-title-3);
+  font-weight: var(--weight-semibold);
+}
+.use-spend__note {
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.use-spend__warn {
+  color: var(--color-warning);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+
+/* ---- the small sheets (a noted amount, a budget) ------------------------------------------------- */
+
+.use-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.use-form__text {
+  color: var(--color-text-secondary);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.use-form__pair {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-3);
+}

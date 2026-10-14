@@ -109,11 +109,18 @@ self.addEventListener('fetch', (event) => {
 
 // ---- notifications -----------------------------------------------------------
 
-/** One line of plain text: no control characters, bounded length. */
+/**
+ * One line of plain text: no control characters, at most `max` characters.
+ * Characters, not UTF-16 units: a cut never splits an emoji in half, and
+ * what the server sends within its own limits (80 for a title, 240 for a
+ * body) is always shown whole.
+ */
 function clean(value, max) {
   if (typeof value !== 'string') return '';
   // eslint-disable-next-line no-control-regex
-  return value.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim().slice(0, max);
+  const text = value.replace(/[\u0000-\u001f\u007f]+/g, ' ').trim();
+  const characters = Array.from(text);
+  return characters.length <= max ? text : characters.slice(0, max).join('');
 }
 
 /**

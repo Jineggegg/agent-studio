@@ -1,0 +1,175 @@
+/* Notifications: this device's status card, the banner form of it, the test report. Tokens only. */
+
+.ntf-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+.ntf-page > .ui-list + .ui-list {
+  margin-top: 0;
+}
+.ntf-stale {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: calc(-1 * var(--space-4));
+}
+
+/* ---- this device ------------------------------------------------------------------------ */
+
+.ntf-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface);
+}
+.ntf-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.ntf-card__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ntf-card__eyebrow {
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-weight: var(--weight-medium);
+}
+.ntf-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-title-3);
+  line-height: var(--leading-title-3);
+  font-weight: var(--weight-semibold);
+}
+.ntf-card__body {
+  color: var(--color-text-secondary);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.ntf-card__note {
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  color: var(--color-positive);
+}
+.ntf-card__note[data-tone='danger'] {
+  color: var(--color-danger);
+}
+.ntf-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.ntf-steps {
+  margin: 0;
+  padding-left: var(--space-6);
+  list-style: decimal;
+  color: var(--color-text);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.ntf-steps > li + li {
+  margin-top: var(--space-1);
+}
+
+/* ---- the banner (a project's automations) --------------------------------------------------- */
+
+.ntf-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface);
+}
+.ntf-banner__text {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.ntf-banner__note {
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.ntf-banner__note[data-tone='danger'] {
+  color: var(--color-danger);
+}
+.ntf-banner > .ui-button {
+  flex: none;
+}
+:root[data-layout='phone'] .ntf-banner {
+  flex-wrap: wrap;
+}
+:root[data-layout='phone'] .ntf-banner > .ui-button {
+  margin-left: calc(30px + var(--space-3));
+}
+
+/* ---- the test report ------------------------------------------------------------------------ */
+
+.ntf-report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: calc(-1 * var(--space-3));
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-positive-soft);
+}
+.ntf-report[data-tone='danger'] {
+  background: var(--color-danger-soft);
+}
+.ntf-report__title {
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.ntf-report__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ntf-report__list > li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  column-gap: var(--space-2);
+  align-items: baseline;
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.ntf-report__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-mark-positive);
+  transform: translateY(-1px);
+}
+.ntf-report__list > li:not([data-outcome='sent']) .ntf-report__dot {
+  background: var(--color-mark-danger);
+}
+.ntf-report__name {
+  font-weight: var(--weight-medium);
+}
+.ntf-report__outcome {
+  grid-column: 2;
+  color: var(--color-text-secondary);
+}
+.ntf-report__hint {
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}

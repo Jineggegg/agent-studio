@@ -1,0 +1,83 @@
+/* The time-zone picker: a field-like button and a searchable list in a sheet. Used by automations and budgets. Tokens only. */
+
+/* ---- the time-zone picker -------------------------------------------------------------------------- */
+
+.aut-zone-button {
+  gap: var(--space-2);
+}
+.aut-zone-button > .ui-select__value {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.aut-zone-button__offset {
+  margin-left: 4px;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+}
+.aut-zones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.aut-zones__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface);
+  overflow: hidden;
+}
+.aut-zones__divider {
+  height: 6px;
+  background: var(--color-sunken);
+}
+.aut-zone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: 8px var(--space-4);
+  text-align: left;
+  color: inherit;
+}
+.aut-zones__list > li + li > .aut-zone {
+  box-shadow: inset 0 1px 0 var(--color-separator);
+}
+@media (hover: hover) {
+  .aut-zone:hover {
+    background: var(--color-fill);
+  }
+}
+.aut-zone__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.aut-zone__city {
+  font-weight: var(--weight-medium);
+}
+.aut-zone__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+}
+.aut-zone__offset {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+}
+.aut-zone__check {
+  flex: none;
+  color: var(--color-accent-text);
+}
+.aut-zones__note {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  text-align: center;
+}

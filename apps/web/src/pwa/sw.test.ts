@@ -181,6 +181,24 @@ describe('the service worker: notifications', () => {
     expect(worker.showNotification).toHaveBeenLastCalledWith('a b c', expect.objectContaining({ body: '', data: { url: '/' } }));
   });
 
+  it('shows what the server sends exactly, within its limits, and never splits a character', async () => {
+    // The server sends at most 80 characters of title and 240 of body (NOTIFICATION_LIMITS): with emoji
+    // that is up to 160 and 480 UTF-16 units, which must still be shown whole.
+    const title = '🚀'.repeat(80);
+    const body = `${'进度'.repeat(100)}${'✅'.repeat(40)}`;
+    await push({ title, body, tag: 'reply-finished:01jabcdefghjkmnpqrstvwxyz0', url: '/projects/01jabcdefghjkmnpqrstvwxyz1/sessions/01jabcdefghjkmnpqrstvwxyz2' });
+    expect(worker.showNotification).toHaveBeenLastCalledWith(
+      title,
+      expect.objectContaining({ body, tag: 'reply-finished:01jabcdefghjkmnpqrstvwxyz0', data: { url: '/projects/01jabcdefghjkmnpqrstvwxyz1/sessions/01jabcdefghjkmnpqrstvwxyz2' } }),
+    );
+
+    // Something longer than any server sends is cut by characters: no half of a surrogate pair is left behind.
+    await push({ title: '😀'.repeat(200), body: 'x' });
+    const shown = (worker.showNotification.mock.calls.at(-1) as unknown[])[0] as string;
+    expect(Array.from(shown)).toHaveLength(120);
+    expect(shown).not.toMatch(/[\ud800-\udbff](?![\udc00-\udfff])/);
+  });
+
   it('opens only same-origin paths; anything else opens the root', async () => {
     const cases: [unknown, string][] = [
       ['/inbox', '/inbox'],

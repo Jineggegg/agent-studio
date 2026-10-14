@@ -1,0 +1,151 @@
+/* "Send later" in the message field and the scheduled messages above it — drawn inside the workbench. Tokens only. */
+
+/* ---- "send later" and the scheduled messages, in the workbench ------------------------------------------ */
+
+.aut-later {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.aut-later__text {
+  max-height: 120px;
+  padding: var(--space-3);
+  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-sunken);
+  color: var(--color-text-secondary);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.aut-later__choices {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface);
+  overflow: hidden;
+}
+.aut-later__choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  text-align: left;
+  color: var(--color-text);
+}
+.aut-later__choices > li + li > .aut-later__choice {
+  box-shadow: inset 0 1px 0 var(--color-separator);
+}
+@media (hover: hover) {
+  .aut-later__choice:not(:disabled):hover {
+    background: var(--color-fill);
+  }
+}
+.aut-later__choice:not(:disabled):active {
+  background: var(--color-fill-hover);
+}
+.aut-later__choice:disabled {
+  color: var(--color-text-disabled);
+}
+.aut-later__time {
+  color: var(--color-text-secondary);
+  font-size: var(--text-callout);
+  font-variant-numeric: tabular-nums;
+}
+.aut-later__custom {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.aut-later__custom > .ui-field {
+  flex: 1 1 220px;
+}
+.aut-later__note {
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.aut-deferred {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 var(--space-1) var(--space-2);
+}
+.aut-deferred__title {
+  padding: 0 var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: var(--weight-semibold);
+}
+.aut-deferred__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 168px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.aut-deferred__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--hit-min);
+  padding: 2px 2px 2px var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface);
+}
+.aut-deferred__item[data-state='failed'] {
+  background: var(--color-danger-soft);
+  box-shadow: none;
+}
+.aut-deferred__icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  color: var(--color-accent-text);
+}
+.aut-deferred__item[data-state='failed'] .aut-deferred__icon {
+  color: var(--color-danger);
+}
+.aut-deferred__text {
+  flex: 1;
+  min-width: 0;
+}
+.aut-deferred__status {
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-weight: var(--weight-semibold);
+}
+.aut-deferred__item[data-state='failed'] .aut-deferred__status {
+  color: var(--color-danger);
+}
+.aut-deferred__message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.aut-deferred__dismiss {
+  position: relative;
+  flex: none;
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-danger);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-semibold);
+}
