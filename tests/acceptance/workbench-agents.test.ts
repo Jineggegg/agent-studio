@@ -48,9 +48,13 @@ describe('6.8 agents and models', () => {
     expect(listed.status).toBe(200);
     const byId = Object.fromEntries(listed.body.agents.map((agent) => [agent.id, agent]));
     expect(Object.keys(byId).sort()).toEqual(['claude-code', 'codex']);
+    // Codex is switched off where agent processes cannot be sandboxed, and says why.
+    const sandboxed = await sandboxIsOn(owner);
     for (const agent of listed.body.agents) {
       expect(agent.kind).toBe('cli');
-      expect(agent.status).toMatchObject({ installed: true, signedIn: true, problem: null });
+      expect(agent.status).toMatchObject({ installed: true, signedIn: true });
+      if (agent.id === 'codex' && !sandboxed) expect(agent.status.problem).toMatch(/sandbox/);
+      else expect(agent.status.problem).toBeNull();
       expect(agent.status.version).toMatch(/standin/);
       expect(
         agent.capabilities.models.filter((model: Json) => model.recommended === true),

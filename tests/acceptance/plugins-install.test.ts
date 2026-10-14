@@ -48,6 +48,7 @@ describe('6.13 plugins', () => {
   let project: Project;
   let runnable = true;
   let isolation = '';
+  let networkContained = true;
 
   beforeAll(async () => {
     source = await mkdtemp(path.join(os.tmpdir(), 'agent-studio-acceptance-plugins-'));
@@ -79,6 +80,7 @@ describe('6.13 plugins', () => {
     const list = (await owner.get<Json>('/api/plugins')).body;
     isolation = list.isolation.level;
     runnable = isolation !== 'none';
+    networkContained = list.isolation.restricts.network === true;
   });
   afterAll(async () => {
     await studio?.destroy();
@@ -245,7 +247,9 @@ describe('6.13 plugins', () => {
       ]);
       expect(offered.projectTabs.map((tab: Json) => tab.panelId)).toEqual(['notes']);
     }
-    // Its read tool answers an agent without a prompt; its write tool is put to the user first.
+    // Its read tool answers an agent without a prompt; its write tool is put to the user first. Where this machine
+    // cannot keep plugin code off the network, a "read" tool could still send what it reads anywhere, so it is
+    // put to the user too.
     const [count, add] = on.contributes.tools.map((item: Json) => item.registeredName as string);
     const working = await createSession(owner, project.id);
     const receipt = await send(
@@ -266,7 +270,7 @@ describe('6.13 plugins', () => {
       },
       { timeout: 40_000, what: 'the run that uses the plugin’s tools to end' },
     );
-    expect(asked).toEqual([add]);
+    expect(asked).toEqual(networkContained ? [add] : [add, count]);
     const outputs = (await transcript(owner, working.id))
       .filter((event) => event.type === 'tool.finished')
       .map((event) => `${event.data.status}: ${event.data.output}`);

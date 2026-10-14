@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { chmod, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -18,6 +19,16 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { StudioEvent } from '../../src/kernel/events.js';
 import { createGitSandbox, type GitSandbox } from '../../src/modules/git/testing/fixtures.js';
 import { createTestStudio, type TestClient, type TestStudio } from '../../src/testing/harness.js';
+
+/** Whether the user's own git configuration trusts every folder, which no test can take back. */
+function trustsEveryFolder(): boolean {
+  try {
+    const listed = execFileSync('git', ['config', '--global', '--get-all', 'safe.directory'], { encoding: 'utf8' });
+    return listed.split('\n').some((line) => line.trim() === '*');
+  } catch {
+    return false; // not set at all
+  }
+}
 
 let sandbox: GitSandbox;
 let t: TestStudio;
@@ -112,15 +123,22 @@ describe('what kind of folder it is', () => {
     expect((await sandbox.git(outer, 'status', '--porcelain')).trim()).toBe('M top.txt');
   });
 
-  it('recognises a bare repository and a repository git does not trust', async () => {
+  it('recognises a bare repository and a repository git does not trust', async (context) => {
     const bareDir = path.join(t.workspace, 'bare');
     await mkdir(bareDir, { recursive: true });
     await sandbox.git(bareDir, 'init', '--quiet', '--bare');
     expect((await status(await register('bare', bareDir))).state).toBe('bare');
 
+    if (trustsEveryFolder()) {
+      return context.skip('git on this machine trusts every folder (safe.directory = * in the user configuration)');
+    }
     // Git's own switch for "this folder belongs to someone else" — the same refusal a real foreign folder gets.
+    // The machine-wide configuration is left out: CI images trust every folder there.
     process.env.GIT_TEST_ASSUME_DIFFERENT_OWNER = '1';
-    const other = await createTestStudio({ config: { childEnvPassthrough: ['GIT_TEST_ASSUME_DIFFERENT_OWNER'] } });
+    process.env.GIT_CONFIG_NOSYSTEM = '1';
+    const other = await createTestStudio({
+      config: { childEnvPassthrough: ['GIT_TEST_ASSUME_DIFFERENT_OWNER', 'GIT_CONFIG_NOSYSTEM'] },
+    });
     try {
       const admin = await other.owner();
       const dir = path.join(other.workspace, 'foreign');
@@ -137,6 +155,7 @@ describe('what kind of folder it is', () => {
       expect(errorCode(refused.body)).toBe('git_untrusted');
     } finally {
       delete process.env.GIT_TEST_ASSUME_DIFFERENT_OWNER;
+      delete process.env.GIT_CONFIG_NOSYSTEM;
       await other.close();
     }
   });

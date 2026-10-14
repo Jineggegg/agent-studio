@@ -30,6 +30,8 @@ async function checkScreen(
   phone: boolean,
   exemptions: readonly Exemption[],
 ): Promise<void> {
+  // The launch screen covers the page until the app has painted, then fades out: nothing under it can be tapped yet.
+  await expect(page.locator('#launch')).toHaveCount(0);
   const controls = await visibleControls(page, exemptions);
   expect(controls.length, `${screen}: no interactive element was found on screen`).toBeGreaterThan(
     0,

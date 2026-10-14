@@ -354,7 +354,7 @@ export class AgentStore {
     return this.#db.all<SessionRow>(
       `SELECT * FROM agent_sessions
        WHERE (id = ? OR chain_id = ?) AND hidden = 0 AND (user_id = ? OR ? = 1)
-       ORDER BY created_at, id`,
+       ORDER BY created_at, rowid`,
       rootId,
       rootId,
       userId,
@@ -544,7 +544,7 @@ export class AgentStore {
   }
 
   latestRun(sessionId: string): RunRow | undefined {
-    return this.#db.get<RunRow>('SELECT * FROM agent_runs WHERE session_id = ? ORDER BY created_at DESC, id DESC LIMIT 1', sessionId);
+    return this.#db.get<RunRow>('SELECT * FROM agent_runs WHERE session_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1', sessionId);
   }
 
   /** Changes a run only if it is still in one of the `from` states. This is what makes the terminal event happen once. */
@@ -599,7 +599,7 @@ export class AgentStore {
       clauses.push('session_id NOT IN (SELECT id FROM agent_sessions WHERE hidden = 1)');
     }
     return this.#db.all<RunRow>(
-      `SELECT * FROM agent_runs ${clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''} ORDER BY created_at DESC, id DESC LIMIT ?`,
+      `SELECT * FROM agent_runs ${clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''} ORDER BY created_at DESC, rowid DESC LIMIT ?`,
       ...params,
       options.limit,
     );
@@ -788,15 +788,15 @@ export class AgentStore {
   }
 
   pendingApprovalsOfSession(sessionId: string): ApprovalRow[] {
-    return this.#db.all<ApprovalRow>("SELECT * FROM agent_approvals WHERE session_id = ? AND status = 'pending' ORDER BY created_at, id", sessionId);
+    return this.#db.all<ApprovalRow>("SELECT * FROM agent_approvals WHERE session_id = ? AND status = 'pending' ORDER BY created_at, rowid", sessionId);
   }
 
   pendingApprovalsOfRun(runId: string): ApprovalRow[] {
-    return this.#db.all<ApprovalRow>("SELECT * FROM agent_approvals WHERE run_id = ? AND status = 'pending' ORDER BY created_at, id", runId);
+    return this.#db.all<ApprovalRow>("SELECT * FROM agent_approvals WHERE run_id = ? AND status = 'pending' ORDER BY created_at, rowid", runId);
   }
 
   allPendingApprovals(): ApprovalRow[] {
-    return this.#db.all<ApprovalRow>("SELECT * FROM agent_approvals WHERE status = 'pending' ORDER BY created_at, id");
+    return this.#db.all<ApprovalRow>("SELECT * FROM agent_approvals WHERE status = 'pending' ORDER BY created_at, rowid");
   }
 
   /**
@@ -807,7 +807,7 @@ export class AgentStore {
     return this.#db.all<ApprovalRow>(
       `SELECT * FROM agent_approvals
        WHERE (user_id = ? OR ? = 1) AND (? = 'all' OR status = 'pending') AND (? IS NULL OR session_id = ?)
-       ORDER BY created_at DESC, id DESC LIMIT ?`,
+       ORDER BY created_at DESC, rowid DESC LIMIT ?`,
       options.userId,
       toSql(options.isOwner),
       options.status,
@@ -874,7 +874,7 @@ export class AgentStore {
       `SELECT * FROM agent_permission_rules
        WHERE (user_id = ? OR (${shared.sql}))
          AND (? IS NULL OR scope = ?) AND (? IS NULL OR project_id = ?) AND (? IS NULL OR session_id = ?)
-       ORDER BY created_at DESC, id DESC`,
+       ORDER BY created_at DESC, rowid DESC`,
       options.userId,
       ...shared.params,
       options.scope ?? null,
@@ -930,7 +930,7 @@ export class AgentStore {
 
   attachmentsOfSession(sessionId: string, pendingOnly: boolean): AttachmentRow[] {
     return this.#db.all<AttachmentRow>(
-      'SELECT * FROM agent_attachments WHERE session_id = ? AND (? = 0 OR sent_at IS NULL) ORDER BY created_at, id',
+      'SELECT * FROM agent_attachments WHERE session_id = ? AND (? = 0 OR sent_at IS NULL) ORDER BY created_at, rowid',
       sessionId,
       toSql(pendingOnly),
     );

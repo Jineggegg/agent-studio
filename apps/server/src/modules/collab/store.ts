@@ -258,7 +258,7 @@ export class CollabStore {
   }
 
   handoffsBySource(sessionId: string): HandoffRow[] {
-    return this.#db.all<HandoffRow>('SELECT * FROM collab_handoffs WHERE source_session_id = ? ORDER BY created_at, id', sessionId);
+    return this.#db.all<HandoffRow>('SELECT * FROM collab_handoffs WHERE source_session_id = ? ORDER BY created_at, rowid', sessionId);
   }
 
   markHandoffStarted(id: string, runId: string | null): void {

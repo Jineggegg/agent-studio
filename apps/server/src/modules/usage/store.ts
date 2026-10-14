@@ -249,7 +249,7 @@ export class UsageStore {
   // ---- budgets -----------------------------------------------------------------
 
   budgetsOf(userId: string): BudgetRow[] {
-    return this.#db.all<BudgetRow>('SELECT * FROM usage_budgets WHERE user_id = ? ORDER BY created_at, id', userId);
+    return this.#db.all<BudgetRow>('SELECT * FROM usage_budgets WHERE user_id = ? ORDER BY created_at, rowid', userId);
   }
 
   /** The caller's own budget, or nothing: somebody else's id answers like one that does not exist. */

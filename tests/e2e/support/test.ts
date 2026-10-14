@@ -33,6 +33,16 @@ interface Fixtures {
   consoleLog: ConsoleLog;
 }
 
+/**
+ * What a browser reports as an error about something working as specified.
+ * Each entry needs a reason a reviewer would accept.
+ */
+const ENGINE_NOTICES: readonly RegExp[] = [
+  // A resize observer whose callback changed a size it watches gets its remaining notifications in the next frame —
+  // the specified guard against endless loops — and WebKit announces that through window.onerror.
+  /^page error: [^:\n]*: ResizeObserver loop completed with undelivered notifications\./,
+];
+
 /** Runs in every page before the app: reports blocked content in a way every engine records. */
 function reportPolicyViolations() {
   document.addEventListener('securitypolicyviolation', (event) => {
@@ -62,7 +72,9 @@ export const test = base.extend<Fixtures>({
       });
       await use(log);
       const unexpected = log.problems.filter(
-        (problem) => !log.allowed.some((pattern) => pattern.test(problem)),
+        (problem) =>
+          !log.allowed.some((pattern) => pattern.test(problem)) &&
+          !ENGINE_NOTICES.some((pattern) => pattern.test(problem)),
       );
       expect(unexpected, 'console errors, page errors and CSP violations during the test').toEqual(
         [],

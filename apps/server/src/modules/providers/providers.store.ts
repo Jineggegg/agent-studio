@@ -126,7 +126,7 @@ export class ProviderStore {
   }
 
   list(): ProviderRecord[] {
-    return this.#db.all<ProviderRow>('SELECT * FROM providers ORDER BY created_at, id').map(toRecord);
+    return this.#db.all<ProviderRow>('SELECT * FROM providers ORDER BY created_at, rowid').map(toRecord);
   }
 
   find(id: string): ProviderRecord | null {

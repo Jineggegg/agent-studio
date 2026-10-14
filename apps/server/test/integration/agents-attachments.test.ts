@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import type { Attachment, MessageReceipt, UploadAttachmentsResponse } from '@agent-studio/protocol';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { type AgentsKit, createAgentsKit, nextRequestId, until } from '../../src/testing/agents-kit.js';
 import type { TestClient, TestResponse } from '../../src/testing/harness.js';
 
@@ -89,6 +89,22 @@ describe('attachments', () => {
     expect(again.status).toBe(422);
     expect(again.body).toMatchObject({ error: { code: 'attachment_already_sent' } });
     expect((await owner.delete(`/api/sessions/${session.id}/attachments/${image!.id}`)).status).toBe(409);
+  });
+
+  it('lists files in the order they were uploaded, even those stored in the same millisecond', async () => {
+    const { owner } = kit;
+    const session = await kit.session();
+    const names = [...'jihgfedcba'].map((letter) => `${letter}.txt`); // ten, the most one upload takes, in reverse order
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now()); // all of them stored in the same millisecond
+    let response;
+    try {
+      response = await upload(owner, session.id, names.map((name) => ({ name, type: 'text/plain', content: name })));
+    } finally {
+      clock.mockRestore();
+    }
+    expect(response.status).toBe(201);
+    const listed = (await owner.get<{ attachments: Attachment[] }>(`/api/sessions/${session.id}/attachments`)).body.attachments;
+    expect(listed.map((entry) => entry.name)).toEqual(names);
   });
 
   it('accepts a message that is only an attachment, and travels with a queued message', async () => {

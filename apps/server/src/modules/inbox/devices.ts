@@ -121,7 +121,7 @@ export class DeviceStore {
   }
 
   ofUser(userId: string): DeviceRow[] {
-    return this.#db.all<DeviceRow>('SELECT * FROM inbox_push_devices WHERE user_id = ? ORDER BY created_at, id', userId);
+    return this.#db.all<DeviceRow>('SELECT * FROM inbox_push_devices WHERE user_id = ? ORDER BY created_at, rowid', userId);
   }
 
   count(userId: string): number {

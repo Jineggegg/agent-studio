@@ -145,7 +145,7 @@ export class AutomationStore {
   }
 
   ofProject(projectId: string): AutomationRow[] {
-    return this.#db.all<AutomationRow>('SELECT * FROM automations WHERE project_id = ? ORDER BY created_at, id', projectId);
+    return this.#db.all<AutomationRow>('SELECT * FROM automations WHERE project_id = ? ORDER BY created_at, rowid', projectId);
   }
 
   countOfProject(projectId: string): number {
@@ -177,7 +177,7 @@ export class AutomationStore {
 
   /** Enabled automations of a project that wait for an event. */
   waitingFor(projectId: string, event: string): AutomationRow[] {
-    return this.#db.all<AutomationRow>('SELECT * FROM automations WHERE project_id = ? AND event = ? AND enabled = 1 ORDER BY created_at, id', projectId, event);
+    return this.#db.all<AutomationRow>('SELECT * FROM automations WHERE project_id = ? AND event = ? AND enabled = 1 ORDER BY created_at, rowid', projectId, event);
   }
 
   /** Switches off everything one person created in one project. Returns what was switched off. */

@@ -11,6 +11,9 @@ import { ProcessSupervisor, Sandbox } from './process.js';
 import { RealtimeHub } from './realtime.js';
 import { KeyRing, SECRETS_MIGRATIONS, SecretStore, loadMasterKey, prepareDataDir } from './secrets.js';
 
+/** How long a stop waits for requests in flight before closing their connections. */
+const SHUTDOWN_GRACE_MS = 3_000;
+
 export interface Studio {
   readonly app: FastifyInstance;
   readonly context: ModuleContext;
@@ -96,7 +99,15 @@ export async function createStudio(config: StudioConfig, modules: readonly Studi
       }
       realtime.close();
       await context.processes.shutdown();
-      await http.app.close();
+      // Requests in flight get a moment to finish. A client still sending one
+      // after that (an upload refused before its body was read, a stalled
+      // connection) is cut off instead of holding the shutdown for minutes.
+      const cutOff = setTimeout(() => http.app.server.closeAllConnections(), SHUTDOWN_GRACE_MS);
+      try {
+        await http.app.close();
+      } finally {
+        clearTimeout(cutOff);
+      }
       db.close();
     },
   };
