@@ -70,7 +70,7 @@ function checkCatalogue(models: readonly ProviderModel[]): ProviderModel[] {
  *   learn its name, whether it is ready, and the models to pick from —
  *   nothing about where it lives or what its key looks like.
  * - **Only the owner** creates, changes and removes providers, and sees the
- *   address, the catalogue with prices, and a hint of the key.
+ *   address, the catalogue with prices, and whether a key is saved and since when.
  * - **Nobody reads a key back.** It goes into the encrypted secret store and
  *   leaves it only inside this process, for the request to the provider.
  *

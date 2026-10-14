@@ -492,6 +492,22 @@ describe('the Studio\'s own tools', () => {
     expect(await c.eventsOf(session.id, 'approval.requested')).toHaveLength(1);
     expect(await c.texts(session.id)).toEqual(['The tool note_write answered: saved "Deploys"']);
   });
+
+  it('record a refusal as denied, on the tool call the approval was for', async () => {
+    const session = await c.session();
+    written.length = 0;
+    const sent = await c.send(session.id, '[[scenario:studio-tool note_write {"title":"Deploys","body":"Fridays are fine."}]]');
+    const approval = await c.pendingApproval(session.id);
+    await c.decide(approval.id, { decision: 'deny', note: 'not on a Friday' });
+    expect((await c.runEnded(sent.body.runId!)).status).toBe('completed');
+    expect(written).toEqual([]);
+    const [started] = await c.eventsOf(session.id, 'tool.started');
+    expect(started).toMatchObject({ name: 'mcp__studio__note_write' });
+    // Claude Code names the call it makes through the bridge, so the approval is tied to the tool row it is about …
+    expect(approval.toolCallId).toBe(started!.toolCallId);
+    // … and the refusal, which Claude Code itself sees as a tool that answered with an error, is recorded as one.
+    expect(await c.eventsOf(session.id, 'tool.finished')).toEqual([expect.objectContaining({ toolCallId: started!.toolCallId, status: 'denied', output: 'not on a Friday' })]);
+  });
 });
 
 describe('to-do lists and sub-agents', () => {
@@ -889,19 +905,30 @@ describe('notices and usage limits', () => {
     const payload = observed!.data as RateLimitObserved;
     expect(payload).toMatchObject({ agentId: 'claude-code', userId: c.owner.userId });
     expect(payload.observedAt).toBeGreaterThanOrEqual(startedAt);
+    const fiveHour = payload.info.resetsAt as number;
     expect(payload.info).toEqual({
       status: 'allowed',
-      resetsAt: 1791939600,
+      resetsAt: fiveHour,
       rateLimitType: 'five_hour',
       overageStatus: 'rejected',
       isUsingOverage: false,
-      unifiedWindows: { five_hour: { utilization: 0.25, resetsAt: 1791939600 }, seven_day: { utilization: 0.1, resetsAt: 1792389600 } },
+      unifiedWindows: { five_hour: { utilization: 0.25, resetsAt: fiveHour }, seven_day: { utilization: 0.1, resetsAt: expect.any(Number) } },
     });
+    // The CLI reports times in seconds; the stand-in's windows reset a few hours and days ahead of whenever the tests run.
+    const hours = (seconds: number) => (seconds * 1000 - startedAt) / 3_600_000;
+    expect(hours(fiveHour)).toBeGreaterThan(1);
+    expect(hours(fiveHour)).toBeLessThanOrEqual(5);
+    expect(hours((payload.info.unifiedWindows as { seven_day: { resetsAt: number } }).seven_day.resetsAt)).toBeGreaterThan(24);
     expect(await c.eventsOf(session.id, 'notice')).toEqual([]);
 
     await c.turn(session.id, '[[scenario:rate-warning]]');
-    expect(await c.eventsOf(session.id, 'notice')).toEqual([expect.objectContaining({ level: 'warning', code: 'rate_limit_warning', text: "Claude's five-hour usage limit is close; it resets at 2026-10-14 01:00 UTC." })]);
-    expect((c.usageEvents.at(-1)!.data as RateLimitObserved).info.status).toBe('allowed_warning');
+    const warning = (c.usageEvents.at(-1)!.data as RateLimitObserved).info;
+    expect(warning.status).toBe('allowed_warning');
+    // The notice names the reset time the CLI reported, in UTC.
+    const resets = new Date((warning.resetsAt as number) * 1000).toISOString();
+    expect(await c.eventsOf(session.id, 'notice')).toEqual([
+      expect.objectContaining({ level: 'warning', code: 'rate_limit_warning', text: `Claude's five-hour usage limit is close; it resets at ${resets.slice(0, 10)} ${resets.slice(11, 16)} UTC.` }),
+    ]);
   });
 
   it('ignores events it does not know and stray output, without failing the turn', async () => {

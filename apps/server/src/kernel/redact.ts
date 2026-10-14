@@ -30,7 +30,15 @@ export function redactSecrets(text: string): string {
   return result;
 }
 
-/** A hint that identifies a stored secret to its owner without revealing it. */
-export function secretHint(value: string): string {
-  return value.length >= 12 ? `…${value.slice(-4)}` : '…';
+/**
+ * What stands in for a stored secret wherever one is described: a fixed
+ * marker that says "a value is saved" and nothing else. It never contains any
+ * character of the secret, however long the secret is — a read must not
+ * return any part of a saved key.
+ */
+export const SECRET_HINT = '••••';
+
+/** The marker shown for a stored secret. The secret itself is not looked at. */
+export function secretHint(_value?: string): string {
+  return SECRET_HINT;
 }

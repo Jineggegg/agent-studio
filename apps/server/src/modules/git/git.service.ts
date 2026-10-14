@@ -79,6 +79,7 @@ interface Upstream {
 }
 
 const FIRST_COMMIT_MESSAGE = 'Initial commit';
+const noRemote = () => gitError(409, 'git_no_remote', 'This repository has no remote configured.');
 const UNIT = '\u001f';
 const RECORD = '\u001e';
 
@@ -813,7 +814,7 @@ export class GitService {
 
   async #pickRemote(root: string, requested: string | undefined, preferred: string | null): Promise<string> {
     const remotes = await this.#remotes(root);
-    if (remotes.length === 0) throw gitError(409, 'git_no_remote', 'This repository has no remote configured.');
+    if (remotes.length === 0) throw noRemote();
     if (requested !== undefined) {
       assertRemoteName(requested);
       if (!remotes.includes(requested)) throw gitError(400, 'git_invalid_remote', `This repository has no remote called "${requested}".`);
@@ -821,6 +822,15 @@ export class GitService {
     }
     if (preferred !== null && remotes.includes(preferred)) return preferred;
     return remotes.includes('origin') ? 'origin' : remotes[0]!;
+  }
+
+  /**
+   * Pull and push have nothing to sync with in a repository without any remote,
+   * whatever state its branch is in, so they say that first — rather than
+   * advising to publish a branch, which needs a remote too.
+   */
+  async #requireRemote(root: string): Promise<void> {
+    if ((await this.#remotes(root)).length === 0) throw noRemote();
   }
 
   async #aheadBehind(root: string, left: string, right: string): Promise<{ ahead: number; behind: number } | null> {
@@ -868,6 +878,7 @@ export class GitService {
   async pull(rootDir: string, userId: string, request: { mode: 'ff-only' | 'merge' }): Promise<GitSyncResult> {
     const repo = await this.repository(rootDir);
     return this.exclusive(repo.root, async () => {
+      await this.#requireRemote(repo.root);
       await this.#refuseUnfinished(repo);
       const { parsed } = await this.#parsedStatus(repo.root);
       if (parsed.head === null) throw gitError(409, 'git_detached_head', 'No branch is checked out, so there is nothing to pull into.');
@@ -917,6 +928,7 @@ export class GitService {
     if (request.remote !== undefined) assertRemoteName(request.remote);
     const repo = await this.repository(rootDir);
     return this.exclusive(repo.root, async () => {
+      await this.#requireRemote(repo.root);
       const { parsed } = await this.#parsedStatus(repo.root);
       if (parsed.head === null) throw gitError(409, 'git_detached_head', 'No branch is checked out, so there is nothing to push.');
       if (parsed.oid === null) throw gitError(409, 'git_no_commits', 'There are no commits to push yet.');

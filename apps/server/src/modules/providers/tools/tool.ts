@@ -40,6 +40,8 @@ export interface PreparedCall {
 export interface ToolIo {
   /** Aborts when the run is stopped or its time is up. */
   readonly signal: AbortSignal;
+  /** The call, as the transcript announced it (`tool.started`). */
+  readonly toolCallId?: string;
   /** Output for people watching, as it is produced. */
   output(text: string): void;
   /** Something the user should know. The same code is shown once per turn. */

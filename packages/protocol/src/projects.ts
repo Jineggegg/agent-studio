@@ -130,6 +130,13 @@ export const projectNameSchema = z.string().trim().min(1).max(80);
 
 const projectAgentsInput = z.array(agentIdSchema).max(20).nullable();
 
+/**
+ * Adds a folder as a project (the owner only). A folder that is already an
+ * active project is refused (`project_exists`). The folder of an *archived*
+ * project brings that project back instead: the answer is 200 with the project
+ * as it was — its original id, name and settings — and nothing else from the
+ * request is applied. A new project is answered with 201.
+ */
 export const createProjectRequestSchema = z.object({
   name: projectNameSchema,
   /** Absolute path, or a path starting with "~/". Must lie inside an allowed workspace root. */

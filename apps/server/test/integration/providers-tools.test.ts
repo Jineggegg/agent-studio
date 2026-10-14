@@ -793,6 +793,9 @@ describe("the Studio's own tools", () => {
     expect(eventsOf(events, 'tool.started').map((tool) => [tool.name, tool.kind])).toEqual([['memory_write', 'other'], ['memory_search', 'read'], ['memory_write', 'other']]);
     expect(eventsOf(events, 'tool.finished').map((tool) => tool.status)).toEqual(['ok', 'ok', 'denied']);
     expect(eventsOf(events, 'approval.requested')).toHaveLength(2);
+    // Each approval names the tool call it was asked for.
+    const started = eventsOf(events, 'tool.started');
+    expect([first.toolCallId, second.toolCallId]).toEqual([started[0].toolCallId, started[2].toolCallId]);
 
     // A conversation of another project cannot find or read that note, whatever it asks for.
     const elsewhere = await kit.session(provider, kit.owner, { projectId: other.id });

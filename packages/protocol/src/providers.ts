@@ -17,9 +17,10 @@ import { idSchema, timestampSchema } from './common.js';
  * - `GET /api/providers` is what a model picker reads. Everyone gets
  *   {@link Provider}; only the owner gets its `settings` (base URL, key hint,
  *   the whole catalogue). For everybody else `settings` is `null`.
- * - **A key can be written and removed, never read.** No answer contains it;
- *   the owner sees `settings.key.configured` and a short `hint` (its last four
- *   characters). Sending a blank `apiKey` in an update keeps the saved key.
+ * - **A key can be written and removed, never read.** No answer contains it
+ *   or any part of it; the owner sees `settings.key.configured`, when it was
+ *   saved, and a fixed marker as its `hint`. Sending a blank `apiKey` in an
+ *   update keeps the saved key.
  * - Saving or replacing a key, changing the base URL and switching on
  *   `allowPrivateNetwork` each decide where conversations and the key are
  *   sent. They need a signed-in browser (never an API token) that proved its
@@ -123,7 +124,10 @@ export type ProviderModelOption = z.infer<typeof providerModelOptionSchema>;
 /** What is known about the saved key. Never the key. */
 export const providerKeyStateSchema = z.object({
   configured: z.boolean(),
-  /** The last characters of the key ("…a1b2"), or "…" for a short one. Null when none is saved. */
+  /**
+   * A fixed marker ("••••") when a key is saved, null when none is. It never
+   * contains any character of the key: no read returns any part of a saved key.
+   */
   hint: z.string().nullable(),
   updatedAt: timestampSchema.nullable(),
   /** False when a key is stored but can no longer be decrypted (the installation key changed): save it again. */

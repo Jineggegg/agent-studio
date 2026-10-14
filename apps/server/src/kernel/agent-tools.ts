@@ -14,6 +14,11 @@ export interface AgentToolContext {
 export interface AgentToolResult {
   readonly text: string;
   readonly isError?: boolean;
+  /**
+   * The call was not carried out because the Studio refused it — a person said no, or the permission mode or a
+   * rule did. Set together with `isError`; `text` says why. Callers show such a call as denied, not as failed.
+   */
+  readonly denied?: boolean;
 }
 
 export interface AgentToolDefinition<Input = unknown> {

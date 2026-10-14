@@ -249,6 +249,16 @@ describe('project access', () => {
     expect((await owner.get<{ sessions: Session[] }>('/api/sessions?scope=all')).body.sessions.map((entry) => entry.id)).toContain(session.id);
     // By default the owner's lists are the owner's own.
     expect((await owner.get<{ sessions: Session[] }>('/api/sessions')).body.sessions.map((entry) => entry.id)).not.toContain(session.id);
+    // Asked for the runs of that session, the owner gets them — the session can be read, so can its runs —
+    // while the owner's own run lists stay the owner's own, and another member still finds no such session.
+    for (const state of ['all', 'active']) {
+      const runs = await owner.get<{ runs: Run[] }>(`/api/runs?state=${state}&sessionId=${session.id}`);
+      expect(runs.body.runs.map((run) => [run.id, run.userId])).toEqual([[running.body.runId, alice.userId]]);
+    }
+    expect((await alice.get<{ runs: Run[] }>(`/api/runs?state=all&sessionId=${session.id}`)).body.runs.map((run) => run.id)).toEqual([running.body.runId]);
+    expect((await owner.get<{ runs: Run[] }>('/api/runs?state=all')).body.runs.map((run) => run.id)).not.toContain(running.body.runId);
+    expect((await owner.get<{ runs: Run[] }>(`/api/runs?state=active&projectId=${kit.project.id}`)).body.runs.map((run) => run.id)).not.toContain(running.body.runId);
+    expect((await mallory.get(`/api/runs?state=all&sessionId=${session.id}`)).status).toBe(404);
     const watching = await kit.connect(owner);
     expect(await watching.subscribe(sessionTopic(session.id))).toMatchObject({ op: 'subscribed' });
     watching.close();

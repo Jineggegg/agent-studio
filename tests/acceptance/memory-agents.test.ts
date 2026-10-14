@@ -204,8 +204,8 @@ describe('7.1 memory: what an agent run can reach', () => {
       'deny',
     );
     expect(refused.asked).toEqual(['memory_write']);
-    expect(refused.answers[0]!.status).not.toBe('ok');
-    expect(refused.answers[0]!.output).toContain('Not allowed');
+    expect(refused.answers[0]).toMatchObject({ name: 'memory_write', status: 'denied' });
+    expect(refused.answers[0]!.output).toContain('denied');
     expect((await owner.get(`/api/memory/note?id=alpha/not-wanted`)).status).toBe(404);
 
     const written = await agentCalls(owner, alpha.id, 'claude-code', [
@@ -228,36 +228,38 @@ describe('7.1 memory: what an agent run can reach', () => {
     expect(recent[0]).toMatchObject({ id: 'alpha/howto/build-tips', author: 'claude-code' });
   });
 
-  // FINDING: when a person refuses one of the Studio's own tools (here memory_write, called through the bridge),
-  // the transcript records the call as `tool.finished` with status "error" and output "Not allowed: <note>" —
-  // not as "denied". The same happens when plan mode refuses it. For the agents' own tools (Bash, Write,
-  // apply_patch, shell) a refusal is recorded as "denied", as AT-WB-056 asks. Both agents behave alike.
-  // Related: the approval for a memory write has `toolCallId: null` (it cannot be tied to its tool row) and the
-  // reason shown is 'The Studio does not know what "memory_write" does, so it asks first.'
-  it.skip('AT-WB-056 (Studio tools): a memory write the user refuses is recorded as "denied", not as an error, and its prompt names the tool call it belongs to', async () => {
-    const session = await createSession(owner, alpha.id, 'claude-code');
-    const receipt = await send(
-      owner,
-      session.id,
-      'save it [[scenario:studio-tool memory_write {"title":"Refused note","content":"no","scope":"project"}]]',
-    );
-    const [approval] = await until(async () => {
-      const pending = await pendingApprovals(owner, session.id);
-      return pending.length > 0 ? pending : undefined;
+  for (const agentId of ['claude-code', 'codex']) {
+    it(`AT-WB-056 (Studio tools, ${agentId}): a memory write the user refuses is recorded as "denied", not as an error, and its prompt names the tool call it belongs to`, async (context) => {
+      if (agentId === 'codex' && !codex) return context.skip(SANDBOX_OFF);
+      const session = await createSession(owner, alpha.id, agentId);
+      const receipt = await send(
+        owner,
+        session.id,
+        'save it [[scenario:studio-tool memory_write {"title":"Refused note","content":"no","scope":"project"}]]',
+      );
+      const [approval] = await until(async () => {
+        const pending = await pendingApprovals(owner, session.id);
+        return pending.length > 0 ? pending : undefined;
+      });
+      expect(approval!.toolCallId).not.toBeNull();
+      await decide(owner, approval!.id, 'deny', { note: 'not now' });
+      await until(async () =>
+        ['completed', 'failed'].includes((await getRun(owner, receipt.runId!)).status)
+          ? true
+          : undefined,
+      );
+      const events = await transcript(owner, session.id);
+      const started = events.find((event) => event.type === 'tool.started')!;
+      const finished = events.find((event) => event.type === 'tool.finished')!;
+      expect(started.data.toolCallId).toBe(approval!.toolCallId);
+      expect(finished.data).toMatchObject({
+        toolCallId: approval!.toolCallId,
+        status: 'denied',
+        output: 'not now',
+      });
+      expect((await owner.get('/api/memory/note?id=alpha/refused-note')).status).toBe(404);
     });
-    expect(approval!.toolCallId).not.toBeNull();
-    await decide(owner, approval!.id, 'deny', { note: 'not now' });
-    await until(async () =>
-      ['completed', 'failed'].includes((await getRun(owner, receipt.runId!)).status)
-        ? true
-        : undefined,
-    );
-    const finished = (await transcript(owner, session.id)).find(
-      (event) => event.type === 'tool.finished',
-    )!;
-    expect(finished.data.status).toBe('denied');
-    expect(finished.data.toolCallId).toBe(approval!.toolCallId);
-  });
+  }
 
   it('AT-MEM-018: an agent’s note that states a credential is refused — the refusal names the kind, never repeats the value, and nothing is stored', async () => {
     const random = 'aB3dE5fG7hJ9kL1mN3pQ5rS7tU9vW1xY3zA5bC7d';

@@ -57,7 +57,7 @@ describe('preferences', () => {
     // Rubbish written straight into the preference store is ignored, not obeyed.
     await kit.owner.patch('/api/preferences', { values: { 'notifications.events': { failure: 'yes', needsYou: 0, replyFinished: false }, 'notifications.channels': 'all', 'notifications.showDetails': 'on' } });
     expect((await settings(kit.owner)).preferences).toEqual({
-      events: { needsYou: true, replyFinished: false, backgroundFinished: false, failure: true, automation: true, plugin: true },
+      events: { needsYou: true, replyFinished: false, backgroundFinished: true, failure: true, automation: true, plugin: true },
       channels: { inApp: true, webPush: false },
       showDetails: false,
     });
@@ -106,8 +106,8 @@ describe('the application-server key', () => {
     expect(stored.publicKey).toBe(key);
     const row = context.db.get<{ sealed: string; hint: string }>("SELECT sealed, hint FROM secrets WHERE name = 'inbox.vapid-keys'")!;
     expect(row.sealed).not.toContain(stored.privateKey);
-    // The stored hint is the tail of the sealed value — which is the end of the public key, not of the private one.
-    expect(row.hint).toBe(`…${key.slice(-2)}"}`);
+    // The stored hint is a fixed marker: no part of the pair is kept in the clear beside the sealed value.
+    expect(row.hint).toBe('••••');
     for (const url of ['/api/notifications/settings', '/api/notifications/push/key', '/api/preferences']) {
       expect(JSON.stringify((await kit.owner.get(url)).body)).not.toContain(stored.privateKey);
     }

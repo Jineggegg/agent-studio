@@ -147,6 +147,8 @@ export function isLocalPeer(request: FastifyRequest): boolean {
 const callBody = z.object({
   name: z.string().min(1).max(200),
   arguments: z.unknown().optional(),
+  /** The agent program's own id for this tool call, when it sends one. Used only to tie an approval and a refusal to the call. */
+  toolCallId: z.string().min(1).max(200).optional(),
 });
 
 const permissionPromptInput = z.looseObject({
@@ -214,7 +216,7 @@ export function registerBridgeRoutes(context: ModuleContext, tokens: BridgeToken
           : ({ behavior: 'deny', message: 'The permission request could not be read.' } as const);
         return { content: [{ type: 'text', text: JSON.stringify(result) }], isError: false };
       }
-      const result = await runs.callStudioTool(identity.runId, body.name, body.arguments ?? {});
+      const result = await runs.callStudioTool(identity.runId, body.name, body.arguments ?? {}, body.toolCallId === undefined ? {} : { toolCallId: body.toolCallId });
       return { content: [{ type: 'text', text: result.text }], isError: result.isError === true };
     },
   });

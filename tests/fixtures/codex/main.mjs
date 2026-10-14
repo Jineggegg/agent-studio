@@ -629,12 +629,14 @@ class Turn {
     this.thread.usage += 1;
     this.thread.lastTurnId = this.id;
     this.note('thread/tokenUsage/updated', { tokenUsage: tokenUsage(this.thread.usage) });
+    // The weekly window resets three days from now, on the hour (in seconds): never a date the tests could outlive.
+    const resetsAt = Math.ceil(Date.now() / 1000 / 3600) * 3600 + 3 * 24 * 3600;
     this.server.notify('account/rateLimits/updated', {
       rateLimits: {
         limitId: 'codex',
         limitName: null,
         normalModelSlug: null,
-        primary: { usedPercent: 17, windowDurationMins: 10080, resetsAt: 1792479518 },
+        primary: { usedPercent: 17, windowDurationMins: 10080, resetsAt },
         secondary: null,
         credits: null,
         individualLimit: null,

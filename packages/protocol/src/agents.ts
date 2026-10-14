@@ -684,6 +684,12 @@ export const approvalSchema = z.object({
 });
 export type Approval = z.infer<typeof approvalSchema>;
 
+/**
+ * The body of `POST /api/approvals/:id/decision` — the one way a tool request,
+ * a plan or a question is answered. A person answers it, from a signed-in
+ * browser: an API token is refused with 403 `session_required`, whatever its
+ * scopes.
+ */
 export const approvalDecisionRequestSchema = z.object({
   /** For a question, `allow` submits `answers` and `deny` skips it. */
   decision: z.enum(['allow', 'deny']),

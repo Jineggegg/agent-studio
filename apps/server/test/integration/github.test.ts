@@ -178,6 +178,21 @@ describe('sign-in state', () => {
     for (const secret of SECRETS) expect(JSON.stringify(expired)).not.toContain(secret);
   });
 
+  it('meets the default stand-in from tests/fixtures/bin when a test brings no gh of its own: never signed in, never the real GitHub', async () => {
+    const pathWithGh = process.env.PATH;
+    // Without the sandbox's gh, the first one on PATH is the default stand-in that test/setup.ts put there.
+    process.env.PATH = (pathWithGh ?? '').split(path.delimiter).filter((entry) => entry !== sandbox.bin).join(path.delimiter);
+    try {
+      const account = await owner.get<GithubAccount>('/api/github/account?refresh=true');
+      expect(account.body).toMatchObject({ state: 'signed_out', login: null, canWrite: null });
+      expect(errorOf(await owner.get('/api/github/inbox'))).toEqual([409, 'github_signed_out']);
+      expect(errorOf(await owner.get('/api/github/repositories'))).toEqual([409, 'github_signed_out']);
+    } finally {
+      process.env.PATH = pathWithGh;
+    }
+    expect(await sandbox.ghCalls()).toEqual([]);
+  });
+
   it('falls back to asking the API who it is when the tool is too old for --json', async () => {
     const old: GhRule = { args: ['auth', 'status'], stderr: 'unknown flag: --json\n', code: 1 };
     expect(await account([old, { args: ['api', 'user'], ...ok({ login: 'octo', id: 1 }) }])).toMatchObject({ state: 'ready', login: 'octo', canWrite: true });

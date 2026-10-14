@@ -1,0 +1,33 @@
+#!/bin/sh
+# A stand-in for the GitHub command-line tool (gh), for tests.
+#
+# It is never signed in and never touches the network: whatever it is asked,
+# it answers the way the real gh does on a machine where nobody has signed in.
+# The integration and acceptance suites put this directory first on PATH, so a
+# test that brings no gh of its own meets this one — never the real gh, even
+# on a machine where the real one is installed and signed in.
+#
+# A test that needs more (a signed-in account, canned API answers) puts its
+# own gh before this directory on PATH, or replaces PATH altogether. It is a
+# test double: production code never looks for it.
+#
+# Commands:  gh --version | gh version   a version line that names the stand-in
+#            gh auth status …            "You are not logged into any GitHub hosts." (exit 1)
+#            gh <anything else> …        "To get started with GitHub CLI, please run: gh auth login" (exit 4,
+#                                        gh's code for "authentication required")
+
+case "$1" in
+  --version | version)
+    echo 'gh version 0.0.0-standin (never signed in, never connects)'
+    exit 0
+    ;;
+esac
+
+if [ "$1" = auth ] && [ "$2" = status ]; then
+  echo 'You are not logged into any GitHub hosts. To log in, run: gh auth login' >&2
+  exit 1
+fi
+
+echo 'To get started with GitHub CLI, please run:  gh auth login' >&2
+echo 'Alternatively, populate the GH_TOKEN environment variable with a GitHub API authentication token.' >&2
+exit 4

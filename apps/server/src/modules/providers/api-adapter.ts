@@ -111,11 +111,11 @@ function studioTool(description: StudioToolDescription, host: AgentRunHost): Mod
         input: args,
         permissions: [],
         waitsForPeople: description.effect === 'write',
-        async run() {
-          const result = await host.studioTools.call(description.name, args);
-          if (result.isError && description.effect === 'write' && result.text.startsWith('Not allowed: ')) {
-            return { status: 'denied', text: `Denied: ${result.text.slice('Not allowed: '.length)}` };
-          }
+        async run(io) {
+          // Naming the call ties its approval — and a refusal — to the tool row the transcript already shows.
+          const result = await host.studioTools.call(description.name, args, io.toolCallId === undefined ? {} : { toolCallId: io.toolCallId });
+          // The runtime says so when it refused the call; its wording is for the model, not something to parse.
+          if (result.denied === true) return { status: 'denied', text: `Denied: ${result.text.replace(/^Not allowed: /, '')}` };
           return { status: result.isError ? 'error' : 'ok', text: result.text };
         },
       };
@@ -679,6 +679,7 @@ class Turn {
 
     const current = prepared;
     const io = {
+      toolCallId,
       output: (text: string): void => host.emit({ type: 'tool.output', toolCallId, text }),
       notice: (level: 'info' | 'warning', code: string, text: string): void => this.#notice(level, code, text),
     };

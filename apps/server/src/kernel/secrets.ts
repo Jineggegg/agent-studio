@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { StudioConfig } from './config.js';
 import { SecretBox } from './crypto.js';
 import type { Database } from './database.js';
-import { secretHint } from './redact.js';
+import { SECRET_HINT, secretHint } from './redact.js';
 
 /** Creates the data directory for the owner only, and tightens it if it already exists. */
 export function prepareDataDir(dataDir: string): void {
@@ -43,7 +43,7 @@ export class KeyRing {
 
 export interface SecretDescription {
   readonly name: string;
-  /** Enough to recognise the secret (its last characters), never enough to use it. */
+  /** A fixed marker that a value is saved. It holds no character of the secret. */
   readonly hint: string;
   readonly updatedAt: number;
 }
@@ -60,6 +60,13 @@ export const SECRETS_MIGRATIONS = [
         updated_at INTEGER NOT NULL
       );
     `,
+  },
+  {
+    // Earlier versions kept the last four characters of each secret in `hint`.
+    // No part of a secret is kept in the clear any more: overwrite what is there.
+    version: 2,
+    name: 'secret hints reveal nothing',
+    sql: `UPDATE secrets SET hint = '${SECRET_HINT}';`,
   },
 ] as const;
 
@@ -79,7 +86,7 @@ export class SecretStore {
 
   put(name: string, value: string): SecretDescription {
     const updatedAt = Date.now();
-    const hint = secretHint(value);
+    const hint = secretHint();
     this.#db.run(
       `INSERT INTO secrets (name, sealed, hint, updated_at) VALUES (?, ?, ?, ?)
        ON CONFLICT (name) DO UPDATE SET sealed = excluded.sealed, hint = excluded.hint, updated_at = excluded.updated_at`,
@@ -97,11 +104,12 @@ export class SecretStore {
   }
 
   describe(name: string): SecretDescription | null {
-    const row = this.#db.get<{ name: string; hint: string; updated_at: number }>(
-      'SELECT name, hint, updated_at FROM secrets WHERE name = ?',
+    const row = this.#db.get<{ name: string; updated_at: number }>(
+      'SELECT name, updated_at FROM secrets WHERE name = ?',
       name,
     );
-    return row ? { name: row.name, hint: row.hint, updatedAt: row.updated_at } : null;
+    // The marker, not the stored column: whatever a row holds, a description reveals nothing of the value.
+    return row ? { name: row.name, hint: secretHint(), updatedAt: row.updated_at } : null;
   }
 
   delete(name: string): boolean {

@@ -123,9 +123,15 @@ describe('ahead, behind and fetching', () => {
     const url = (suffix: string) => `/api/projects/${project.id}/git/${suffix}`;
     expect((await owner.get<GitStatus>(url('status'))).body).toMatchObject({ remotes: [], defaultRemote: null });
     expect(errorOf(await owner.post(url('fetch')))).toEqual([409, 'git_no_remote']);
-    expect(errorOf(await owner.post(url('pull')))).toEqual([409, 'git_no_upstream']);
-    expect(errorOf(await owner.post(url('push')))).toEqual([409, 'git_no_upstream']);
+    // Pull and push say so directly, rather than advising to publish the branch first.
+    expect(errorOf(await owner.post(url('pull')))).toEqual([409, 'git_no_remote']);
+    expect(errorOf(await owner.post(url('pull'), { mode: 'merge' }))).toEqual([409, 'git_no_remote']);
+    expect(errorOf(await owner.post(url('push')))).toEqual([409, 'git_no_remote']);
     expect(errorOf(await owner.post(url('push'), { publish: true }))).toEqual([409, 'git_no_remote']);
+    // Whatever state the branch is in: with no branch checked out the answer is the same.
+    await sandbox.git(project.rootDir, 'checkout', '--quiet', '--detach');
+    expect(errorOf(await owner.post(url('pull')))).toEqual([409, 'git_no_remote']);
+    expect(errorOf(await owner.post(url('push')))).toEqual([409, 'git_no_remote']);
   });
 });
 

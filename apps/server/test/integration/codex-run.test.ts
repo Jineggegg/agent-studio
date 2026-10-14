@@ -72,11 +72,17 @@ describe('the Codex adapter, driving the stand-in CLI', () => {
     expect(JSON.stringify(events)).not.toContain(native);
 
     expect(usage.map((event) => event.type)).toContain('rate-limit.observed');
-    expect(usage.find((event) => event.type === 'rate-limit.observed')!.data).toMatchObject({
+    const observed = usage.find((event) => event.type === 'rate-limit.observed')!.data as { info: { primary: { resetsAt: number } } };
+    expect(observed).toMatchObject({
       agentId: 'codex',
       userId: owner.userId,
-      info: { limitId: 'codex', planType: 'plus', primary: { usedPercent: 17, windowMinutes: 10080, resetsAt: 1792479518000 }, secondary: null, credits: null, reached: null },
+      info: { limitId: 'codex', planType: 'plus', primary: { usedPercent: 17, windowMinutes: 10080, resetsAt: expect.any(Number) }, secondary: null, credits: null, reached: null },
     });
+    // Codex reports the reset in seconds; the Studio keeps milliseconds. The stand-in's weekly window resets three days ahead, on the hour.
+    const resetsAt = observed.info.primary.resetsAt;
+    expect(resetsAt % 3_600_000).toBe(0);
+    expect(resetsAt - Date.now()).toBeGreaterThan(2 * 24 * 3_600_000);
+    expect(resetsAt - Date.now()).toBeLessThanOrEqual(3 * 24 * 3_600_000 + 3_600_000);
   });
 
   it('starts the CLI in the project, with the settings that make it ask, and nothing of the server in its environment', async () => {

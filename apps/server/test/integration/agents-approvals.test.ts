@@ -1,7 +1,7 @@
 import { type Approval, type ApprovalDecisionResponse, type PermissionRule, type Run, type Session, type SessionEvent, sessionTopic, userTopic } from '@agent-studio/protocol';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { type AgentsKit, createAgentsKit, nextRequestId, until } from '../../src/testing/agents-kit.js';
-import type { TestClient } from '../../src/testing/harness.js';
+import { TestClient } from '../../src/testing/harness.js';
 import type { PermissionRequest } from '../../src/modules/agents/adapter.js';
 
 const bash = (command: string, extra: Partial<PermissionRequest> = {}): PermissionRequest => ({
@@ -277,6 +277,38 @@ describe('approvals', () => {
     expect((await decide(owner, approval!.id, { decision: 'allow' })).status).toBe(409);
     expect((await owner.get<Run>(`/api/runs/${sent.body.runId}`)).body.status).toBe('stopped');
     expect((await owner.get<Session>(`/api/sessions/${session.id}`)).body.attention).toBe('none');
+  });
+
+  it('is answered by a person in a browser: an API token cannot allow or deny — a tool request, a plan or a question — whatever its scopes', async () => {
+    const { owner, agent } = kit;
+    const robot = new TestClient(kit.t.studio);
+    robot.bearer = (await owner.post<{ token: string }>('/api/auth/tokens', { name: 'automation', scopes: ['read', 'write', 'admin'] })).body.token;
+    const session = await kit.session();
+    agent.script([
+      { permission: bash('npm publish') },
+      { permission: { toolName: 'ExitPlanMode', kind: 'other', input: {}, approval: 'plan', plan: '1. Do it.' } },
+      { ask: { questions: [{ id: 'q1', question: 'Which one?', options: [{ label: 'A' }, { label: 'B' }], multiSelect: false }] } },
+      { text: 'done' },
+    ]);
+    const sent = await kit.send(owner, session.id, 'three things to decide');
+    for (const kind of ['tool', 'plan', 'question']) {
+      const [approval] = await pending(kit, owner, session.id);
+      expect(approval!.kind).toBe(kind);
+      // The token may read what is waiting …
+      expect((await robot.get<Approval>(`/api/approvals/${approval!.id}`)).body.status).toBe('pending');
+      // … and cannot answer it, either way.
+      for (const body of [{ decision: 'allow' }, { decision: 'deny' }, { decision: 'allow', remember: 'always' }, { decision: 'allow', answers: [{ questionId: 'q1', selected: ['A'] }] }]) {
+        const refused = await robot.post<{ error: { code: string } }>(`/api/approvals/${approval!.id}/decision`, body);
+        expect(refused.status).toBe(403);
+        expect(refused.body.error.code).toBe('session_required');
+      }
+      expect((await owner.get<Approval>(`/api/approvals/${approval!.id}`)).body).toMatchObject({ status: 'pending', decidedBy: null });
+      // The same person, in a browser, answers it.
+      const answered = await decide(owner, approval!.id, kind === 'question' ? { decision: 'allow', answers: [{ questionId: 'q1', selected: ['A'] }] } : { decision: 'allow' });
+      expect(answered.status).toBe(200);
+    }
+    expect((await owner.get<{ rules: PermissionRule[] }>('/api/permission-rules')).body.rules.some((rule) => rule.pattern === 'npm publish *')).toBe(false);
+    await kit.runEnded(owner, sent.body.runId!);
   });
 
   it('never lets a member allow a dangerous request: that takes the owner', async () => {

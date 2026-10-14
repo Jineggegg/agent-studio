@@ -42,6 +42,8 @@
  *   [[scenario:compact]]               reports a context compaction, then answers
  *   [[scenario:retry]]                 reports two API retries, then answers
  *   [[scenario:rate-warning]]          reports that the usage limit is close, then answers
+ *   [[scenario:rate-reset-passed]]     reports a five-hour usage window whose reset time has just passed, then answers
+ *                                      (otherwise the windows it reports reset a few hours and days from now)
  *   [[scenario:unknown-event]]         prints event types no client knows, then answers
  *   [[scenario:noisy]]                 prints a line that is not JSON, then answers normally
  *

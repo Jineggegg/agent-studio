@@ -256,6 +256,21 @@ describe('6.15 access to sessions', () => {
         (row) => row.id,
       ),
     ).not.toContain(hers.id); // "mine" is mine
+    // The session's runs come with it: asked for them by session, the owner gets hers.
+    for (const state of ['all', 'active']) {
+      const runs = await owner.get<{ runs: Array<{ id: string; userId: string }> }>(
+        `/api/runs?state=${state}&sessionId=${hers.id}`,
+      );
+      expect(
+        runs.body.runs.map((row) => [row.id, row.userId]),
+        state,
+      ).toEqual([[run.runId, alice.userId]]);
+    }
+    expect(
+      (await owner.get<{ runs: Array<{ id: string }> }>('/api/runs?state=all')).body.runs.map(
+        (row) => row.id,
+      ),
+    ).not.toContain(run.runId); // the owner's own list stays the owner's own
     const ownerLive = await Realtime.open(studio, owner);
     expect((await ownerLive.subscribe(`session:${hers.id}`)).op).toBe('subscribed');
 
@@ -370,7 +385,7 @@ describe('6.15 access to sessions', () => {
     await live.close();
   });
 
-  it('an API token is bound by its scopes: a read-only token can read its owner’s session and cannot send, stop or answer an approval', async () => {
+  it('an API token is bound by its scopes: a read-only token can read its owner’s session and cannot send or stop', async () => {
     const hers = await createSession(alice, project.id);
     const run = await send(alice, hers.id, 'token test [[scenario:bash npm test]]');
     const [ask] = await approvalsWaiting(alice, hers.id);
@@ -385,8 +400,6 @@ describe('6.15 access to sessions', () => {
     for (const attempt of [
       postMessage(robot, hers.id, 'robot here'),
       robot.post(`/api/sessions/${hers.id}/stop`),
-      decide(robot, ask!.id, 'allow'),
-      decide(robot, ask!.id, 'deny'),
     ]) {
       const response = await attempt;
       expect(response.status).toBe(403);
@@ -400,9 +413,44 @@ describe('6.15 access to sessions', () => {
     const bobRobot = studio.client();
     bobRobot.bearer = bobToken.body.token;
     await notFound(bobRobot.get(`/api/sessions/${hers.id}`), 'another member’s token');
-    await notFound(decide(bobRobot, ask!.id, 'allow'), 'another member’s token answering');
     expect((await alice.get<Json>(`/api/approvals/${ask!.id}`)).body.status).toBe('pending');
     await decide(alice, ask!.id, 'deny');
+    await runEnded(alice, run.runId!);
+  });
+
+  it('AT-WB-056 (adapted): an approval is answered by a person in a browser — no API token can allow or deny it, whatever its scopes and whoever made it', async () => {
+    const hers = await createSession(alice, project.id);
+    const run = await send(alice, hers.id, 'needs a person [[scenario:bash npm test]]');
+    const [ask] = await approvalsWaiting(alice, hers.id);
+    const robots: Array<[string, ApiClient]> = [];
+    for (const [who, client, scopes] of [
+      ['her own read-only token', alice, ['read']],
+      ['her own write token', alice, ['read', 'write']],
+      ['the instance owner’s admin token', owner, ['read', 'write', 'admin']],
+      ['another member’s token', bob, ['read', 'write']],
+    ] as const) {
+      const token = await client.post<{ token: string }>('/api/auth/tokens', {
+        name: `answering ${robots.length}`,
+        scopes,
+      });
+      expect(token.status, who).toBe(200);
+      const robot = studio.client();
+      robot.bearer = token.body.token;
+      robots.push([who, robot]);
+    }
+    for (const [who, robot] of robots) {
+      for (const decision of ['allow', 'deny'] as const) {
+        const response = await decide(robot, ask!.id, decision);
+        expect(response.status, `${who}: ${decision}`).toBe(403);
+        expect((response.body as ErrorBody).error.code, who).toBe('session_required');
+      }
+    }
+    expect((await alice.get<Json>(`/api/approvals/${ask!.id}`)).body).toMatchObject({
+      status: 'pending',
+      decidedBy: null,
+    });
+    // The person, in her browser, still can.
+    expect((await decide(alice, ask!.id, 'deny')).status).toBe(200);
     await runEnded(alice, run.runId!);
   });
 });

@@ -113,6 +113,12 @@ interface ActiveRun {
   readonly abort: AbortController;
   readonly streaming: Map<string, StreamingBlock>;
   readonly toolTails: Map<string, string>;
+  /** Tool calls the adapter has announced and not yet finished: what a call of a Studio tool is matched against. */
+  readonly openTools: Map<string, { name: string; input: unknown; claimed: boolean }>;
+  /** Tool calls the Studio itself refused (by a person or by the engine), with the reason. Their result is `denied`. */
+  readonly refusedTools: Map<string, string>;
+  /** Refusals of a Studio tool whose tool call was not known yet when they happened; matched when the call finishes. */
+  readonly pendingRefusals: Array<{ name: string; input: unknown; message: string }>;
   readonly usage: Map<string, { input: number; output: number; cacheRead: number; cacheWrite: number; cost: number | null }>;
   readonly settled: Promise<void>;
   readonly settle: () => void;
@@ -146,6 +152,31 @@ interface Waiter {
 }
 
 const TAIL_CHARS = 8000;
+/** How long a call of a Studio tool waits for its adapter to have announced the tool call it belongs to. */
+const TOOL_CALL_WAIT_MS = 500;
+
+/**
+ * Whether a tool call an adapter announced as `announced` is a call of the Studio tool `name`: under its plain
+ * name (an API model calls it directly) or MCP-qualified, as the CLI agents see it (`mcp__studio__memory_write`).
+ */
+function isStudioToolCall(announced: string, name: string): boolean {
+  return announced === name || announced.endsWith(`__${name}`);
+}
+
+/** Equal as JSON values, whatever order the keys of an object come in. */
+function sameJson(a: unknown, b: unknown): boolean {
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (typeof value !== 'object' || value === null) return value;
+    const record = value as Record<string, unknown>;
+    return Object.fromEntries(Object.keys(record).sort().map((key) => [key, canonical(record[key])]));
+  };
+  try {
+    return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+  } catch {
+    return false;
+  }
+}
 const HISTORY_MESSAGES = 400;
 const ERROR_CHARS = 2000;
 const MAX_RULES_PER_USER = 500;
@@ -614,6 +645,9 @@ export class RunService {
       abort: new AbortController(),
       streaming: new Map(),
       toolTails: new Map(),
+      openTools: new Map(),
+      refusedTools: new Map(),
+      pendingRefusals: [],
       usage: new Map(),
       settled,
       settle,
@@ -652,7 +686,7 @@ export class RunService {
         }),
       studioTools: {
         list: () => this.studioToolsFor(run.id),
-        call: (name, input) => this.callStudioTool(run.id, name, input),
+        call: (name, input, options) => this.callStudioTool(run.id, name, input, options),
       },
       log: this.#log.child({ runId: run.id, agent: run.agentId }),
     };
@@ -853,6 +887,7 @@ export class RunService {
       }
       case 'tool.started': {
         const bounded = boundInput(event.input);
+        run.openTools.set(String(event.toolCallId), { name: String(event.name), input: event.input, claimed: false });
         this.#sessions.append(sessionId, runId, SESSION_EVENT.toolStarted, {
           runId,
           toolCallId: String(event.toolCallId),
@@ -875,12 +910,17 @@ export class RunService {
       case 'tool.finished': {
         const toolCallId = String(event.toolCallId);
         run.toolTails.delete(toolCallId);
-        const output = boundOutput(typeof event.output === 'string' ? event.output : '');
+        // A Studio tool the Studio itself refused is `denied`, whatever the agent's own program made of the
+        // refusal it was handed (to it, a refused tool is just a tool that answered with an error).
+        const refusal = event.status === 'error' ? this.#takeRefusal(run, toolCallId) : null;
+        run.openTools.delete(toolCallId);
+        run.refusedTools.delete(toolCallId);
+        const output = boundOutput(refusal !== null ? refusal : typeof event.output === 'string' ? event.output : '');
         const diffs = boundDiffs(event.diffs ?? []);
         this.#sessions.append(sessionId, runId, SESSION_EVENT.toolFinished, {
           runId,
           toolCallId,
-          status: event.status,
+          status: refusal !== null ? 'denied' : event.status,
           output: output.output,
           outputOmittedChars: output.omitted,
           diffs: diffs.diffs,
@@ -1274,7 +1314,9 @@ export class RunService {
     const visible = new Set(this.#context.services.projects.list(principal, { includeArchived: true }).map((project) => project.id));
     return this.#store
       .listRuns({
-        userId: principal.userId,
+        // Without a session the list is the caller's own runs. With one, it is that session's runs: whoever may
+        // look at the session — its creator, or the instance owner — sees them, whoever started them.
+        userId: query.sessionId === undefined ? principal.userId : null,
         state: query.state,
         ...(query.projectId === undefined ? {} : { projectId: query.projectId }),
         ...(query.sessionId === undefined ? {} : { sessionId: query.sessionId }),
@@ -1921,8 +1963,15 @@ export class RunService {
     return this.studioTools();
   }
 
-  /** Calls a registered tool with the identity of one run. `write` tools go through the permission engine first. */
-  async callStudioTool(runId: string, name: string, input: unknown): Promise<AgentToolResult> {
+  /**
+   * Calls a registered tool with the identity of one run. `write` tools go through the permission engine first.
+   *
+   * A refusal is recorded against the tool call it belongs to, so that the transcript shows that call as
+   * `denied` — for every adapter, without anybody reading the refusal's wording. Which tool call that is comes
+   * from `options.toolCallId` when the caller knows it (an adapter calling directly; the bridge, when the agent's
+   * program names the call), and otherwise from the run's own record of the calls its adapter has announced.
+   */
+  async callStudioTool(runId: string, name: string, input: unknown, options: { toolCallId?: string } = {}): Promise<AgentToolResult> {
     const run = this.#active.get(runId);
     if (!run || run.phase === 'finished') return { text: 'This run has ended.', isError: true };
     if (this.#sessions.isHidden(run.sessionId)) return { text: 'This run has no tools.', isError: true };
@@ -1930,11 +1979,56 @@ export class RunService {
     if (!tool) return { text: `There is no tool named "${name}".`, isError: true };
     let effective = input;
     if (tool.effect === 'write') {
-      const decision = await run.host.requestPermission({ toolName: name, kind: 'other', title: `Use ${name}`, input });
-      if (decision.behavior === 'deny') return { text: `Not allowed: ${decision.message}`, isError: true };
+      const toolCallId = await this.#toolCallOf(run, name, input, options.toolCallId);
+      const decision = await run.host.requestPermission({ toolName: name, kind: 'other', title: `Use ${name}`, input, ...(toolCallId === null ? {} : { toolCallId }) });
+      if (decision.behavior === 'deny') {
+        if (toolCallId !== null && run.openTools.has(toolCallId)) run.refusedTools.set(toolCallId, decision.message);
+        else run.pendingRefusals.push({ name, input, message: decision.message });
+        return { text: `Not allowed: ${decision.message}`, isError: true, denied: true };
+      }
       effective = decision.updatedInput;
     }
     return this.#context.agentTools.call(name, { runId: run.id, sessionId: run.sessionId, projectId: run.projectId, userId: run.userId, agentId: run.agentId }, effective);
+  }
+
+  /**
+   * The tool call, as the run's adapter announced it, that a call of a Studio tool belongs to; null when it
+   * cannot be told. An adapter announces a call (`tool.started`) on one channel and the call itself arrives on
+   * another — the bridge — so the announcement may be a moment behind: it is waited for briefly.
+   */
+  async #toolCallOf(run: ActiveRun, name: string, input: unknown, hint: string | undefined): Promise<string | null> {
+    const find = (): string | null => {
+      if (hint !== undefined) {
+        const named = run.openTools.get(hint);
+        // A hint is the agent program's word: it counts only for a call that is open and is a call of this tool.
+        if (named && isStudioToolCall(named.name, name)) return hint;
+      }
+      const candidates = [...run.openTools].filter(([, call]) => !call.claimed && isStudioToolCall(call.name, name));
+      const sameInput = candidates.filter(([, call]) => sameJson(call.input, input));
+      const found = sameInput[0] ?? (candidates.length === 1 ? candidates[0] : undefined);
+      return found ? found[0] : null;
+    };
+    const deadline = Date.now() + TOOL_CALL_WAIT_MS;
+    let toolCallId = find();
+    while (toolCallId === null && Date.now() < deadline && run.phase !== 'finished' && !run.abort.signal.aborted) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      toolCallId = find();
+    }
+    if (toolCallId !== null) run.openTools.get(toolCallId)!.claimed = true;
+    return toolCallId;
+  }
+
+  /** The reason this tool call was refused by the Studio, if it was; the record is used up. */
+  #takeRefusal(run: ActiveRun, toolCallId: string): string | null {
+    const known = run.refusedTools.get(toolCallId);
+    if (known !== undefined) return known;
+    const call = run.openTools.get(toolCallId);
+    if (!call || run.pendingRefusals.length === 0) return null;
+    // Only the very call that was refused: the same tool with the same input. A later, different call of that
+    // tool that fails by itself is a failure.
+    const index = run.pendingRefusals.findIndex((refusal) => isStudioToolCall(call.name, refusal.name) && sameJson(call.input, refusal.input));
+    if (index < 0) return null;
+    return run.pendingRefusals.splice(index, 1)[0]!.message;
   }
 
   /** The bridge's `permission_prompt` tool: turns an agent's own permission request into the Studio's. */

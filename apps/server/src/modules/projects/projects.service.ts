@@ -418,7 +418,22 @@ export class ProjectsService {
 
   // ---- changes -------------------------------------------------------------
 
+  /** Creates a project. A folder that already is a project — active or archived — is a conflict. */
   async create(principal: Principal, input: CreateProjectRequest): Promise<Project> {
+    return (await this.#create(principal, input, false)).project;
+  }
+
+  /**
+   * What "add this folder as a project" means for the owner: a new project —
+   * or, when the folder is that of an archived project, that project brought
+   * back as it was (same id, name and settings; what was sent with the request
+   * is not applied). A folder whose project is active is still a conflict.
+   */
+  register(principal: Principal, input: CreateProjectRequest): Promise<{ project: Project; restored: boolean }> {
+    return this.#create(principal, input, true);
+  }
+
+  async #create(principal: Principal, input: CreateProjectRequest, restoreArchived: boolean): Promise<{ project: Project; restored: boolean }> {
     if (principal.role !== 'owner') throw forbidden('Only the owner can add projects.', 'owner_required');
     // Everything that can be refused is checked before a folder is created.
     const settings: Record<string, unknown> = {};
@@ -430,7 +445,14 @@ export class ProjectsService {
     if (input.features !== undefined) settings.features = features;
 
     const rootDir = await this.resolveRootDir(input.rootDir, input.createDirectory);
-    if (this.findByRootDir(rootDir)) throw conflict('That folder is already a project.', 'project_exists');
+    const existing = this.findByRootDir(rootDir);
+    if (existing) {
+      if (existing.archivedAt === null || !restoreArchived) throw conflict('That folder is already a project.', 'project_exists');
+      this.#db.run('UPDATE projects SET archived_at = NULL, updated_at = ? WHERE id = ?', Date.now(), existing.id);
+      this.#bus.publish(`project:${existing.id}`, 'project.changed', { projectId: existing.id });
+      this.#announce(existing.id, 'updated');
+      return { project: this.present(this.find(existing.id)!, 'write', principal), restored: true };
+    }
     const now = Date.now();
     const id = newId();
     this.#db.run(
@@ -449,7 +471,7 @@ export class ProjectsService {
     const record = this.find(id)!;
     this.#bus.publish('internal:projects', 'project.created', { projectId: id });
     this.#announce(id, 'created');
-    return this.present(record, 'write');
+    return { project: this.present(record, 'write'), restored: false };
   }
 
   update(principal: Principal, projectId: string, changes: UpdateProjectRequest): Project {

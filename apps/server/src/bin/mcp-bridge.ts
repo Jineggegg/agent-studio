@@ -26,6 +26,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 const PERMISSION_PROMPT_TOOL = 'permission_prompt';
+/** Where Claude Code puts the id of the model's tool call in the metadata of an MCP `tools/call` request. */
+const TOOL_CALL_ID_META = 'claudecode/toolUseId';
 const TOKEN_HEADER = 'x-studio-bridge-token';
 
 const baseUrl = process.env.STUDIO_BRIDGE_URL ?? '';
@@ -126,7 +128,10 @@ async function main(): Promise<void> {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const name = request.params.name;
     try {
-      const reply = await post('/api/bridge/tools/call', { name, arguments: request.params.arguments ?? {} });
+      // Claude Code names the model's tool call in the request's metadata; other programs send none.
+      const named = (request.params._meta as Record<string, unknown> | undefined)?.[TOOL_CALL_ID_META];
+      const toolCallId = typeof named === 'string' && named !== '' && named.length <= 200 ? { toolCallId: named } : {};
+      const reply = await post('/api/bridge/tools/call', { name, arguments: request.params.arguments ?? {}, ...toolCallId });
       if (reply.status === 200 && reply.body && typeof reply.body === 'object') return reply.body as ReturnType<typeof textResult>;
       // A permission prompt that cannot be decided is a refusal, never an error the agent might ignore.
       if (name === PERMISSION_PROMPT_TOOL) return textResult(JSON.stringify({ behavior: 'deny', message: problemOf(reply) }), false);

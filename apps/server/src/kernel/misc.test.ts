@@ -3,7 +3,8 @@ import { ConfigError, loadConfig, parseOrigin } from './config.js';
 import { Database } from './database.js';
 import { EventBus } from './events.js';
 import { looksLikeApiPath } from './http.js';
-import { redactSecrets, secretHint } from './redact.js';
+import { SECRET_HINT, redactSecrets, secretHint } from './redact.js';
+import { KeyRing, SECRETS_MIGRATIONS, SecretStore } from './secrets.js';
 import { AttemptThrottle } from '../modules/auth/throttle.js';
 
 describe('loadConfig', () => {
@@ -149,9 +150,32 @@ describe('redactSecrets', () => {
     expect(redactSecrets(text)).toBe(text);
   });
 
-  it('gives a hint that cannot reconstruct the secret', () => {
-    expect(secretHint('sk-abcdefghijklmnop')).toBe('…mnop');
-    expect(secretHint('short')).toBe('…');
+  it('keeps no part of a secret in the clear: a description is the marker, and tails stored by an earlier version are overwritten', () => {
+    const db = new Database(':memory:');
+    // A database as an earlier version left it: the last four characters of the secret in `hint`.
+    db.migrate('kernel.secrets', SECRETS_MIGRATIONS.slice(0, 1));
+    db.run('INSERT INTO secrets (name, sealed, hint, updated_at) VALUES (?, ?, ?, ?)', 'provider:old', 'sealed-bytes', '…wxyz', 1);
+    expect(db.migrate('kernel.secrets', SECRETS_MIGRATIONS)).toBe(1);
+    expect(db.get<{ hint: string }>('SELECT hint FROM secrets WHERE name = ?', 'provider:old')!.hint).toBe(SECRET_HINT);
+
+    const secrets = new SecretStore(db, new KeyRing(Buffer.alloc(32, 7)));
+    const saved = secrets.put('provider:new', 'sk-live-abcdefghijklmnopQ_Zx');
+    expect(saved.hint).toBe(SECRET_HINT);
+    expect(secrets.describe('provider:new')).toEqual({ name: 'provider:new', hint: SECRET_HINT, updatedAt: saved.updatedAt });
+    expect(secrets.reveal('provider:new')).toBe('sk-live-abcdefghijklmnopQ_Zx');
+    // Even a row that somehow holds something else is described with the marker.
+    db.run('UPDATE secrets SET hint = ? WHERE name = ?', '…Q_Zx', 'provider:new');
+    expect(JSON.stringify(secrets.describe('provider:new'))).not.toContain('Q_Zx');
+    expect(JSON.stringify(db.all('SELECT name, hint FROM secrets WHERE name = ?', 'provider:old'))).not.toContain('wxyz');
+    db.close();
+  });
+
+  it('describes a stored secret with a fixed marker that holds no character of it', () => {
+    const secret = 'sk-abcdefghijklmnop';
+    expect(secretHint(secret)).toBe(SECRET_HINT);
+    expect(secretHint('short')).toBe(SECRET_HINT);
+    expect(secretHint()).toBe(SECRET_HINT);
+    for (const character of new Set(secret)) expect(SECRET_HINT).not.toContain(character);
   });
 });
 

@@ -140,14 +140,10 @@ describe('6.3 notifications and preferences', () => {
     expect((await studio.client().get('/api/notifications/settings')).status).toBe(401);
   });
 
-  // FINDING: switching off only "reply finished" also turns "background finished" off in the answer and in every
-  // later read (events.backgroundFinished: true → false), although the request named one switch. The module
-  // treats "background finished" as following "reply finished" until it has been set explicitly; the requirement
-  // says updating one event switch leaves all the others unchanged. Setting backgroundFinished explicitly first
-  // makes it independent. The same coupling applies in the other direction of the same switch (on → on).
-  it.skip('AT-NTF-042: switching off "reply finished" alone leaves "background finished" — and every other switch — unchanged', async () => {
+  it('AT-NTF-042: switching off "reply finished" alone leaves "background finished" — and every other switch — unchanged', async () => {
     const me = await person();
     const before = (await me.get<Json>('/api/notifications/settings')).body.preferences;
+    expect(before.events).toMatchObject({ replyFinished: true, backgroundFinished: true });
     const changed = await me.patch<Json>('/api/notifications/preferences', {
       events: { replyFinished: false },
     });
@@ -155,10 +151,25 @@ describe('6.3 notifications and preferences', () => {
       ...before,
       events: { ...before.events, replyFinished: false },
     });
-    expect(
-      (await me.get<Json>('/api/notifications/settings')).body.preferences.events
-        .backgroundFinished,
-    ).toBe(true);
+    expect((await me.get<Json>('/api/notifications/settings')).body.preferences).toEqual(
+      changed.body.preferences,
+    );
+    // The other way round: each switch moves alone, whichever is changed and in either direction.
+    const background = await me.patch<Json>('/api/notifications/preferences', {
+      events: { backgroundFinished: false },
+    });
+    expect(background.body.preferences.events).toEqual({
+      ...before.events,
+      replyFinished: false,
+      backgroundFinished: false,
+    });
+    const reply = await me.patch<Json>('/api/notifications/preferences', {
+      events: { replyFinished: true },
+    });
+    expect(reply.body.preferences.events).toEqual({
+      ...before.events,
+      backgroundFinished: false,
+    });
   });
 
   it('AT-NTF-025 (adapted): a "needs you" notification names the conversation, the agent and the tool, and leads to the session — its sentence carries neither the command nor the message', async () => {

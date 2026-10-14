@@ -243,8 +243,8 @@ export type NotificationPreferences = z.infer<typeof notificationPreferencesSche
 
 /**
  * A new account: every event on; the in-app list on; Web Push off until a
- * device subscribes; no details on the lock screen. `backgroundFinished`
- * follows `replyFinished` until the user sets it.
+ * device subscribes; no details on the lock screen. The switches are
+ * independent: each has its own default and none follows another.
  */
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   events: { needsYou: true, replyFinished: true, backgroundFinished: true, failure: true, automation: true, plugin: true },

@@ -276,9 +276,9 @@ describe('6.6 git: fetch, pull, push', () => {
       defaultRemote: null,
     });
     refusal(await owner.post(`${api}/fetch`, {}), 'git_no_remote');
-    // Pull and push have nothing to follow either (the status above is what tells a client not to offer them).
-    refusal(await owner.post(`${api}/pull`, {}), ['git_no_remote', 'git_no_upstream']);
-    refusal(await owner.post(`${api}/push`, {}), ['git_no_remote', 'git_no_upstream']);
+    // Pull and push say the same directly — not "publish the branch first", which needs a remote too.
+    refusal(await owner.post(`${api}/pull`, {}), 'git_no_remote');
+    refusal(await owner.post(`${api}/push`, {}), 'git_no_remote');
     refusal(await owner.post(`${api}/push`, { publish: true }), 'git_no_remote');
     refusal(await owner.post(`${api}/fetch`, { remote: 'upstream' }), [
       'git_no_remote',

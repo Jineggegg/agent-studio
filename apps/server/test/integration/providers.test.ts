@@ -383,7 +383,9 @@ describe('provider records', () => {
 
 describe('keys', () => {
   it('takes a key in and never gives it back — not in an answer, not in the database, not in the audit log', async () => {
-    const key = 'sk-live-4f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c';
+    // The key ends in characters that cannot occur by chance in an id or a number.
+    const key = 'sk-live-4f9a8b7c6d5e4f3a2b1c0d9e8f7aQ_Zx';
+    const tail = key.slice(-4);
     const provider = await kit.provider({ apiKey: undefined });
     expect(provider).toMatchObject({ configured: false, settings: { key: { configured: false, hint: null } } });
 
@@ -394,7 +396,9 @@ describe('keys', () => {
     };
     const saved = keep(await kit.owner.put<Provider>(`/api/providers/${provider.id}/key`, { apiKey: `  ${key}\n` }));
     expect(saved.status).toBe(200);
-    expect(saved.body).toMatchObject({ configured: true, settings: { key: { configured: true, hint: `…${key.slice(-4)}`, readable: true } } });
+    // What is known about the key: that one is saved, and since when. The marker is fixed; it holds no character of the key.
+    expect(saved.body).toMatchObject({ configured: true, settings: { key: { configured: true, hint: '••••', readable: true } } });
+    expect(saved.raw.body).not.toContain(tail);
     expect(saved.body.settings!.key.updatedAt).toBeGreaterThan(Date.now() - 5000);
 
     // It is used…
@@ -422,7 +426,10 @@ describe('keys', () => {
     keep(await kit.owner.post(`/api/providers/${provider.id}/verify`));
     keep(await kit.owner.post(`/api/providers/${provider.id}/discover-models`));
     keep(await kit.owner.patch(`/api/providers/${provider.id}`, { name: 'Renamed with key' }));
-    for (const body of responses) expectNoKey(body, key);
+    for (const body of responses) {
+      expectNoKey(body, key);
+      expect(body, 'no read returns any part of a saved key — not even its last characters').not.toContain(tail);
+    }
 
     // On disk it is sealed: no file of the data directory holds the key or a piece of it.
     kit.t.studio.context.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
@@ -430,7 +437,7 @@ describe('keys', () => {
     expect(files.some((entry) => entry.name === 'studio.db')).toBe(true);
     for (const entry of files) expectNoKey(readFileSync(path.join(entry.parentPath, entry.name)).toString('latin1'), key);
     const row = kit.t.studio.context.db.get<{ sealed: string; hint: string }>('SELECT sealed, hint FROM secrets WHERE name = ?', `provider:${provider.id}:api-key`)!;
-    expect(row.hint).toBe(`…${key.slice(-4)}`);
+    expect(row.hint).toBe('••••');
     expectNoKey(row.sealed, key);
 
     const audit = kit.t.studio.context.db.all<{ action: string; subject: string; detail: string }>('SELECT action, subject, detail FROM audit_events WHERE subject LIKE ?', `%(${provider.id})`);
@@ -440,13 +447,15 @@ describe('keys', () => {
 
   it('keeps the saved key when an update leaves the field blank, and replaces it when one is typed', async () => {
     const provider = await kit.provider();
-    const hint = `…${TEST_KEY.slice(-4)}`;
+    const savedAt = provider.settings!.key.updatedAt;
     for (const body of [{ name: 'Still has its key' }, { apiKey: '' }, { apiKey: '   ' }, { name: 'Again', apiKey: '' }]) {
       const response = await kit.owner.patch<UpdateProviderResponse>(`/api/providers/${provider.id}`, body);
-      expect(response.body).toMatchObject({ keyCleared: false, provider: { settings: { key: { configured: true, hint } } } });
+      expect(response.body).toMatchObject({ keyCleared: false, provider: { settings: { key: { configured: true, hint: '••••', updatedAt: savedAt } } } });
     }
     const replaced = await kit.owner.patch<UpdateProviderResponse>(`/api/providers/${provider.id}`, { apiKey: 'sk-second-key-0123456789abcdWXYZ' });
-    expect(replaced.body.provider.settings!.key).toMatchObject({ configured: true, hint: '…WXYZ' });
+    // The marker says nothing about which key it is; that a new one is in place shows in what the provider receives.
+    expect(replaced.body.provider.settings!.key).toMatchObject({ configured: true, hint: '••••' });
+    expect(replaced.raw.body).not.toContain('WXYZ');
     kit.model.script({ text: 'ok' });
     await kit.turn(kit.owner, (await kit.session(provider)).id, 'which key?');
     expect(kit.model.lastChat.key).toBe('sk-second-key-0123456789abcdWXYZ');
@@ -492,7 +501,7 @@ describe('keys', () => {
     }
     // Nothing of all that was saved: the first key is still the one in use, the name unchanged.
     const now = (await kit.owner.get<Provider>(`/api/providers/${provider.id}`)).body;
-    expect(now.settings!.key.hint).toBe(`…${TEST_KEY.slice(-4)}`);
+    expect(now.settings!.key).toEqual(provider.settings!.key);
     expect(now.name).toBe(provider.name);
     expect((await kit.owner.get<{ providers: Provider[] }>('/api/providers')).body.providers.some((entry) => entry.name === 'Never created')).toBe(false);
   });
@@ -519,7 +528,7 @@ describe('keys', () => {
 
       // A new address together with a new key: the new key is kept, for the new address.
       const both = await kit.owner.patch<UpdateProviderResponse>(`/api/providers/${provider.id}`, { baseUrl: kit.model.url, apiKey: 'sk-key-for-the-new-address-012345' });
-      expect(both.body).toMatchObject({ keyCleared: false, provider: { configured: true, settings: { baseUrl: kit.model.url, key: { hint: '…2345' } } } });
+      expect(both.body).toMatchObject({ keyCleared: false, provider: { configured: true, settings: { baseUrl: kit.model.url, key: { configured: true, hint: '••••' } } } });
       kit.model.script({ text: 'ok' });
       await kit.turn(kit.owner, session.id, 'again');
       expect(kit.model.lastChat.key).toBe('sk-key-for-the-new-address-012345');
@@ -548,7 +557,7 @@ describe('keys', () => {
         expect(response.body.error.code).toBe('reauth_required');
       }
       const untouched = (await kit.owner.get<Provider>(url)).body;
-      expect(untouched).toMatchObject({ name: provider.name, settings: { baseUrl: 'https://example.com/v1', allowPrivateNetwork: false, key: { hint: `…${TEST_KEY.slice(-4)}` } } });
+      expect(untouched).toMatchObject({ name: provider.name, settings: { baseUrl: 'https://example.com/v1', allowPrivateNetwork: false, key: provider.settings!.key } });
 
       // Everything that cannot redirect anything still works with an older sign-in — including taking things away.
       expect((await kit.owner.patch(url, { name: 'Renamed late' })).status).toBe(200);
@@ -584,7 +593,7 @@ describe('keys', () => {
       expect(response.status).toBe(403);
       expect(response.body.error.code).toBe('session_required');
     }
-    expect((await kit.owner.get<Provider>(url)).body.settings).toMatchObject({ baseUrl: 'https://example.com/v1', allowPrivateNetwork: false, key: { hint: `…${TEST_KEY.slice(-4)}` } });
+    expect((await kit.owner.get<Provider>(url)).body.settings).toMatchObject({ baseUrl: 'https://example.com/v1', allowPrivateNetwork: false, key: provider.settings!.key });
 
     // An admin token may read, rename, switch off and take a key away; a lesser token may only read the list.
     expect((await robot.get<Provider>(url)).body.settings).not.toBeNull();
@@ -905,7 +914,7 @@ describe('across a restart', () => {
       const listed = (await owner.get<{ providers: Provider[] }>('/api/providers')).body.providers;
       expect(listed.map((entry) => [entry.id, entry.enabled, entry.configured])).toEqual([[provider.id, true, true], [disabled.id, false, true]]);
       // What was learned about the provider's health is not kept: a new process has no opinion yet.
-      expect(listed[0]!.settings).toMatchObject({ baseUrl: first.model.url, key: { configured: true, readable: true, hint: `…${TEST_KEY.slice(-4)}` }, lastCheck: null });
+      expect(listed[0]!.settings).toMatchObject({ baseUrl: first.model.url, key: { configured: true, readable: true, hint: '••••' }, lastCheck: null });
       const agents = (await owner.get<{ agents: Agent[] }>('/api/agents')).body.agents.map((agent) => agent.id);
       expect(agents).toContain(provider.agentId);
       expect(agents).not.toContain(disabled.agentId);

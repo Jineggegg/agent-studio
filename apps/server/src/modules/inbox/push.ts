@@ -140,7 +140,7 @@ export class PushChannel {
       this.#context.log.warn({ err: describeError(error) }, 'the stored Web Push key pair cannot be read; a new one is generated and devices must subscribe again');
     }
     const fresh = generateVapidKeys();
-    // The private key first: the stored hint is the tail of the value, which is then part of the public key.
+    // (The secret store describes a value with a fixed marker only; no part of this pair is kept in the clear.)
     secrets.put(VAPID_SECRET, JSON.stringify({ privateKey: fresh.privateKey, publicKey: fresh.publicKey }));
     return (this.#vapid = fresh);
   }

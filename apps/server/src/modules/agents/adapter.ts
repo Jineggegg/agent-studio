@@ -316,7 +316,11 @@ export interface AgentRunHost {
    */
   readonly studioTools: {
     list(): StudioToolDescription[];
-    call(name: string, input: unknown): Promise<AgentToolResult>;
+    /**
+     * `toolCallId` is the id the adapter gave this call in `tool.started`, when it has one: an approval the call
+     * needs then names it. A refusal comes back with `denied: true` and is recorded as `denied` for that call.
+     */
+    call(name: string, input: unknown, options?: { toolCallId?: string }): Promise<AgentToolResult>;
   };
   /** Structured logging, already tagged with the run. Never log message text or credentials. */
   readonly log: FastifyBaseLogger;

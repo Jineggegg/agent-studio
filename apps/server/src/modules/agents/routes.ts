@@ -374,10 +374,13 @@ export function registerAgentRoutes(
     handler: ({ user, params }) => runs.getApproval(user, params.approvalId),
   });
 
+  // An approval waits for a person: a tool request, a plan and a question are all answered here, and only from a
+  // signed-in browser. An API token — whatever its scopes, the owner's included — cannot stand in for that person.
   http.route({
     method: 'POST',
     url: '/api/approvals/:approvalId/decision',
     access: 'user',
+    sessionOnly: true,
     params: approvalParams,
     body: approvalDecisionRequestSchema,
     handler: ({ user, params, body }) => runs.decide(user, params.approvalId, body),

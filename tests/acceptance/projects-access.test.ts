@@ -202,16 +202,24 @@ describe('6.1 projects: location rules, access, links', () => {
     expect(again.body.id).not.toBe(project.id);
   });
 
-  // FINDING: registering the folder of an archived project is refused with 409 project_exists ("That folder is
-  // already a project.") instead of reactivating the archived project and returning its original id and name.
-  // The archived project is not in the active list, so the refusal reads as a dead end; the owner has to know
-  // to look under archived projects and restore it there.
-  it.skip('AT-PJ-014: registering the folder of an archived project reactivates that project and returns its original id and name', async () => {
+  it('AT-PJ-014: registering the folder of an archived project reactivates that project and returns its original id and name', async () => {
     const project = await createProject(studio, owner, 'come-back');
     await owner.patch(`/api/projects/${project.id}`, { archived: true });
+    expect((await active()).map((item) => item.id)).not.toContain(project.id);
+    // Only the owner adds folders — a member gets no way round that by naming an archived one.
+    const member = await createMember(studio, owner, 'returner');
+    const byMember = await register({ name: 'mine now', rootDir: project.rootDir }, member);
+    expect(byMember.status).toBe(403);
+    expect(byMember.body.error.code).toBe('owner_required');
+
     const again = await register({ name: 'another name', rootDir: project.rootDir });
     expect(again.status).toBeLessThan(300);
     expect(again.body).toMatchObject({ id: project.id, name: 'come-back', archived: false });
+    expect((await active()).map((item) => item.id)).toContain(project.id);
+    // Now that it is active again, the same folder is a conflict once more.
+    const twice = await register({ name: 'come-back', rootDir: project.rootDir });
+    expect(twice.status).toBe(409);
+    expect(twice.body.error.code).toBe('project_exists');
   });
 
   it('AT-PJ-017: the folder browser shows folders only, inside the workspace root — nothing above it, no system folder, and a file is not a folder', async () => {

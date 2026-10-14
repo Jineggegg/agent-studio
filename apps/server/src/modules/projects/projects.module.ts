@@ -105,8 +105,9 @@ export const projectsModule: StudioModule = {
       access: 'owner',
       body: createProjectRequestSchema,
       handler: async ({ user, body, reply }) => {
-        const project = await projects.create(user, body);
-        void reply.status(201);
+        // 201 for a new project; 200 when the folder's archived project was brought back instead.
+        const { project, restored } = await projects.register(user, body);
+        void reply.status(restored ? 200 : 201);
         return project;
       },
     });

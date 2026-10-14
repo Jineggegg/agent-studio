@@ -204,6 +204,93 @@ describe('the bridge endpoints', () => {
     await kit.runEnded(kit.owner, run.runId);
   });
 
+  it('record a refused Studio tool as denied — not as a failed tool — and tie its approval to the tool call, whatever the agent\'s program made of the refusal', async () => {
+    const events = async (sessionId: string) => (await kit.owner.get<{ events: Array<{ type: string; data: Record<string, unknown> }> }>(`/api/sessions/${sessionId}/events?after=0`)).body.events;
+    const finishedCalls = async (sessionId: string) => (await events(sessionId)).filter((event) => event.type === 'tool.finished').map((event) => event.data);
+    const session = await kit.session(kit.owner);
+    const input = { title: 'Refused', body: 'no' };
+    // The agent's program announces each call under its own, MCP-qualified name, makes it through the bridge, and
+    // afterwards reports what it got back as an ordinary tool error: it does not know a refusal from a failure.
+    kit.agent.script([
+      { emit: { type: 'tool.started', toolCallId: 'call-a', name: 'mcp__studio__note_write', kind: 'other', title: 'note write', input } },
+      { gate: 'refusal-a' },
+      { emit: { type: 'tool.finished', toolCallId: 'call-a', status: 'error', output: 'Not allowed: not now' } },
+      { emit: { type: 'tool.started', toolCallId: 'call-b', name: 'mcp__studio__note_write', kind: 'other', title: 'note write', input: { title: 'Second', body: 'no' } } },
+      { emit: { type: 'tool.started', toolCallId: 'call-c', name: 'mcp__studio__note_write', kind: 'other', title: 'note write', input: { title: 'Third', body: 'yes' } } },
+      { gate: 'refusal-b' },
+      { emit: { type: 'tool.finished', toolCallId: 'call-b', status: 'error', output: 'something the program made up' } },
+      { emit: { type: 'tool.finished', toolCallId: 'call-c', status: 'ok', output: 'saved "Third"' } },
+      // A tool that simply failed stays an error.
+      { tool: { id: 'call-d', name: 'mcp__studio__whoami', kind: 'other', status: 'error', output: 'it broke' } },
+      { gate: 'refusal-end' },
+    ]);
+    const sent = await kit.send(kit.owner, session.id, 'refusals');
+    await kit.agent.reached('refusal-a');
+    const token = kit.agent.lastRun.request.bridge.env.STUDIO_BRIDGE_TOKEN!;
+
+    // 1. The call is matched to the one the adapter announced: same tool, same input.
+    const first = bridge('tools/call', token, { name: 'note_write', arguments: input });
+    const approvalA = await pendingApproval(session.id);
+    expect(approvalA).toMatchObject({ toolName: 'note_write', toolCallId: 'call-a', status: 'pending' });
+    await kit.owner.post(`/api/approvals/${approvalA.id}/decision`, { decision: 'deny', note: 'not now' });
+    expect((await first).body).toEqual({ content: [{ type: 'text', text: 'Not allowed: not now' }], isError: true });
+    kit.agent.open('refusal-a');
+    await kit.agent.reached('refusal-b');
+    expect(await finishedCalls(session.id)).toEqual([expect.objectContaining({ toolCallId: 'call-a', status: 'denied', output: 'not now' })]);
+
+    // 2. Two calls of the same tool are open: the agent's program names which one this is, and that one is refused;
+    //    the other is allowed and stays a success.
+    const second = bridge('tools/call', token, { name: 'note_write', arguments: { title: 'Second', body: 'no' }, toolCallId: 'call-b' });
+    const approvalB = await pendingApproval(session.id);
+    expect(approvalB.toolCallId).toBe('call-b');
+    await kit.owner.post(`/api/approvals/${approvalB.id}/decision`, { decision: 'deny', note: 'nor this' });
+    expect((await second).body.isError).toBe(true);
+    const third = bridge('tools/call', token, { name: 'note_write', arguments: { title: 'Third', body: 'yes' } });
+    const approvalC = await pendingApproval(session.id);
+    expect(approvalC.toolCallId).toBe('call-c');
+    await kit.owner.post(`/api/approvals/${approvalC.id}/decision`, { decision: 'allow' });
+    expect((await third).body.isError).toBe(false);
+    // A name the program gives for a call that is not a call of this tool is not believed.
+    const misnamed = bridge('tools/call', token, { name: 'note_write', arguments: { title: 'Stray', body: '' }, toolCallId: 'call-zzz' });
+    const stray = await pendingApproval(session.id);
+    expect(stray.toolCallId).toBeNull();
+    await kit.owner.post(`/api/approvals/${stray.id}/decision`, { decision: 'deny' });
+    await misnamed;
+
+    kit.agent.open('refusal-b');
+    await kit.agent.reached('refusal-end');
+    const finished = await finishedCalls(session.id);
+    expect(finished.map((call) => `${String(call.toolCallId)}: ${String(call.status)}`)).toEqual(['call-a: denied', 'call-b: denied', 'call-c: ok', 'call-d: error']);
+    expect(finished[1]).toMatchObject({ output: 'nor this' }); // the reason the person gave, not the program's wording
+    expect(finished[3]).toMatchObject({ output: 'it broke' });
+    kit.agent.open('refusal-end');
+    await kit.runEnded(kit.owner, sent.body.runId!);
+  });
+
+  it('record the refusal as denied also when the agent\'s program announces the tool call only after having made it', async () => {
+    const session = await kit.session(kit.owner);
+    kit.agent.script([
+      { gate: 'late-a' },
+      { emit: { type: 'tool.started', toolCallId: 'late-1', name: 'mcp__studio__note_write', kind: 'other', title: 'note write', input: { title: 'Late', body: '' } } },
+      { emit: { type: 'tool.finished', toolCallId: 'late-1', status: 'error', output: 'Not allowed: too late' } },
+      { gate: 'late-end' },
+    ]);
+    const sent = await kit.send(kit.owner, session.id, 'late announcement');
+    await kit.agent.reached('late-a');
+    const token = kit.agent.lastRun.request.bridge.env.STUDIO_BRIDGE_TOKEN!;
+    const call = bridge('tools/call', token, { name: 'note_write', arguments: { title: 'Late', body: '' } });
+    const approval = await pendingApproval(session.id);
+    expect(approval.toolCallId).toBeNull(); // nothing had been announced that it could belong to
+    await kit.owner.post(`/api/approvals/${approval.id}/decision`, { decision: 'deny', note: 'too late' });
+    await call;
+    kit.agent.open('late-a');
+    await kit.agent.reached('late-end');
+    const events = (await kit.owner.get<{ events: Array<{ type: string; data: Record<string, unknown> }> }>(`/api/sessions/${session.id}/events?after=0`)).body.events;
+    expect(events.filter((event) => event.type === 'tool.finished').map((event) => event.data)).toEqual([expect.objectContaining({ toolCallId: 'late-1', status: 'denied', output: 'too late' })]);
+    kit.agent.open('late-end');
+    await kit.runEnded(kit.owner, sent.body.runId!);
+  });
+
   it('turn an agent\'s permission prompt into an approval and answer in the agent\'s format', async () => {
     const run = await heldRun('prompt');
     const call = bridge('tools/call', run.token, { name: 'permission_prompt', arguments: { tool_name: 'Bash', input: { command: 'npm publish', description: 'Publish' }, tool_use_id: 'toolu_1' } });

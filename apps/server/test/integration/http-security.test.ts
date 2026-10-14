@@ -235,7 +235,8 @@ describe('secrets at rest', () => {
 
     const secrets = t.studio.context.secrets;
     secrets.put('provider:test', 'sk-live-abcdefghijklmnopqrstuvwxyz');
-    expect(secrets.describe('provider:test')).toMatchObject({ name: 'provider:test', hint: '…wxyz' });
+    // A description says that a value is saved, with a fixed marker: no character of the secret.
+    expect(secrets.describe('provider:test')).toMatchObject({ name: 'provider:test', hint: '••••' });
     expect(secrets.reveal('provider:test')).toBe('sk-live-abcdefghijklmnopqrstuvwxyz');
 
     const row = t.studio.context.db.get<{ sealed: string }>('SELECT sealed FROM secrets WHERE name = ?', 'provider:test')!;

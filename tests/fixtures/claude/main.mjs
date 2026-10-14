@@ -366,14 +366,24 @@ async function converse(options) {
     });
   };
 
-  const rateLimitInfo = (status) => ({
-    status,
-    resetsAt: 1791939600,
-    rateLimitType: 'five_hour',
-    overageStatus: 'rejected',
-    isUsingOverage: false,
-    unifiedWindows: { five_hour: { utilization: status === 'allowed' ? 0.25 : 0.97, resetsAt: 1791939600 }, seven_day: { utilization: 0.1, resetsAt: 1792389600 } },
-  });
+  // The account's usage windows, as the CLI reports them (times in seconds). Like Claude's, they reset on the hour:
+  // the five-hour window two to three hours from now, the weekly one four days later — so what the Studio makes of
+  // them never depends on the day the tests run. `fiveHourPassed` reports a five-hour window whose reset time has
+  // just gone by, as a reading taken before a reset looks afterwards.
+  const rateLimitInfo = (status, { fiveHourPassed = false } = {}) => {
+    const HOUR = 3600;
+    const nextHour = Math.ceil(Date.now() / 1000 / HOUR) * HOUR;
+    const fiveHour = fiveHourPassed ? Math.floor(Date.now() / 1000) - 60 : nextHour + 2 * HOUR;
+    const sevenDay = nextHour + 4 * 24 * HOUR;
+    return {
+      status,
+      resetsAt: fiveHour,
+      rateLimitType: 'five_hour',
+      overageStatus: 'rejected',
+      isUsingOverage: false,
+      unifiedWindows: { five_hour: { utilization: status === 'allowed' ? 0.25 : 0.97, resetsAt: fiveHour }, seven_day: { utilization: 0.1, resetsAt: sevenDay } },
+    };
+  };
 
   /** One request to the "model": a message of content blocks, streamed like the real thing. */
   async function apiMessage(blocks, { parent = null, delayMs = 0, extra = {} } = {}) {
@@ -749,6 +759,11 @@ async function converse(options) {
       rateLimitPrinted = true;
       emit({ type: 'rate_limit_event', rate_limit_info: rateLimitInfo('allowed_warning'), ...base() });
       await turn.say('The limit is close, but here is the answer.');
+    },
+    async 'rate-reset-passed'(turn) {
+      rateLimitPrinted = true;
+      emit({ type: 'rate_limit_event', rate_limit_info: rateLimitInfo('allowed', { fiveHourPassed: true }), ...base() });
+      await turn.say('The five-hour window has just reset.');
     },
     async 'unknown-event'(turn) {
       emit({ type: 'future_event', payload: { anything: true }, ...base() });

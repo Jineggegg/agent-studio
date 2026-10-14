@@ -158,6 +158,37 @@ describe('archiving and removing', () => {
     expect((await owner.get<{ projects: Project[] }>('/api/projects?archived=include')).body.projects).toHaveLength(1);
   });
 
+  it('brings an archived project back when the owner adds its folder again — the same project, not a conflict and not a second one', async () => {
+    const project = await makeProject('comeback');
+    const owner = await t.owner();
+    await owner.patch(`/api/projects/${project.id}`, { description: 'kept as it was', archived: true });
+    const published: string[] = [];
+    t.studio.context.bus.onTopic(`project:${project.id}`, (event) => published.push(event.type));
+
+    // However the folder is spelled, and whatever else the request says: the project comes back as it was.
+    const again = await owner.post<Project>('/api/projects', { name: 'Another name', description: 'ignored', rootDir: `${path.join(t.workspace, 'comeback')}/` });
+    expect(again.status).toBe(200); // 201 is for a new project
+    expect(again.body).toMatchObject({ id: project.id, name: 'comeback', description: 'kept as it was', archived: false, access: 'write' });
+    expect(published).toContain('project.changed');
+    const listed = (await owner.get<{ projects: Project[] }>('/api/projects?archived=include')).body.projects;
+    expect(listed.map((entry) => entry.id)).toEqual([project.id]);
+    expect(listed[0]!.archived).toBe(false);
+
+    // Active again, its folder is a conflict like any other project's.
+    const conflict = await owner.post<{ error: { code: string } }>('/api/projects', { name: 'Twice', rootDir: path.join(t.workspace, 'comeback') });
+    expect(conflict.status).toBe(409);
+    expect(conflict.body.error.code).toBe('project_exists');
+
+    // Only the owner can do this, as for creating: a member — even one the project was shared with — is refused and it stays archived.
+    await owner.patch(`/api/projects/${project.id}`, { archived: true });
+    const member = await t.member('restorer');
+    await owner.put(`/api/projects/${project.id}/members/${member.userId}`, { access: 'write' });
+    const refused = await member.post<{ error: { code: string } }>('/api/projects', { name: 'comeback', rootDir: path.join(t.workspace, 'comeback') });
+    expect(refused.status).toBe(403);
+    expect(refused.body.error.code).toBe('owner_required');
+    expect((await owner.get<{ projects: Project[] }>('/api/projects')).body.projects).toEqual([]);
+  });
+
   it('forgets a removed project but never touches its files', async () => {
     const project = await makeProject('keepfiles');
     const file = path.join(project.rootDir, 'important.txt');

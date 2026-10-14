@@ -235,6 +235,24 @@ describe('Codex asks the Studio before it changes anything', () => {
     expect(texts[1]).toBe('The Studio tool permission_prompt answered: the tool permission_prompt is not offered by studio');
   });
 
+  it("records a Studio tool the user refuses as denied, on the tool call its approval was for", async () => {
+    const { owner } = kit;
+    await kit.listen();
+    const session = await kit.codexSession();
+    const sent = await kit.send(owner, session.id, '[[scenario:studio-tool memory_write {"title":"Refused","content":"not wanted","scope":"project"}]]');
+    const [approval] = await kit.pending(session.id);
+    expect(approval).toMatchObject({ kind: 'tool', toolName: 'memory_write' });
+    await kit.decide(approval!.id, { decision: 'deny', note: 'not this time' });
+    expect((await kit.runEnded(owner, sent.body.runId!)).status).toBe('completed');
+    const events = await kit.events(owner, session.id);
+    const started = eventsOf(events, 'tool.started').map((event) => event.data);
+    expect(started).toEqual([expect.objectContaining({ name: 'mcp__studio__memory_write' })]);
+    // Codex says nothing about which call a bridge request belongs to: the Studio ties them together itself.
+    expect(approval!.toolCallId).toBe(started[0]!.toolCallId);
+    // To Codex the refusal is a failed tool call; the transcript records what it was.
+    expect(eventsOf(events, 'tool.finished').map((event) => event.data)).toEqual([expect.objectContaining({ toolCallId: started[0]!.toolCallId, status: 'denied', output: 'not this time' })]);
+  });
+
   it("asks the Studio about another MCP server's tool, grants no wider sandbox, and passes Codex's questions on", async () => {
     const { owner } = kit;
     const session = await kit.codexSession();

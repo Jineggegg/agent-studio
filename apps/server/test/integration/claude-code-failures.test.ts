@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { Agent, Attachment, Run, UploadAttachmentsResponse } from '@agent-studio/protocol';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import type { ClaudeCodeAdapter } from '../../src/modules/claude-code/claude-code.module.js';
+import type { ClaudeCodeAdapter, RateLimitObserved } from '../../src/modules/claude-code/claude-code.module.js';
 import { type ClaudeKit, STANDIN_BIN, createClaudeKit } from '../../src/modules/claude-code/testing/kit.js';
 import { until } from '../../src/testing/agents-kit.js';
 import { TEST_HOST } from '../../src/testing/harness.js';
@@ -81,7 +81,11 @@ describe('failures of the CLI', () => {
     expect(run.error!.code).toBe('rate_limited');
     expect(run.error!.message).toMatch(/usage limit has been reached/);
     expect(run.error!.message).toContain('resets 3pm (UTC)');
-    expect(await c.eventsOf(sessionId, 'notice')).toEqual([expect.objectContaining({ level: 'error', code: 'rate_limit', text: "Claude's five-hour usage limit has been reached; it resets at 2026-10-14 01:00 UTC." })]);
+    // The notice names, in UTC, the reset time the CLI reported along with the refusal.
+    const info = (c.usageEvents.at(-1)!.data as RateLimitObserved).info;
+    expect(info.status).toBe('rejected');
+    const resets = new Date((info.resetsAt as number) * 1000).toISOString();
+    expect(await c.eventsOf(sessionId, 'notice')).toEqual([expect.objectContaining({ level: 'error', code: 'rate_limit', text: `Claude's five-hour usage limit has been reached; it resets at ${resets.slice(0, 10)} ${resets.slice(11, 16)} UTC.` })]);
   });
 
   it('"model not available" names the model that was asked for', async () => {

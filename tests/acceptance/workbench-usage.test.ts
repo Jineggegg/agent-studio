@@ -336,11 +336,15 @@ describe('6.12 usage', () => {
   it('AT-WB-126/127 (adapted): a plan window is reported as used and as remaining — two views of one reading — with when it was observed; a window whose reset time has passed is flagged, with the reason, never shown as current', async () => {
     const quota = (await owner.get<{ agents: Json[]; checkedAt: number }>('/api/usage/quota')).body;
     const claude = quota.agents.find((agent) => agent.agentId === 'claude-code')!;
+    // The stand-in's windows reset hours and days from now, so the reading of this file's runs is current.
     expect(claude).toMatchObject({
       agentName: 'Claude Code',
       available: true,
       refreshable: false,
       status: 'allowed',
+      state: 'fresh',
+      staleCode: null,
+      staleReason: null,
     });
     expect(claude.observedAt).toBeLessThanOrEqual(quota.checkedAt);
     expect(quota.checkedAt - claude.observedAt).toBeLessThan(60_000); // read during the runs of this file
@@ -353,19 +357,29 @@ describe('6.12 usage', () => {
       expect(window.usedFraction).toBeLessThanOrEqual(1);
       expect(window.remainingFraction).toBeCloseTo(1 - window.usedFraction, 9);
       expect(window.label.length).toBeGreaterThan(0);
-      // The stand-in reports fixed reset times, so whether one has passed depends on today's date — the flag must say which.
-      expect(window.resetPassed).toBe(
-        window.resetsAt !== null && window.resetsAt <= quota.checkedAt,
-      );
-    }
-    const anyPassed = (claude.windows as Json[]).some((window) => window.resetPassed);
-    if (anyPassed) {
-      expect(claude).toMatchObject({ state: 'stale', staleCode: 'reset-passed' });
-      expect(claude.staleReason).toContain('out of date');
-    } else {
-      expect(claude).toMatchObject({ state: 'fresh', staleCode: null, staleReason: null });
+      expect(window.resetPassed).toBe(false);
+      expect(window.resetsAt).toBeGreaterThan(quota.checkedAt);
     }
     expect(claude.refreshHint.length).toBeGreaterThan(10); // says in words how the reading gets renewed
+
+    // A reading whose window has reset since is flagged, with the reason — never shown as current.
+    const session = await createSession(owner, one.id);
+    const reset = await runToEnd(
+      owner,
+      session.id,
+      'just after a reset [[scenario:rate-reset-passed]]',
+    );
+    expect(reset.status).toBe('completed');
+    const after = (await owner.get<{ agents: Json[]; checkedAt: number }>('/api/usage/quota')).body;
+    const passed = after.agents.find((agent) => agent.agentId === 'claude-code')!;
+    expect(passed.observedAt).toBeGreaterThanOrEqual(claude.observedAt);
+    expect(passed).toMatchObject({ state: 'stale', staleCode: 'reset-passed' });
+    expect(passed.staleReason).toContain('out of date');
+    expect(
+      Object.fromEntries(
+        (passed.windows as Json[]).map((window) => [window.id, window.resetPassed]),
+      ),
+    ).toEqual({ five_hour: true, seven_day: false });
     // A reading belongs to the person whose run observed it.
     const fresh = await createMember(studio, owner, 'newcomer');
     const theirs = (await fresh.get<{ agents: Json[] }>('/api/usage/quota')).body.agents.find(

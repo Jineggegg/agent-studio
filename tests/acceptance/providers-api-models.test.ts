@@ -144,13 +144,22 @@ describe('6.11 API-model providers', () => {
     await live.close();
   });
 
-  // FINDING: the owner's view of a provider carries `settings.key.hint` — "…" followed by the last four characters
-  // of the saved key (for KEY above: "…fXYZ"). It is returned by create, read, list and update, to the owner only
-  // (a member gets `settings: null`). AT-WB-123 says no read capability returns the key "or any part of it".
-  it.skip('AT-WB-123: no read capability returns any part of a saved key', async () => {
+  it('AT-WB-123: no read capability returns any part of a saved key', async () => {
     const provider = (await owner.get<Json>('/api/providers/stand-in')).body;
-    expect(JSON.stringify(provider)).not.toContain(KEY.slice(-4));
-    expect(provider.settings.key.hint ?? '').not.toContain(KEY.slice(-4));
+    // What the owner is told about the key: that one is saved, and when — nothing of the key itself.
+    expect(provider.settings.key).toMatchObject({ configured: true, readable: true });
+    expect(provider.settings.key.updatedAt).toEqual(expect.any(Number));
+    const reads = [
+      provider,
+      (await owner.get('/api/providers')).body,
+      (await owner.patch('/api/providers/stand-in', { name: provider.name })).body,
+      (await owner.get('/api/agents')).body,
+      (await owner.get('/api/usage/providers')).body,
+    ];
+    const everything = JSON.stringify(reads);
+    for (const part of [KEY, KEY.slice(0, 16), KEY.slice(-8), KEY.slice(-4)])
+      expect(everything).not.toContain(part);
+    expect(provider.settings.key.hint ?? '').not.toMatch(/[0-9A-Za-z]/);
   });
 
   it('AT-WB-122 (adapted): what is pasted as a key must be an API key — a subscription sign-in token, another service’s token or an address is refused with its own explanation, which never repeats the value; an API token of the Studio cannot save a key at all', async () => {

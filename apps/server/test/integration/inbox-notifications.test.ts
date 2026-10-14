@@ -1,4 +1,4 @@
-import { type Approval, INBOX_EVENT, type NotificationList, type Run, type Session } from '@agent-studio/protocol';
+import { type Approval, INBOX_EVENT, type NotificationList, type NotificationSettings, type Run, type Session } from '@agent-studio/protocol';
 import { afterEach, describe, expect, it } from 'vitest';
 import { nextRequestId, until } from '../../src/modules/inbox/testing/kit.js';
 import { bash, createWorlds, device, idle, notifications, pending } from '../../src/modules/inbox/testing/world.js';
@@ -217,19 +217,24 @@ describe('what raises a notification', () => {
     expect(push.payloads(phone)).toEqual([expect.objectContaining({ title: 'Reports', body: 'Scripted agent finished its background work', tag: `background-finished:${session.id}` })]);
     expect(push.to(phone)[0]!.headers.urgency).toBe('low');
 
-    // Until it is set, the background switch follows the reply switch.
+    // The reply switch is another switch: turning it off changes nothing for background work …
     push.received.length = 0;
-    await kit.owner.patch('/api/notifications/preferences', { events: { replyFinished: false } });
+    const quiet = await kit.owner.patch<NotificationSettings>('/api/notifications/preferences', { events: { replyFinished: false } });
+    expect(quiet.body.preferences.events).toEqual({ needsYou: true, replyFinished: false, backgroundFinished: true, failure: true, automation: true, plugin: true });
     const second = await agents.sendMessage(principal, session.id, { requestId: nextRequestId(), text: 'nightly report' }, { origin: 'scheduled' });
     await kit.runEnded(kit.owner, second.runId!);
     await idle(world);
-    expect(push.received).toEqual([]);
-    // Set on its own, it stands on its own.
-    await kit.owner.patch('/api/notifications/preferences', { events: { backgroundFinished: true } });
+    expect(push.to(phone)).toHaveLength(1);
+    // … and its own switch is what silences it, without touching the reply switch.
+    push.received.length = 0;
+    const silenced = await kit.owner.patch<NotificationSettings>('/api/notifications/preferences', { events: { backgroundFinished: false } });
+    expect(silenced.body.preferences.events).toEqual({ needsYou: true, replyFinished: false, backgroundFinished: false, failure: true, automation: true, plugin: true });
     const third = await agents.sendMessage(principal, session.id, { requestId: nextRequestId(), text: 'nightly report' }, { origin: 'scheduled' });
     await kit.runEnded(kit.owner, third.runId!);
     await idle(world);
-    expect(push.to(phone)).toHaveLength(1);
+    expect(push.received).toEqual([]);
+    const back = await kit.owner.patch<NotificationSettings>('/api/notifications/preferences', { events: { replyFinished: true } });
+    expect(back.body.preferences.events).toMatchObject({ replyFinished: true, backgroundFinished: false });
   });
 
   it('does not notify when the user stops their own run', async () => {

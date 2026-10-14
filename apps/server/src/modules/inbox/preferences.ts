@@ -30,8 +30,8 @@ function switchesOf<K extends string>(value: unknown, names: readonly K[]): Part
  * Notification switches, kept in the account's preferences under the keys of
  * {@link KEYS} so that they follow the user to every device and other open
  * pages are told when they change. Only what the user has set is stored;
- * everything else comes from the defaults, which is how `backgroundFinished`
- * can follow `replyFinished` until it is set.
+ * everything else comes from the defaults. Every switch stands on its own:
+ * changing one never changes what another reads as.
  */
 export class NotificationSwitches {
   readonly #preferences: PreferencesService;
@@ -45,12 +45,11 @@ export class NotificationSwitches {
     const events = switchesOf(all[KEYS.events], NOTIFICATION_EVENTS);
     const channels = switchesOf(all[KEYS.channels], NOTIFICATION_CHANNELS);
     const defaults = DEFAULT_NOTIFICATION_PREFERENCES;
-    const replyFinished = events.replyFinished ?? defaults.events.replyFinished;
     return {
       events: {
         needsYou: events.needsYou ?? defaults.events.needsYou,
-        replyFinished,
-        backgroundFinished: events.backgroundFinished ?? replyFinished,
+        replyFinished: events.replyFinished ?? defaults.events.replyFinished,
+        backgroundFinished: events.backgroundFinished ?? defaults.events.backgroundFinished,
         failure: events.failure ?? defaults.events.failure,
         automation: events.automation ?? defaults.events.automation,
         plugin: events.plugin ?? defaults.events.plugin,
