@@ -9,7 +9,6 @@ import { collabModule } from './collab/collab.module.js';
 import { filesModule } from './files/files.module.js';
 import { gitModule } from './git/git.module.js';
 import { githubModule } from './github/github.module.js';
-import { homeModule } from './home/home.module.js';
 import { inboxModule } from './inbox/inbox.module.js';
 import { memoryModule } from './memory/memory.module.js';
 import { pluginsModule } from './plugins/plugins.module.js';
@@ -50,7 +49,6 @@ export const modules: readonly StudioModule[] = [
   automationModule,
   usageModule,
   collabModule,
-  // extensions and the launcher
+  // extensions
   pluginsModule,
-  homeModule,
 ];
