@@ -62,6 +62,9 @@ describe('plugin manifest', () => {
     ['a reserved id', { ...base, id: 'install' }],
     ['another reserved id', { ...base, id: 'panel' }],
     ['node_modules as id', { ...base, id: 'node_modules' }],
+    // The plugins folder holds the Studio's own files beside the plugins: a plugin must not take their place.
+    ['package.json as id', { ...base, id: 'package.json' }],
+    ['the temporary name package.json is rewritten through', { ...base, id: 'package.json.1234.tmp' }],
     ['an empty name', { ...base, name: '' }],
     ['an over-long name', { ...base, name: 'n'.repeat(61) }],
     ['a name with a line break', { ...base, name: 'Nice\nPlugin' }],

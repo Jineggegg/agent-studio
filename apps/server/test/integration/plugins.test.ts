@@ -233,6 +233,26 @@ describe('installing', () => {
     expect(existsSync(path.join(t.pluginsDir, 'notes.counter'))).toBe(false);
   });
 
+  it('refuses an id that would take the place of the Studio’s own files in the plugins folder', async () => {
+    await installed(); // the plugins folder and the shared SDK copy are set up
+    const shared = await readFile(path.join(t.pluginsDir, 'package.json'), 'utf8');
+    const cases: [folder: string, id: string][] = [
+      ['takes-package-json', 'package.json'],
+      ['takes-its-temporary-file', 'package.json.4242.tmp'],
+    ];
+    for (const [folder, id] of cases) {
+      await t.writeSource(folder, { manifest: manifest(id) });
+      const refused = await tryInstall(folder);
+      expect(refused.status, id).toBe(422);
+      expect(refused.body.error.code, id).toBe('invalid_manifest');
+      expect(refused.body.error.message, id).toMatch(/used by the Studio’s own files/);
+    }
+    // The shared package.json is still the Studio's, and every other plugin still finds the SDK.
+    expect(await readFile(path.join(t.pluginsDir, 'package.json'), 'utf8')).toBe(shared);
+    expect(existsSync(path.join(t.pluginsDir, 'node_modules', '@agent-studio', 'plugin-sdk', 'package.json'))).toBe(true);
+    expect(await installed()).not.toContain('package.json');
+  });
+
   it('lists what can be installed from the source folder', async () => {
     const { body } = await owner.get<PluginSourceList>('/api/plugins/sources');
     expect(body.configured).toBe(true);

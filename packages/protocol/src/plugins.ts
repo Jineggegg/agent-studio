@@ -46,6 +46,22 @@ export const PLUGIN_LIMITS = {
 export const RESERVED_PLUGIN_IDS = ['install', 'contributions', 'sources', 'panel', 'isolation'] as const;
 
 /**
+ * Names the server keeps for itself in the folder that holds the installed
+ * plugins, beside the plugins' own folders (`<plugins>/<id>/`): the shared
+ * SDK copy (`node_modules`), the `package.json` that makes plugin code ES
+ * modules, and the temporary files those are rewritten through
+ * (`package.json.<pid>.tmp`). A plugin with one of these ids would replace or
+ * break what every other plugin depends on. Names starting with a dot
+ * (`.staging`) are kept too; the id pattern already refuses them.
+ */
+export const RESERVED_PLUGIN_FOLDER_NAMES = ['package.json', 'node_modules'] as const;
+
+/** True when a plugin with this id would sit where the server keeps something of its own. */
+export function isReservedPluginFolderName(id: string): boolean {
+  return id.startsWith('.') || RESERVED_PLUGIN_FOLDER_NAMES.some((name) => id === name || id.startsWith(`${name}.`));
+}
+
+/**
  * A slug (`notes-counter`) or a reverse-DNS name (`com.example.notes`):
  * lowercase letters and digits in groups joined by single dots or hyphens.
  */
@@ -54,7 +70,8 @@ export const pluginIdSchema = z
   .min(2)
   .max(48)
   .regex(/^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/, 'Use lowercase letters, digits, dots and hyphens, starting with a letter.')
-  .refine((id) => !(RESERVED_PLUGIN_IDS as readonly string[]).includes(id), 'That name is reserved.');
+  .refine((id) => !(RESERVED_PLUGIN_IDS as readonly string[]).includes(id), 'That name is reserved.')
+  .refine((id) => !isReservedPluginFolderName(id), 'That name is used by the Studio’s own files in the plugins folder.');
 
 export const pluginToolNameSchema = z
   .string()
