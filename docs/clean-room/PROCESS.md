@@ -49,16 +49,24 @@ The following limitations are real and a reader should weigh them:
    files, one section of its contributor instructions (repository identity
    rules), a handful of file paths that appeared in tool output listing other
    people's uncommitted work, two function names mentioned in the operator's
-   notes, and the titles of five recent commits.
+   notes, and the titles of five recent commits. It also ran the similarity
+   tool, which reads both trees but prints only locations in this one.
 3. **The requirement documents are detailed.** They were written to be
    buildable, and include observed limits and timings. They describe behaviour,
    not code, but they are far more specific than a marketing description.
 4. **Models have priors.** The language models used may have seen CloudCLI UI's
    public source during training. No prompt asked them to recall it, and the
    similarity audit is the check on whether any of it surfaced.
-5. **One analyst ran a read-only `git status` in the old checkout** and briefly
-   created, then deleted, a scratch file in `/tmp`. Neither changed the old
-   system.
+5. **Small departures from the analysts' read-only brief**, all disclosed by
+   the analysts themselves and none of which changed the old system: two ran a
+   read-only `git status` in the old checkout; one briefly created and deleted
+   a scratch file in `/tmp`; helpers of one ran a read-only one-line script to
+   print locale files; one made a single read-only search of the owner's notes
+   (it returned nothing).
+6. **Analysts' raw documents named the owner's private integrations.** Those
+   rows were removed mechanically before the documents were published here;
+   the raw versions were kept outside this repository and away from the
+   development group.
 
 Because of points 1 and 2 this project does not claim to be a strict
 clean-room implementation in the legal sense. It claims that it was written
