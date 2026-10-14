@@ -139,6 +139,10 @@ describe('redactSecrets', () => {
     ['DB_PASSWORD=hunter2hunter2', 'hunter2hunter2'],
     ['"api_key": "abcd1234efgh5678"', 'abcd1234efgh5678'],
     ['-----BEGIN PRIVATE KEY-----\nMIIabc\n-----END PRIVATE KEY-----', 'MIIabc'],
+    ['google key AIzaSyA-test_0123456789abcdefghijklmnop rejected', 'AIzaSyA-test_0123456789abcdefghijklmnop'],
+    ['gitlab glpat-test0123456789abcdefgh', 'glpat-test0123456789abcdefgh'],
+    ['fetch https://deploy:hunter2-test@git.example.com/repo.git failed', 'hunter2-test'],
+    ['GET https://api.example.com/v1/models?key=test-query-secret&page=2', 'test-query-secret'],
   ])('removes the secret from %j', (text, secret) => {
     const result = redactSecrets(text);
     expect(result).not.toContain(secret);
