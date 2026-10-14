@@ -661,9 +661,11 @@ export class PluginsService {
   }
 
   /**
-   * Fetches the plugin again from where it came. The new version keeps
-   * running only if it asks for nothing new and contributes nothing
-   * different; otherwise it waits, disabled, for the owner to approve it.
+   * Fetches the plugin again from where it came. An approval is bound to the
+   * content hash (ADR 0008), so new files wait, disabled, for the owner to
+   * review and approve them — even when they ask for nothing new and
+   * contribute nothing different. Asking for the update is not reviewing the
+   * code it brings.
    */
   async update(user: Principal, id: string, address?: string): Promise<PluginSummary> {
     await this.ready();
@@ -691,29 +693,25 @@ export class PluginsService {
         await fs.rename(staged.directory, target);
         await fs.rm(retired, { recursive: true, force: true });
 
-        const approvalWasCurrent = this.#approval(before).state === 'current';
         const reasons = before.approvedSurface ? surfaceChanges(before.approvedSurface, staged.manifest) : [];
         const stillRequested = new Set(staged.manifest.permissions);
         const granted = before.granted.filter((permission) => stillRequested.has(permission));
-        const keepsRunning = before.enabled && approvalWasCurrent && reasons.length === 0;
 
+        // The approval stays bound to the old hash, so the plugin shows as changed since it was approved.
         const record = this.#store.update(id, {
           manifest: staged.manifest,
           commit: staged.commit,
           contentHash: staged.contentHash,
           granted,
-          ...(keepsRunning
-            ? // The owner asked for this update with a fresh sign-in: that is the approval of the new files.
-              { approvedHash: staged.contentHash, approvedSurface: surfaceOf(staged.manifest), approvedBy: user.userId, approvedAt: Date.now() }
-            : { enabled: false, disabledReason: before.enabled ? (reasons[0] ?? 'content-changed') : before.disabledReason }),
+          enabled: false,
+          disabledReason: before.enabled ? (reasons[0] ?? 'content-changed') : before.disabledReason,
         });
-        if (keepsRunning) this.#registerTools(record, isolation);
         this.#audit(
           'plugin.updated',
           user.userId,
           id,
           `${before.manifest.version} → ${staged.manifest.version}; ${staged.commit ?? staged.contentHash}; ` +
-            (keepsRunning ? 'still enabled' : before.enabled ? `disabled until approved (${reasons.join(', ') || 'content-changed'})` : 'disabled'),
+            (before.enabled ? `disabled until approved (${reasons.join(', ') || 'content-changed'})` : 'disabled'),
           address,
         );
         this.#announce(id);

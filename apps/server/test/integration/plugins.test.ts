@@ -376,13 +376,25 @@ describe('installing from a Git repository', () => {
     const grant = await t.openPanel(owner, 'from-git', 'main');
     await t.rpc(owner, grant, 'call', { fn: 'storage.set', args: ['kept', 'across updates'] });
 
-    // Same permissions and contributions, new code: the owner's update is the approval.
+    // Same permissions and contributions, new code: asking for the update is not reviewing the code (ADR 0008).
+    // The new files wait, disabled, until the owner has approved them; nothing of them runs before that.
     const second = await commit(toolbox('from-git', [], { version: '1.1.0', body: 'extra: () => "new code",' }), 'second');
     const updated = (await owner.post<PluginSummary>('/api/plugins/from-git/update')).body;
-    expect(updated).toMatchObject({ version: '1.1.0', enabled: true, source: { commit: second }, approval: { state: 'current' } });
+    expect(updated).toMatchObject({
+      version: '1.1.0',
+      enabled: false,
+      status: 'needs-approval',
+      source: { commit: second },
+      approval: { state: 'stale', reasons: ['content-changed'] },
+      permissions: { requested: [], granted: [] },
+    });
     expect(updated.contentHash).not.toBe(response.body.contentHash);
+    expect(t.studio.context.agentTools.get('plugin_from_git_probe')).toBeUndefined();
+    expect(t.studio.context.services.plugins.processId('from-git')).toBeUndefined();
+    expect((await owner.post(`/api/plugins/from-git/panels/main/open`, { slot: 'home-tile' })).status).toBe(404);
     // The old panel grant ended with the old code.
     expect((await t.rpcRaw(owner, grant, 'extra')).status).toBe(410);
+    expect(await t.enable(owner, 'from-git')).toMatchObject({ enabled: true, approval: { state: 'current' } });
     const fresh = await t.openPanel(owner, 'from-git', 'main');
     expect(await t.rpc(owner, fresh, 'extra')).toBe('new code');
     expect(await t.rpc(owner, fresh, 'call', { fn: 'storage.get', args: ['kept'] })).toMatchObject({ result: { ok: true, value: 'across updates' } });
@@ -408,7 +420,8 @@ describe('installing from a Git repository', () => {
     expect((await owner.post(`/api/plugins/from-git/panels/main/open`, { slot: 'home-tile' })).status).toBe(404);
 
     const details = (await audit(t, owner)).filter((event) => event.action === 'plugin.updated').map((event) => event.detail);
-    expect(details.some((detail) => detail.includes('still enabled') && detail.includes(second))).toBe(true);
+    expect(details.some((detail) => detail.includes('disabled until approved (content-changed)') && detail.includes(second))).toBe(true);
+    expect(details.some((detail) => detail.includes('still enabled'))).toBe(false);
     expect(details.some((detail) => detail.includes('disabled until approved (permissions-changed)'))).toBe(true);
 
     const approved = await t.enable(owner, 'from-git');
@@ -570,16 +583,30 @@ describe('approval', () => {
     expect(stillLinked.status).toBe(409);
   });
 
-  it('keeps an updated plugin running only if it asks for nothing new and contributes nothing different', async () => {
+  it('disables an updated plugin whose files changed until the owner approves them, even when it asks for nothing new', async () => {
     await start();
     await t.writeSource('box', toolbox('box', ['notifications', 'projects:read']));
     await t.installAndEnable(owner, 'box');
     const update = async () => (await owner.post<PluginSummary>('/api/plugins/box/update')).body;
 
-    // New code, same manifest surface, one permission dropped.
+    // New code, same manifest surface, one permission dropped: the approval was of other files (ADR 0008).
     await t.writeSource('box', toolbox('box', ['notifications'], { version: '1.0.1', body: 'v: () => "1.0.1",' }));
-    expect(await update()).toMatchObject({ version: '1.0.1', enabled: true, approval: { state: 'current' }, permissions: { requested: ['notifications'], granted: ['notifications'] } });
+    expect(await update()).toMatchObject({
+      version: '1.0.1',
+      enabled: false,
+      status: 'needs-approval',
+      approval: { state: 'stale', reasons: ['content-changed'] },
+      permissions: { requested: ['notifications'], granted: ['notifications'] },
+    });
+    expect(t.studio.context.agentTools.get('plugin_box_probe')).toBeUndefined();
+    expect(t.studio.context.services.plugins.processId('box')).toBeUndefined();
+    expect((await t.callTool(owner.userId!, 'plugin_box_probe', { fn: 'storage.list' })).isError).toBe(true);
+    expect((await owner.post(`/api/plugins/box/panels/main/open`, { slot: 'home-tile' })).status).toBe(404);
+    expect(await t.enable(owner, 'box', ['notifications'])).toMatchObject({ enabled: true, approval: { state: 'current' } });
     expect(await t.rpc(owner, await t.openPanel(owner, 'box', 'main'), 'v')).toBe('1.0.1');
+
+    // Fetching again when nothing changed upstream keeps the approval and the plugin running.
+    expect(await update()).toMatchObject({ version: '1.0.1', enabled: true, approval: { state: 'current' } });
 
     // A permission more.
     await t.writeSource('box', toolbox('box', ['notifications', 'network'], { version: '1.1.0' }));
