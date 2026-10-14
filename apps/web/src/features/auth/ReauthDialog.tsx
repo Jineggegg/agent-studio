@@ -91,6 +91,8 @@ export function ReauthDialog() {
             {error}
           </Banner>
         )}
+        {/* With two text fields and no submit button inside the form, a browser does nothing on Enter; this makes Enter submit. */}
+        <button type="submit" hidden />
       </Form>
     </Sheet>
   );
