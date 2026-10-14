@@ -16,6 +16,7 @@ export * from './memory.js';
 export * from './inbox.js';
 export * from './automation.js';
 export * from './usage.js';
+export * from './collab.js';
 export * from './plugins.js';
 export * from './home.js';
 export * from './system.js';

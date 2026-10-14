@@ -5,6 +5,7 @@ import { authModule } from './auth/auth.module.js';
 import { automationModule } from './automation/automation.module.js';
 import { claudeCodeModule } from './claude-code/claude-code.module.js';
 import { codexModule } from './codex/codex.module.js';
+import { collabModule } from './collab/collab.module.js';
 import { filesModule } from './files/files.module.js';
 import { gitModule } from './git/git.module.js';
 import { githubModule } from './github/github.module.js';
@@ -48,6 +49,7 @@ export const modules: readonly StudioModule[] = [
   inboxModule,
   automationModule,
   usageModule,
+  collabModule,
   // extensions and the launcher
   pluginsModule,
   homeModule,
