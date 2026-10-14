@@ -85,10 +85,16 @@ run_studio() {
 echo "Installing from $RELEASE_DIR"
 installer_flags=(--no --port "$PORT")
 [ "$SERVICE" = 1 ] || installer_flags+=(--no-service)
-env HOME="$TEST_HOME" AGENT_STUDIO_SERVICE_NAME=agent-studio-test \
+# The package was built here, not by the release workflow, so it has no provenance to check.
+env HOME="$TEST_HOME" AGENT_STUDIO_SERVICE_NAME=agent-studio-test AGENT_STUDIO_SKIP_PROVENANCE=1 \
   AGENT_STUDIO_RELEASES_URL="http://127.0.0.1:$FILES_PORT/api/releases.json" AGENT_STUDIO_DOWNLOAD_URL="http://127.0.0.1:$FILES_PORT/download" \
   bash "$RELEASE_DIR/install.sh" "${installer_flags[@]}" >"$WORK/install.log" 2>&1 || { cat "$WORK/install.log" >&2; die "the installer failed"; }
 check "the installer finished"
+
+# The settings file may hold the master key: it was created here with the default mode, and is tightened.
+SETTINGS_MODE=$(stat -c %a "$TEST_HOME/.config/agent-studio/env" 2>/dev/null || stat -f %Lp "$TEST_HOME/.config/agent-studio/env")
+[ "$SETTINGS_MODE" = 600 ] || die "the settings file has mode $SETTINGS_MODE, not 600"
+check "the settings file is readable by its owner only"
 
 grep -q 'Finding the newest release' "$WORK/install.log" || die "the installer did not look up the newest release"
 [ "$(run_studio version)" = "$VERSION" ] || die "agent-studio version does not say $VERSION"
@@ -108,6 +114,32 @@ grep -q 'does not match its published SHA-256 sum' "$WORK/tampered.log" || die "
 [ ! -e "$WORK/other-home/.local/share/agent-studio/current" ] || die "a tampered archive left an installation behind"
 kill "$TAMPERED_PID" 2>/dev/null || true
 check "a tampered archive is refused"
+
+# When the GitHub CLI is signed in and cannot verify where the package was built, nothing is installed.
+mkdir -p "$WORK/fake-gh"
+cat >"$WORK/fake-gh/gh" <<'GH'
+#!/bin/sh
+case "$1 $2" in
+  "auth status" | "attestation --help") exit 0 ;;
+  *) exit 1 ;;
+esac
+GH
+chmod 755 "$WORK/fake-gh/gh"
+if env HOME="$WORK/gh-home" PATH="$WORK/fake-gh:$PATH" AGENT_STUDIO_DOWNLOAD_URL="http://127.0.0.1:$FILES_PORT/download" \
+  bash "$RELEASE_DIR/install.sh" --no --no-service --version "$VERSION" >"$WORK/provenance.log" 2>&1; then
+  die "a package whose provenance could not be verified was installed"
+fi
+grep -q 'could not verify' "$WORK/provenance.log" || die "an unverified package was refused for the wrong reason: $(tail -n 2 "$WORK/provenance.log")"
+[ ! -e "$WORK/gh-home/.local/share/agent-studio/current" ] || die "an unverified package left an installation behind"
+check "a package whose provenance fails to verify is refused"
+
+# Only a version can name the folders that are replaced.
+if env HOME="$WORK/bad-version-home" AGENT_STUDIO_DOWNLOAD_URL="http://127.0.0.1:$FILES_PORT/download" \
+  bash "$RELEASE_DIR/install.sh" --no --no-service --version "../../x" >"$WORK/bad-version.log" 2>&1; then
+  die "a path was accepted as a version"
+fi
+grep -q 'is not a release version' "$WORK/bad-version.log" || die "a bad version was refused for the wrong reason: $(tail -n 2 "$WORK/bad-version.log")"
+check "a version that is not x.y.z is refused"
 
 if [ "$SERVICE" = 1 ]; then
   wait_for_health || die "the service did not answer on port $PORT"

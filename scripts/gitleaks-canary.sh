@@ -46,6 +46,7 @@ if [ "$status" -ne 1 ]; then
   exit 1
 fi
 
+# shellcheck disable=SC2016 # JavaScript, not shell
 node -e '
   const findings = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
   const files = findings.map((f) => f.File);

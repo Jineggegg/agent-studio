@@ -104,6 +104,14 @@ function hostnameOf(hostHeader: string): string {
   return colon === -1 ? hostHeader : hostHeader.slice(0, colon);
 }
 
+/**
+ * For a route that API tokens may use, but not for this particular change:
+ * throws unless the caller is a person in a signed-in browser.
+ */
+export function requireBrowser(principal: Pick<Principal, 'via'>): void {
+  if (principal.via !== 'session') throw forbidden('This can only be done from a signed-in browser, not with an API token.', 'session_required');
+}
+
 /** The server log's settings. Every entry passes through {@link redactLogFields}. */
 export function loggerOptions(level: string, stream?: { write(line: string): void }) {
   return {

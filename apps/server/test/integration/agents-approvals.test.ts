@@ -311,6 +311,35 @@ describe('approvals', () => {
     await kit.runEnded(owner, sent.body.runId!);
   });
 
+  it('cannot be taken out of the loop with an API token: no allow rules, no looser modes, no auto mode, no handed-over credentials', async () => {
+    const { owner } = kit;
+    const robot = new TestClient(kit.t.studio);
+    robot.bearer = (await owner.post<{ token: string }>('/api/auth/tokens', { name: 'ci', scopes: ['read', 'write', 'admin'] })).body.token;
+    const session = await kit.session();
+    const refused = async (response: Promise<{ status: number; body: unknown }>) => {
+      const answer = await response;
+      expect(answer.status, JSON.stringify(answer.body)).toBe(403);
+      expect(answer.body).toMatchObject({ error: { code: 'session_required' } });
+    };
+
+    await refused(robot.post('/api/permission-rules', { scope: 'account', effect: 'allow', tool: 'Bash' }));
+    await refused(robot.patch(`/api/sessions/${session.id}`, { permissionMode: 'accept-edits' }));
+    await refused(robot.patch(`/api/sessions/${session.id}`, { permissionMode: 'auto' }));
+    await refused(robot.put(`/api/agents/projects/${kit.project.id}/settings`, { autoMode: true }));
+    await refused(robot.patch(`/api/projects/${kit.project.id}`, { features: { agentCredentials: true } }));
+    const rules = (await owner.get<{ rules: PermissionRule[] }>('/api/permission-rules')).body.rules;
+    expect(rules.some((rule) => rule.effect === 'allow' && rule.tool === 'Bash' && !rule.pattern)).toBe(false);
+
+    // Tightening stays open to tokens.
+    expect((await robot.post('/api/permission-rules', { scope: 'account', effect: 'deny', tool: 'Bash', pattern: 'npm publish *' })).status).toBe(201);
+    expect((await robot.patch(`/api/sessions/${session.id}`, { permissionMode: 'plan' })).status).toBe(200);
+    expect((await robot.patch(`/api/sessions/${session.id}`, { permissionMode: 'ask' })).status).toBe(200);
+    expect((await robot.patch(`/api/sessions/${session.id}`, { title: 'renamed by a token' })).status).toBe(200);
+    // And the person in the browser can still do all of it.
+    expect((await owner.post('/api/permission-rules', { scope: 'account', effect: 'allow', tool: 'Bash', pattern: 'npm test' })).status).toBe(201);
+    expect((await owner.patch(`/api/sessions/${session.id}`, { permissionMode: 'accept-edits' })).status).toBe(200);
+  });
+
   it('never lets a member allow a dangerous request: that takes the owner', async () => {
     const { owner, agent } = kit;
     const member = await kit.t.member('approver');

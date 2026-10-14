@@ -12,6 +12,7 @@
 #   --no                answer no to every question
 #   --dir <path>        install here (default ~/.local/share/agent-studio)
 #   --bin-dir <path>    put the `agent-studio` command here (default ~/.local/bin)
+#   --skip-provenance   install even if the GitHub CLI cannot verify where the package was built
 #
 # What it does: downloads the release and a private copy of Node.js, checks
 # both against their published SHA-256 sums, unpacks them under --dir, writes
@@ -19,6 +20,10 @@
 # (systemd or launchd). It listens on 127.0.0.1 only. Your data lives in
 # ~/.agent-studio; settings in ~/.config/agent-studio/env.
 set -euo pipefail
+
+# Everything runs from main, called on the last line: should the download stop
+# part-way, bash has read no complete command and runs nothing.
+main() {
 
 REPO=Jineggegg/agent-studio
 NODE_VERSION=24.21.0
@@ -33,6 +38,7 @@ DOWNLOAD_URL=${AGENT_STUDIO_DOWNLOAD_URL:-https://github.com/$REPO/releases/down
 PORT=
 SERVICE=1
 ANSWER=${AGENT_STUDIO_ANSWER:-ask}
+SKIP_PROVENANCE=${AGENT_STUDIO_SKIP_PROVENANCE:-0}
 
 # ---- output -------------------------------------------------------------------
 
@@ -66,6 +72,7 @@ Installs Agent Cloud Studio for the current user.
   --yes / --no        answer every question yes / no (installing bubblewrap uses sudo)
   --dir <path>        install here (default ~/.local/share/agent-studio)
   --bin-dir <path>    put the `agent-studio` command here (default ~/.local/bin)
+  --skip-provenance   install even if the GitHub CLI cannot verify where the package was built
 USAGE
 }
 
@@ -78,12 +85,15 @@ while [ $# -gt 0 ]; do
     --no) ANSWER=no; shift ;;
     --dir) INSTALL_DIR=${2:?--dir needs a value}; shift 2 ;;
     --bin-dir) BIN_DIR=${2:?--bin-dir needs a value}; shift 2 ;;
+    --skip-provenance) SKIP_PROVENANCE=1; shift ;;
     -h | --help) usage; exit 0 ;;
     *) fail "Unknown option $1 (see --help)." ;;
   esac
 done
 VERSION=${VERSION#v}
 case $PORT in '' | *[!0-9]*) [ -z "$PORT" ] || fail "--port must be a number." ;; esac
+# Both are written into the `agent-studio` command between single quotes.
+case $INSTALL_DIR$BIN_DIR in *"'"* | *$'\n'*) fail "--dir and --bin-dir cannot contain a quote or a line break." ;; esac
 
 # ---- the system ---------------------------------------------------------------
 
@@ -156,19 +166,27 @@ else
   BASE=$DOWNLOAD_URL/v$VERSION
 fi
 [ -n "$VERSION" ] || fail "Could not tell which version to install."
+# The version names folders that are replaced, so it must be exactly a version.
+[[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || fail "\"$VERSION\" is not a release version (x.y.z)."
 ARCHIVE=agent-studio-$VERSION.tar.gz
 
 step "Downloading Agent Cloud Studio $VERSION"
 fetch "$BASE/SHA256SUMS" "$WORK/SHA256SUMS"
 fetch "$BASE/$ARCHIVE" "$WORK/$ARCHIVE"
 verify "$WORK/$ARCHIVE" "$WORK/SHA256SUMS"
-note "checked against SHA256SUMS"
-if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+note "checked against SHA256SUMS (this shows the download is complete; the sums come from the same place)"
+# Provenance shows the package was built by this repository's release workflow. When it can be checked and
+# fails, nothing is installed: that is exactly the case the check exists for.
+if [ "$SKIP_PROVENANCE" = 1 ]; then
+  note "build provenance not checked (--skip-provenance)"
+elif command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1 && gh attestation --help >/dev/null 2>&1; then
   if gh attestation verify "$WORK/$ARCHIVE" -R "$REPO" >/dev/null 2>&1; then
     note "build provenance verified (built by this repository's release workflow)"
   else
-    note "could not verify build provenance with gh; the SHA-256 check passed"
+    fail "The GitHub CLI could not verify that $ARCHIVE was built by github.com/$REPO's release workflow. Nothing was installed. If you trust this download anyway, run the installer again with --skip-provenance."
   fi
+else
+  note "build provenance not checked: sign in to the GitHub CLI (gh) to have it checked"
 fi
 
 # ---- Node.js ------------------------------------------------------------------
@@ -240,6 +258,8 @@ if [ -n "${AGENT_STUDIO_NODE:-}" ]; then
   printf 'AGENT_STUDIO_NODE=%s\n' "$AGENT_STUDIO_NODE" >>"$WORK/env"
   cat "$WORK/env" >"$CONFIG_DIR/env"
 fi
+# The file may hold the master key, whoever created it and however.
+chmod 600 "$CONFIG_DIR/env"
 setting() { sed -n "s/^$1=//p" "$CONFIG_DIR/env" | tail -n 1; }
 LISTEN_PORT=$(setting AGENT_STUDIO_PORT)
 LISTEN_PORT=${LISTEN_PORT:-7420}
@@ -341,3 +361,7 @@ case ":$PATH:" in
 esac
 printf '\n  %sNext: sign in to the agent CLIs you use (claude, codex) or add an API key under Settings → Models.\n' "$DIM"
 printf '  To reach the Studio from your phone, see docs/deployment/remote-access.md.%s\n\n' "$RESET"
+
+}
+
+main "$@"

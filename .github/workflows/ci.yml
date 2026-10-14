@@ -230,7 +230,7 @@ jobs:
           cache: npm
       - name: The shell scripts pass shellcheck
         run: |
-          shellcheck -s bash packaging/install.sh scripts/test-install.sh
+          shellcheck -s bash packaging/install.sh scripts/test-install.sh scripts/gitleaks-canary.sh
           shellcheck -s sh packaging/bin/agent-studio
       - run: npm ci
       - run: npm run build
