@@ -64,10 +64,28 @@ phone / tablet / laptop ──HTTPS──▶ your server (Agent Cloud Studio) �
 
 ## Quick start
 
-You need Node.js **22.13 or newer** and git. No compiler is required. It is
-developed and tested on Linux, where installing `bubblewrap` gives agents a
-sandbox. macOS should work but is untested, and has no sandbox (see
+On Linux (or WSL on Windows) or macOS, as the user who will run it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Jineggegg/agent-studio/main/packaging/install.sh | bash
+```
+
+The installer downloads the newest release and a private copy of Node.js,
+checks both against their published SHA-256 sums, starts the Studio as a
+background service for your user (systemd or launchd) and prints the address
+and a **one-time setup token**. It never needs root, except — if you agree — to
+install `bubblewrap`, which gives agents a sandbox on Linux. Options:
+`… | bash -s -- --help`. Manage it afterwards with
+`agent-studio service status|restart|logs`; settings live in
+`~/.config/agent-studio/env`, data in `~/.agent-studio`.
+
+macOS works but is less tested than Linux and has no sandbox (see
 [SECURITY.md](SECURITY.md)); Codex then refuses to run unless you allow it.
+
+<details>
+<summary>From source instead</summary>
+
+You need Node.js **22.13 or newer** and git. No compiler is required.
 
 ```bash
 git clone https://github.com/Jineggegg/agent-studio.git
@@ -77,9 +95,10 @@ npm run build
 npm start
 ```
 
-The server prints its address (`http://127.0.0.1:7420`) and a **one-time setup
-token**. Open the address on the same machine, enter the token and create the
-owner account. Then:
+</details>
+
+Open `http://127.0.0.1:7420` on the same machine, enter the setup token and
+create the owner account. Then:
 
 1. **Connect an agent.** Install and sign in to the CLIs you want — the app
    shows which ones it found and offers a terminal for their sign-in:

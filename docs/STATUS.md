@@ -4,7 +4,7 @@ A running record of what is done, what is in flight and what comes next, kept
 so that work can resume after an interruption. It is updated at every
 integration point; nothing is listed as done unless its tests pass.
 
-Last updated: 2026-10-14 (first public release, 2.0.0-beta.1).
+Last updated: 2026-10-14 (2.0.0-beta.2: one-line installer).
 
 ## Phases
 
@@ -22,6 +22,7 @@ Last updated: 2026-10-14 (first public release, 2.0.0-beta.1).
 | 10 Hardening, integration tests, docs | **Done** | AI-assisted security review: no critical/high/medium findings, two lows fixed; guides in `docs/guides/` |
 | 11 Compliance and similarity review | **Done** | `docs/licenses/THIRD_PARTY_LICENSES.md`, `docs/clean-room/SIMILARITY.md` |
 | 12 GitHub release | **Done** | Public repository; every CI job green on GitHub-hosted runners at the release commit, plus CodeQL; release `v2.0.0-beta.1` |
+| 13 One-line install (part 1 of one-click setup) | **In review** | `packaging/install.sh`, `packaging/bin/agent-studio`, `scripts/package-release.mjs`; CI installs the package on Ubuntu x64/ARM64, Debian, Fedora and macOS (with the service); release workflow attaches the package with build provenance. Next: remote access set-up (Tailscale, then Cloudflare Tunnel, then a VPS with Caddy), then update/backup/rollback |
 
 ## Verified at the release commit
 

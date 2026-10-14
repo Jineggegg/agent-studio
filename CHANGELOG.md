@@ -4,9 +4,26 @@ All notable changes to this project are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.0.0-beta.2] — 2026-10-14
+
+### Added
+- A one-line installer for Linux, WSL and macOS
+  (`curl -fsSL https://raw.githubusercontent.com/Jineggegg/agent-studio/main/packaging/install.sh | bash`):
+  a private Node.js, SHA-256 checks of everything downloaded, an
+  `agent-studio` command, a background service for the user (systemd or
+  launchd), and — if you agree — bubblewrap and the AppArmor profile it needs
+  on recent Ubuntu. No root otherwise.
+- Release packages: every published release gets an installable archive built
+  from the released commit, tested by installing it, with GitHub build
+  provenance. CI installs the package on Ubuntu (x64 and ARM64), Debian,
+  Fedora and macOS.
 
 ### Fixed
+- The file tools of API models open files through checked descriptors, so a
+  command racing a tool cannot redirect it outside the project (found by
+  CodeQL).
+- Attachments uploaded together are listed in upload order; stopping the
+  server no longer waits minutes for a stalled upload.
 - A terminal whose program ended in the moment between a browser connecting
   and attaching (a remote host refusing the connection at once, say) closed
   that connection without showing why; the attach now still gets the output

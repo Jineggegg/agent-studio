@@ -1,6 +1,6 @@
 {
   "name": "@agent-studio/protocol",
-  "version": "2.0.0-beta.1",
+  "version": "2.0.0-beta.2",
   "private": true,
   "description": "Wire contracts shared by the Agent Cloud Studio server and clients: REST payloads, realtime messages and domain types.",
   "license": "MIT",

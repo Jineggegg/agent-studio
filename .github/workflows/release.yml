@@ -1,0 +1,48 @@
+name: Release
+
+# When a release is published, its installable package is built from the
+# released commit, tested, given build provenance and attached to it.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Build, test and attach the package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # attach files to the release
+      id-token: write # sign the provenance
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: The package is for this release
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          [ "v$version" = "$TAG" ] || { echo "package.json says $version, the release is $TAG"; exit 1; }
+      - run: node scripts/package-release.mjs
+      - run: scripts/test-install.sh
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            dist-release/*.tar.gz
+            dist-release/install.sh
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" dist-release/*.tar.gz dist-release/install.sh dist-release/SHA256SUMS --clobber -R "$GITHUB_REPOSITORY"

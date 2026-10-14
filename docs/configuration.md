@@ -77,3 +77,24 @@ them up separately and keep them at the same paths on a new machine.
 
 Treat a backup like a password manager export. On the new machine keep the
 directory permissions at `700`.
+
+## When installed with the installer
+
+The `agent-studio` command reads `AGENT_STUDIO_*` lines from
+`~/.config/agent-studio/env` before it starts the server, and the background
+service does the same; variables already set in the environment win. The file
+is read, never executed: one `AGENT_STUDIO_NAME=value` per line, quotes around a
+value allowed. After a change, run `agent-studio service restart`.
+
+A few names are for the command itself, not the server:
+
+| Variable | Meaning |
+|---|---|
+| `AGENT_STUDIO_NODE` | The Node.js to run with (otherwise the installer's private copy, then `node` on `PATH`). |
+| `AGENT_STUDIO_ENV_FILE` | The settings file to read instead of `~/.config/agent-studio/env`. |
+| `AGENT_STUDIO_INSTALL_DIR` | Where releases are installed (default `~/.local/share/agent-studio`). |
+| `AGENT_STUDIO_SERVICE_NAME` | Name of the background service (default `agent-studio`). |
+
+The service keeps the `PATH` of the shell that installed it, so that agents
+find the CLIs they run. After installing a CLI somewhere new, run
+`agent-studio service install` again.

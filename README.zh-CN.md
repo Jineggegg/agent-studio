@@ -40,7 +40,20 @@ Agent Cloud Studio 跑在你自己的机器上（工作站、家用服务器或 
 
 ## 快速开始
 
-需要 Node.js **22.13 或更高**和 git，不需要编译器。在 Linux 上开发和测试，安装 `bubblewrap` 后 Agent 才有沙箱。macOS 理论上可用但未经测试，且没有沙箱（见 [SECURITY.md](SECURITY.md)）；此时除非你明确允许，否则 Codex 会拒绝运行。
+在 Linux（或 Windows 上的 WSL）或 macOS 上，用平时使用它的账号运行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Jineggegg/agent-studio/main/packaging/install.sh | bash
+```
+
+安装脚本会下载最新版本和一份专用的 Node.js，逐个核对官方公布的 SHA-256 校验值，然后以当前用户的后台服务（systemd 或 launchd）启动 Studio，最后打印访问地址和**一次性安装令牌**。整个过程不需要 root；只有你同意安装 `bubblewrap`（Linux 上 Agent 的沙箱）时才会用 sudo。更多选项：`… | bash -s -- --help`。之后用 `agent-studio service status|restart|logs` 管理；设置在 `~/.config/agent-studio/env`，数据在 `~/.agent-studio`。
+
+macOS 可以用，但测试得比 Linux 少，而且没有沙箱（见 [SECURITY.md](SECURITY.md)）；此时除非你明确允许，否则 Codex 会拒绝运行。
+
+<details>
+<summary>改用源码安装</summary>
+
+需要 Node.js **22.13 或更高**和 git，不需要编译器。
 
 ```bash
 git clone https://github.com/Jineggegg/agent-studio.git
@@ -50,7 +63,9 @@ npm run build
 npm start
 ```
 
-服务器会打印访问地址（`http://127.0.0.1:7420`）和**一次性安装令牌**。在同一台机器上打开该地址，输入令牌并创建所有者账号。然后：
+</details>
+
+在同一台机器上打开 `http://127.0.0.1:7420`，输入安装令牌并创建所有者账号。然后：
 
 1. **接入 Agent。** 安装并登录你要用的 CLI——应用会显示检测到了哪些，并提供终端让你完成它们的登录：
    - Claude Code：<https://docs.claude.com/en/docs/claude-code>
