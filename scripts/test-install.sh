@@ -159,6 +159,11 @@ run_studio status | grep -q 'first-run setup is pending' || die "agent-studio st
 check "agent-studio status reports the pending setup"
 curl -fs "http://127.0.0.1:$PORT/" | grep -q '<title>' || die "the web client is not served"
 check "the web client is served"
+LICENCES=$(curl -fs "http://127.0.0.1:$PORT/third-party-licenses.md") || die "the web client's third-party licences are not served"
+for package in react highlight.js lucide-react; do
+  grep -q "$package" <<<"$LICENCES" || die "the third-party licences do not mention $package"
+done
+check "the web client's third-party licences are served"
 # Only loopback is listened on.
 if curl -fs -m 2 "http://$(hostname -I 2>/dev/null | awk '{ print $1 }'):$PORT/api/health" >/dev/null 2>&1; then
   die "the server answers on a non-loopback address"

@@ -62,6 +62,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    // The bundle carries code from many packages whose licences ask for their notices to travel with it.
+    license: { fileName: 'third-party-licenses.md' },
     target: 'es2022',
     rolldownOptions: {
       treeshake: {

@@ -63,7 +63,7 @@ version other than restoring a backup, so make one first.
 
 ```bash
 systemctl --user stop agent-studio
-tar -C ~ -cpzf ~/agent-studio-data-$(date +%F).tar.gz .agent-studio   # see Backups below
+(umask 077; tar -C ~ -cpzf ~/agent-studio-data-$(date +%F).tar.gz .agent-studio)   # see Backups below
 cd ~/agent-studio
 git pull
 npm ci
@@ -88,11 +88,12 @@ changes. **Settings → Agent accounts** shows the version it found.
 ## Backups and restoring
 
 **Stop the service**, then copy the whole data directory (`~/.agent-studio`
-unless `AGENT_STUDIO_DATA_DIR` says otherwise), keeping its permissions:
+unless `AGENT_STUDIO_DATA_DIR` says otherwise), keeping its permissions. The
+archive holds the master key, so it is created readable by you only:
 
 ```bash
 systemctl --user stop agent-studio
-tar -C ~ -cpzf agent-studio-data.tar.gz .agent-studio
+(umask 077; tar -C ~ -cpzf agent-studio-data.tar.gz .agent-studio)
 systemctl --user start agent-studio
 ```
 
