@@ -1,6 +1,7 @@
 import type { Agent, AttachmentRef } from '@agent-studio/protocol';
 import { Check, CircleAlert, CircleCheck, CircleDashed, CircleDot, CircleSlash, Clock, File as FileIcon, Info, ListChecks, MessageSquare, Square, TriangleAlert } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode, memo, useMemo, useState } from 'react';
+import { HandoffNotice, isHandoffNotice } from '@/features/collab/handoff/HandoffNotice';
 import { type MessageKey, useT } from '@/i18n';
 import { Spinner } from '@/ui';
 import { AgentMark, CopyButton } from '../chat/parts';
@@ -39,6 +40,8 @@ export interface RowContext {
   userId: string | null;
   /** The whole of a reply that came in several blocks, given the key of its last block. */
   proseOf: (key: string) => string;
+  /** The conversation on show (a handoff's notice looks up its record by it). */
+  sessionId?: string | null;
 }
 
 // ---- a failure in one row stays in that row -------------------------------------------
@@ -261,10 +264,18 @@ const NOTICE_TITLES: Record<string, MessageKey> = {
   question_skipped: 'workbench.notice.question_skipped',
 };
 
-const NoticeRow = memo(function NoticeRow({ item }: { item: NoticeItem }) {
+const NoticeRow = memo(function NoticeRow({ item, sessionId }: { item: NoticeItem; sessionId: string | null }) {
   const t = useT();
   const Icon = item.level === 'error' ? CircleAlert : item.level === 'warning' ? TriangleAlert : Info;
   const title = NOTICE_TITLES[item.code];
+  // A handoff to or from another agent: folded to one line, with its brief and the other conversation (features/collab).
+  if (isHandoffNotice(item.code)) {
+    return (
+      <div className="wb-row wb-row--notice">
+        <HandoffNotice code={item.code} text={item.text} seq={item.seq} sessionId={sessionId} />
+      </div>
+    );
+  }
   return (
     <div className="wb-row wb-row--notice">
       <div className="wb-notice" data-level={item.level} role="note">
@@ -407,7 +418,7 @@ export function renderRow(row: TranscriptRow, context: RowContext, next?: Transc
     case 'todos':
       return <TodosRow item={row} />;
     case 'notice':
-      return <NoticeRow item={row} />;
+      return <NoticeRow item={row} sessionId={context.sessionId ?? null} />;
     case 'approval':
       return <ApprovalRow item={row} context={context} />;
     case 'run-end':

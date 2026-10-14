@@ -90,8 +90,10 @@
 .mem-chips {
   display: flex;
   gap: var(--space-2);
-  margin: 0 calc(-1 * var(--gutter));
-  padding: 2px var(--gutter);
+  /* The row scrolls sideways and so clips what sticks out: room above and below for each chip's 44 px hit area
+     (its ::after reaches 4 px out), given back by the negative margin so nothing moves. */
+  margin: -4px calc(-1 * var(--gutter));
+  padding: 6px var(--gutter);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;

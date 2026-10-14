@@ -28,6 +28,8 @@ export interface TitleBarItem {
   load: () => Promise<{ default: ComponentType<TitleBarItemProps> }>;
   /** Whether the item has anything to say here. Default: always, inside a project. */
   available?: (context: { project: Project; role: Role }) => boolean;
+  /** `start` (default): before the context ring and the mode. `end`: after them, at the bar's far end (a "…" menu). */
+  placement?: 'start' | 'end';
 }
 
 const items: TitleBarItem[] = [];
@@ -45,9 +47,11 @@ export function registerTitleBarItem(...added: TitleBarItem[]): void {
   for (const listener of [...listeners]) listener();
 }
 
-/** The items that apply to this project and person, in display order. */
-export function titleBarItems(context: { project: Project; role: Role }): TitleBarItem[] {
-  return items.filter((item) => item.available?.(context) ?? true).sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+/** The items that apply to this project and person, in display order — those of one placement. */
+export function titleBarItems(context: { project: Project; role: Role }, placement: 'start' | 'end' = 'start'): TitleBarItem[] {
+  return items
+    .filter((item) => (item.placement ?? 'start') === placement && (item.available?.(context) ?? true))
+    .sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
 }
 
 export function subscribeTitleBarItems(listener: () => void): () => void {

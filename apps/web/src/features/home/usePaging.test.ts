@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TILE_GEOMETRY, chunk, gridFor } from './usePaging';
+import { TILE_GEOMETRY, chunk, gridFor, namelessGeometry } from './usePaging';
 
 describe('home paging', () => {
   it('counts only whole rows and columns', () => {
@@ -19,6 +19,20 @@ describe('home paging', () => {
     expect(gridFor(1440, 700, TILE_GEOMETRY.wide).columns).toBe(8);
     expect(gridFor(2560, 700, TILE_GEOMETRY.wide).columns).toBe(8); // the grid stops growing
     expect(gridFor(390, 60, TILE_GEOMETRY.phone).rows).toBe(1);
+  });
+
+  it('shares a page’s spare height out among the rows on a phone, and keeps a desktop’s rows compact', () => {
+    // 640 px on a phone: five rows of 112 + 4 × 14 leave 24 px, shared out (116 each).
+    expect(gridFor(390, 640, TILE_GEOMETRY.phone).rowHeight).toBe(116);
+    // 700 px on a desktop: four rows could each grow to 155; they grow by 4 % at most.
+    expect(gridFor(1440, 700, TILE_GEOMETRY.wide).rowHeight).toBe(Math.round(132 * 1.04));
+    expect(gridFor(1440, 700, TILE_GEOMETRY.wide).rows).toBe(4);
+  });
+
+  it('brings rows closer together, and fits more of them, when tiles show no names', () => {
+    const phone = TILE_GEOMETRY.phone;
+    expect(namelessGeometry(phone).rowHeight).toBe(phone.rowHeight - 32);
+    expect(gridFor(390, 600, namelessGeometry(phone)).rows).toBeGreaterThan(gridFor(390, 600, phone).rows);
   });
 
   it('flows tiles onto as many pages as they need', () => {

@@ -11,6 +11,7 @@ import { projectSettingsPath } from '@/registry';
 import { useCanHover, usePageVisible } from '@/platform/media';
 import type { BackAction } from '@/shell/back';
 import { ActivityMark, Badge, Button, DelayedSkeleton, EmptyState, ErrorState, Glyph, List, ListRow, Menu, type RowAction, SegmentedControl, Skeleton, Spinner, StaleNotice, confirm, isImeConfirm, toTint, toast } from '@/ui';
+import { type ChainSummary, collapseChains, rowStandsFor } from '@/features/collab/handoff/chains';
 import { projectSymbol } from '@/features/home/icons';
 import { workbenchApi } from '../api';
 import { AgentMark, ShortcutHint, shortcutText } from '../chat/parts';
@@ -109,9 +110,11 @@ interface RowProps {
   projectName: string | null;
   archivedView: boolean;
   onOpen: () => void;
+  /** The row stands for a chain of conversations handed from one agent to another; this is its newest. */
+  chain?: ChainSummary | undefined;
 }
 
-function SessionRow({ session, open, now, agents, projectName, archivedView, onOpen }: RowProps) {
+function SessionRow({ session, open, now, agents, projectName, archivedView, onOpen, chain }: RowProps) {
   const t = useT();
   const user = useUser();
   const queryClient = useQueryClient();
@@ -170,9 +173,18 @@ function SessionRow({ session, open, now, agents, projectName, archivedView, onO
   if (mine && archivedView) actions.push({ id: 'restore', label: t('workbench.session.restore'), icon: <ArchiveRestore size={18} />, tone: 'accent', onSelect: () => void change({ archived: false }) });
   actions.push({ id: 'delete', label: t('workbench.session.delete'), icon: <Trash2 size={18} />, tone: 'danger', onSelect: () => void remove() });
 
+  const chained = chain ? t('collab.chain.row', { count: t.number(Math.max(2, chain.count)) }) : null;
   const leading = (
     <span className="wb-list__agent">
-      <AgentMark agentId={session.agentId} size={30} />
+      {chained ? (
+        // A chain: a quiet stack behind the newest agent's mark.
+        <span className="cl-chain-stack" title={chained}>
+          <AgentMark agentId={session.agentId} size={30} />
+          <span className="visually-hidden">{chained}</span>
+        </span>
+      ) : (
+        <AgentMark agentId={session.agentId} size={30} />
+      )}
       {mark && mark !== 'running' && <ActivityMark kind={mark} className="wb-list__mark" />}
     </span>
   );
@@ -319,7 +331,9 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
   const list = useSessionList(params, { enabled });
   const archived = useSessionList({ projectId, archived: 'only', q: '' }, { enabled: enabled && !archivedView });
   const staleness = useStaleness(list);
-  const sessions = useMemo(() => flattenSessions(list.data), [list.data]);
+  const loaded = useMemo(() => flattenSessions(list.data), [list.data]);
+  // Conversations handed from one agent to another are one entry: the newest of their chain (features/collab).
+  const { sessions, chains } = useMemo(() => collapseChains(loaded), [loaded]);
   const sections = useMemo(() => (archivedView ? [] : groupSessions(sessions, now)), [archivedView, sessions, now]);
   const archivedCount = flattenSessions(archived.data).length;
   const projectNames = useMemo(() => new Map(projects.map((entry) => [entry.id, entry.name])), [projects]);
@@ -336,12 +350,13 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
     <SessionRow
       key={session.id}
       session={session}
-      open={session.id === openSessionId}
+      open={rowStandsFor(session.id, chains.get(session.id), openSessionId)}
       now={now}
       agents={agents}
       projectName={scope === 'all' && session.projectId ? (projectNames.get(session.projectId) ?? null) : null}
       archivedView={archivedView}
       onOpen={() => open(session)}
+      chain={chains.get(session.id)}
     />
   );
 

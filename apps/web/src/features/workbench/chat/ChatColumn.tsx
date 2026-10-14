@@ -7,6 +7,7 @@ import { describeError, errorKind } from '@/data/errors';
 import { useIsOwner, useUser } from '@/data/session';
 import { DeferredList } from '@/features/automation/DeferredList';
 import { SendLater } from '@/features/automation/SendLater';
+import { ChainBar } from '@/features/collab/handoff/ChainBar';
 import { useT } from '@/i18n';
 import { useLayoutClass } from '@/platform/layout';
 import { isApplePlatform, useCanHover } from '@/platform/media';
@@ -90,13 +91,13 @@ function LazySlot({ item, ...props }: TitleBarItemProps & { item: TitleBarItem }
 }
 
 /** What other features put in the title bar (see `./slots`). Each is its own small island: one that fails to load is simply absent. */
-function TitleBarSlot({ project, sessionId, busy }: { project: Project; sessionId: string | null; busy: boolean }) {
+function TitleBarSlot({ project, sessionId, busy, placement = 'start' }: { project: Project; sessionId: string | null; busy: boolean; placement?: 'start' | 'end' }) {
   const user = useUser();
   const layout = useLayoutClass();
   const version = useSyncExternalStore(subscribeTitleBarItems, titleBarItemsVersion, titleBarItemsVersion);
   // `version` is what changes when a feature registers an item.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const items = useMemo(() => titleBarItems({ project, role: user?.role ?? 'member' }), [project, user?.role, version]);
+  const items = useMemo(() => titleBarItems({ project, role: user?.role ?? 'member' }, placement), [project, user?.role, version, placement]);
   return (
     <>
       {items.map((item) => (
@@ -572,6 +573,7 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
           {project && <TitleBarSlot project={project} sessionId={sessionId} busy={busy} />}
           <ContextRing context={transcript.context} totals={transcript.totals} agent={agent} />
           {agent && <ModeSwitcher mode={mode} effective={effectiveMode} agent={agent} project={project} disabled={!mine || !writable} onChange={chooseMode} />}
+          {project && <TitleBarSlot project={project} sessionId={sessionId} busy={busy} placement="end" />}
         </>
       }
     />
@@ -623,6 +625,8 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
   return (
     <div className="wb-chat" ref={column} onKeyDown={onKeyDown} onTouchStart={onTouchStart} onTouchMove={onTouchMove}>
       {titleBar}
+      {/* Where this conversation stands among those handed from one agent to another (features/collab). */}
+      {session && <ChainBar session={session} items={transcript.items} />}
       <Transcript
         state={state}
         channel={channel}

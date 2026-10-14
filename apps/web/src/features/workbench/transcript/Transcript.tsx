@@ -157,9 +157,10 @@ export function Transcript({ state, channel, outgoing, starting, agents, session
     }
     return parts.join('\n\n');
   }, []);
+  const sessionId = transcript.sessionId || null;
   const context = useMemo<RowContext>(
-    () => ({ agents, sessionAgentId, onReviewApproval, onOpenImage, userId, proseOf }),
-    [agents, sessionAgentId, onReviewApproval, onOpenImage, userId, proseOf],
+    () => ({ agents, sessionAgentId, onReviewApproval, onOpenImage, userId, proseOf, sessionId }),
+    [agents, sessionAgentId, onReviewApproval, onOpenImage, userId, proseOf, sessionId],
   );
   const renderItem = useCallback(
     (row: TranscriptRow, index: number) => <RowBoundary resetKey={row.kind === 'pending' ? row.phase : row.rev}>{renderRow(row, context, current.current[index + 1])}</RowBoundary>,

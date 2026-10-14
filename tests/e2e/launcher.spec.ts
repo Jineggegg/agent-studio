@@ -1,4 +1,3 @@
-import type { Page } from '@playwright/test';
 import type { StudioApi } from './support/api.js';
 import { appTile, launcher } from './support/home.js';
 import { expect, test } from './support/test.js';
@@ -14,16 +13,6 @@ test.afterEach(async ({ api }) => {
 async function savedPreference(api: StudioApi, key: string): Promise<unknown> {
   const { values } = await api.call<{ values: Record<string, unknown> }>('GET', '/api/preferences');
   return values[key] ?? null;
-}
-
-/**
- * Hides `document.startViewTransition`, as in a browser without view transitions, so the theme changes at once.
- * Needed while the FINDING below stands: with view transitions every theme change throws an uncaught AbortError.
- */
-async function withoutViewTransitions(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    delete (Document.prototype as { startViewTransition?: unknown }).startViewTransition;
-  });
 }
 
 test('the launcher shows the day, the apps and the projects, and opens each', async ({
@@ -74,7 +63,6 @@ test('the theme switches to dark and back, from the launcher and from Settings',
   page,
   api,
 }) => {
-  await withoutViewTransitions(page);
   const html = page.locator('html');
   await page.goto('/');
   await expect(html).toHaveAttribute('data-theme', 'light');
@@ -97,18 +85,10 @@ test('the theme switches to dark and back, from the launcher and from Settings',
   await expect.poll(() => savedPreference(api, 'appearance.theme')).toBe('light');
 });
 
-// FINDING: every theme change throws an uncaught promise rejection where the browser has view transitions
-// (seen in Chromium; Safari 18+ has them too, not verified there): "AbortError: Transition was skipped. New
-// ViewTransition started".
-// Reproduce: sign in, open the launcher in Chromium, press "Switch to dark" (or pick Dark under Settings → Theme);
-// the page reports the AbortError as an uncaught error, and again after a reload while Dark is saved.
-// Cause (apps/web/src/platform/theme.ts, applyThemePreference): chooseTheme() starts a view transition whose
-// update callback commits the theme later, then setPreference() synchronously re-runs the appearance sync, which
-// still sees the old theme in the store and starts a second transition; the first is skipped and its `ready`
-// promise rejects with nobody listening. Un-skip when fixed (and drop withoutViewTransitions above).
-test.skip('FINDING: switching the theme with view transitions raises no error', async ({
-  page,
-}) => {
+// One change makes one view transition (Chromium has them; so does Safari 18+): the account sync re-reading the
+// preference that was just set must not start a second one, which would skip the first and leave its promise
+// rejecting unheard ("AbortError: Transition was skipped").
+test('switching the theme with view transitions raises no error', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Switch to dark' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');

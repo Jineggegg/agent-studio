@@ -95,7 +95,8 @@ export function TitleBar({ title, session, canRename, onRename, agentId, agentLa
         ) : session && canRename ? (
           <button
             type="button"
-            className="wb-titlebar__title u-truncate"
+            // The title inside truncates; the button itself must not clip, or its widened hit area goes with it.
+            className="wb-titlebar__title"
             title={t('workbench.session.renameHint')}
             onClick={() => {
               setDraft(title);
@@ -128,8 +129,8 @@ export function TitleBar({ title, session, canRename, onRename, agentId, agentLa
           project &&
           (projectSettingsPath(project.id) ? (
             // The project's own page: its links, what it offers, who it is shared with.
-            <Link className="wb-titlebar__project wb-titlebar__project--link u-truncate" to={projectSettingsPath(project.id)!} title={t('workbench.project.page', { project: project.name })} draggable={false}>
-              {project.name}
+            <Link className="wb-titlebar__project wb-titlebar__project--link" to={projectSettingsPath(project.id)!} title={t('workbench.project.page', { project: project.name })} draggable={false}>
+              <span className="u-truncate">{project.name}</span>
             </Link>
           ) : (
             <p className="wb-titlebar__project u-truncate">{project.name}</p>

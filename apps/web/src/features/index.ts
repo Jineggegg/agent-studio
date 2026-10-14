@@ -23,3 +23,7 @@ import './notifications';
 import './automation';
 import './providers';
 import './usage';
+import './collab';
+import './plugins';
+import './home';
+import './onboarding';

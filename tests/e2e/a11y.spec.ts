@@ -24,23 +24,6 @@ const EXEMPTIONS: readonly Exemption[] = [
   },
 ];
 
-/** Too small today by mistake, not by design: product defects, checked by the skipped FINDING test below. */
-const KNOWN_DEFECTS: readonly Exemption[] = [
-  {
-    selector: 'button.wb-titlebar__title',
-    reason: 'FINDING: the conversation title in the title bar',
-  },
-  {
-    selector: 'a.wb-titlebar__project--link',
-    reason: 'FINDING: the project link in the title bar',
-  },
-  { selector: 'button.mem-chip', reason: 'FINDING: Memory folder chips' },
-  {
-    selector: '.wb-tool__row:has(+ .wb-tool__preview)',
-    reason: 'FINDING: a tool row above its diff preview',
-  },
-];
-
 async function checkScreen(
   page: Page,
   screen: string,
@@ -138,22 +121,15 @@ test('key screens: every control has a name, and on a phone room for a finger', 
     rootDir: folder,
     createDirectory: false,
   });
-  await tourKeyScreens(page, project.id, layout === 'phone', [...EXEMPTIONS, ...KNOWN_DEFECTS]);
+  await tourKeyScreens(page, project.id, layout === 'phone', EXEMPTIONS);
 });
 
-// FINDING: on a phone, four controls leave a finger less than 44 × 44 CSS px (README rule 3), each because the
-// pseudo-element meant to widen its hit area is clipped or covered:
-//   1. the conversation title in the workbench's title bar (tap to rename): 23 px tall. `button.wb-titlebar__title`
-//      also has `u-truncate` (overflow: hidden), which clips its `::after { inset: -6px 0 -16px }` (workbench.css);
-//   2. the project's name beside it (a link to the project's page): about 17 px tall. Same cause:
-//      `a.wb-titlebar__project--link.u-truncate` clips its `::after { inset: -15px -6px }`;
-//   3. Memory's folder chips: about 41 px tall. The chip row `.mem-chips` scrolls sideways (overflow-x: auto), which clips
-//      each chip's `::after { inset: -4px 0 }` to the row's 2 px padding (memory.css; phone and tablet, wide wraps);
-//   4. an edit's row in a tool stack ("Edit src/app.ts +4 −2"): 42 px at its middle. The diff preview under it,
-//      `.wb-tool__preview { margin: -2px … }`, covers the row's bottom 2 px.
-// Reproduce: at 390 × 844, open a conversation in which `[[tools]]` ran, and /memory with a project folder chip;
-// tap the top or bottom edge of each control (nothing happens), or run this test un-skipped on the phone project.
-test.skip('FINDING: some controls give a finger less than 44 × 44 px on a phone', async ({
+// Four controls once left a finger less than 44 × 44 px because the pseudo-element widening their hit area was
+// clipped or covered: the conversation title and the project link in the title bar (each truncated by
+// `overflow: hidden` on itself — now on the text inside), Memory's folder chips (clipped by their sideways-scrolling
+// row — which now has room above and below), and an edit's tool row (covered by the diff preview's negative margin).
+// With no exemption but the deliberate one above, every control on these screens must give a finger 44 × 44 px.
+test('on a phone, every control gives a finger at least 44 × 44 px', async ({
   page,
   api,
   unique,

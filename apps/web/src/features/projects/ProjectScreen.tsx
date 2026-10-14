@@ -14,6 +14,7 @@ import { useT } from '@/i18n';
 import { Screen } from '@/shell/Screen';
 import { Badge, Banner, Button, DelayedSkeleton, ErrorState, Form, Glyph, List, ListRow, LoadingRow, Sheet, Skeleton, StaleNotice, confirm, toTint, toast } from '@/ui';
 import { AccessSection } from './AccessSection';
+import { ProjectTasksSection } from '@/features/collab/tasks/ProjectTasksSection';
 import { LinksSection } from './LinksSection';
 import { SharingSection } from './SharingSection';
 import { projectPageKeys, projectsApi } from './api';
@@ -150,6 +151,9 @@ function Loaded({ project, onRemove, removeFailure }: { project: Project; onRemo
       </div>
 
       <LinksSection project={project} />
+
+      {/* The project's multi-agent tasks, and "Ask several agents" (features/collab). */}
+      {project.features.assistant && <ProjectTasksSection project={project} />}
 
       {isOwner ? (
         <>

@@ -926,6 +926,9 @@
 }
 button.wb-titlebar__title {
   position: relative;
+  /* Not clipped itself (the title inside truncates), so the hit area below reaches 44 px. */
+  display: block;
+  min-width: 0;
   padding: 0 6px;
   margin: 0 -6px;
   border-radius: var(--radius-xs);
@@ -1455,7 +1458,8 @@ button.wb-titlebar__title::after {
   transform: rotate(90deg);
 }
 .wb-tool__preview {
-  margin: -2px 12px 8px 39px;
+  /* Under its row, never over it: the row keeps its whole 44 px for a finger. */
+  margin: 0 12px 8px 39px;
   border-radius: var(--radius-xs);
   background: var(--code-bg);
   font-family: var(--font-mono);
@@ -2959,10 +2963,15 @@ button.wb-titlebar__title::after {
 /* The project's name in the title bar leads to the project's own page. */
 .wb-titlebar__project--link {
   position: relative;
+  /* The name inside truncates; the link itself must not clip its widened hit area. */
+  display: flex;
   align-self: flex-start;
   /* A short name ("Demo") still makes a target a finger can find. */
   min-width: 32px;
   text-decoration: none;
+}
+.wb-titlebar__project--link > span {
+  min-width: 0;
 }
 .wb-titlebar__project--link::after {
   content: '';

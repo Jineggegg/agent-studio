@@ -1,0 +1,168 @@
+/* The welcome guide, and the launcher's card that offers it */
+
+.ob-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface), var(--shadow-1);
+}
+.ob-card__glyph {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--tint-amber-soft);
+  color: var(--tint-amber-strong);
+}
+.ob-card__text {
+  flex: 1;
+  min-width: 0;
+}
+.ob-card__title {
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+  font-weight: var(--weight-semibold);
+}
+.ob-card__line {
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.ob-card__actions {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 2px;
+}
+:root[data-layout='phone'] .ob-card {
+  flex-wrap: wrap;
+}
+:root[data-layout='phone'] .ob-card__actions {
+  width: 100%;
+  justify-content: space-between;
+  padding-left: calc(40px + var(--space-3));
+}
+
+/* ---- the guide ------------------------------------------------------------------- */
+
+.ob-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.ob-steps__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--hit-min);
+  padding: 0 var(--space-3) 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-fill);
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  font-weight: var(--weight-medium);
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+.ob-steps__item[data-current] .ob-steps__button {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+.ob-steps__mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-semibold);
+}
+.ob-steps__item[data-outcome='done'] .ob-steps__mark {
+  background: var(--color-positive);
+  color: var(--color-surface);
+  box-shadow: none;
+}
+.ob-steps__item[data-outcome='skipped'] .ob-steps__name {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-separator-strong);
+}
+
+.ob-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface), var(--shadow-1);
+}
+:root[data-layout='phone'] .ob-step {
+  padding: var(--space-4);
+}
+.ob-step--done {
+  align-items: flex-start;
+}
+.ob-step__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.ob-step__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+.ob-step__count {
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+}
+.ob-step__title {
+  font-size: var(--text-title-3);
+  line-height: var(--leading-title-3);
+  font-weight: var(--weight-semibold);
+}
+.ob-step__lead {
+  color: var(--color-text-secondary);
+}
+.ob-step__body .ui-list {
+  margin: 0;
+}
+.ob-step__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0 calc(-1 * var(--space-2)) calc(-1 * var(--space-2));
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-separator);
+}
+.ob-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.ob-agents {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.ob-note {
+  color: var(--color-text-secondary);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.ob-settings-actions {
+  display: flex;
+  padding: 0 var(--space-1);
+}
