@@ -4,75 +4,62 @@ A running record of what is done, what is in flight and what comes next, kept
 so that work can resume after an interruption. It is updated at every
 integration point; nothing is listed as done unless its tests pass.
 
-Last updated: 2026-10-14 (all server modules and the workbench UI integrated; project tools UI and acceptance suites in progress).
+Last updated: 2026-10-14 (release candidate).
 
 ## Phases
 
 | Phase | State | Evidence |
 |---|---|---|
-| 1 Requirements | **Done** | `docs/requirements/01–04` (708 acceptance tests), scanned for code, identifiers and personal data |
-| 2 Architecture | **Done** | `docs/architecture/ARCHITECTURE.md`, ADRs 0001–0006 |
+| 1 Requirements | **Done** | `docs/requirements/01–04` (708 acceptance tests), scanned for code and personal data; security observations about the predecessor restated as requirements before publication |
+| 2 Architecture | **Done** | `docs/architecture/ARCHITECTURE.md`, ADRs 0001–0010 |
 | 3 New project | **Done** | Workspace, tooling, CI definitions, licence and lockfile checks |
-| 4 Backend foundation, auth, database | **Done** | Kernel + auth (passkeys, tokens, lockout, audit, operator CLI) + projects + preferences; unit, integration and 21 black-box acceptance tests |
-| 5 Agent runtime (Claude Code, Codex) | **Done** (server) | Runtime core; Claude Code adapter (stream-json; verified against Claude Code 2.1.283: attachments, resume, approved and denied writes, steering, stop); Codex adapter (app-server protocol; verified against codex-cli 0.160.0: status, turn, resume, bridge tool, approved and denied changes, stop). See `docs/guides/agent-smoke-test.md` for what was and was not seen from the real CLIs |
-| 6 Workbench, sessions, tasks | **Done** | Runtime; workbench UI (transcript, composer with durable delivery, approvals, queue, recovery) verified in headless Chromium at four widths, not on a physical device; handoff, multi-agent tasks and a running-work view on the server (UI pending) |
-| 7 Projects, GitHub, terminal, files | Server **done** | Files, Git, worktrees, GitHub (automated tests use a stand-in `gh`; the read paths — account, repositories, pull-request inbox, repository page, pull-request detail, CI runs — were checked by hand against a real account on 2026-10-14; merge and the other write actions were not), terminal with real PTY tests, remote hosts, plugins. UI pending |
-| 8 Memory, API models, automation | Server **done** | Memory; API-model providers with a confined tool loop (never run against a real provider — preset model ids are unverified); inbox, notifications, Web Push (never sent to a real push service), automation with exactly-once scheduling. UI pending |
-| 9 Mobile UI, PWA, remote access | In progress | Web foundation **done** (design system, shell, auth and settings screens, launcher, PWA; verified in headless Chromium at phone, tablet and desktop sizes — not yet on a real device). Feature screens pending |
-| 10 Hardening, integration tests, docs | In progress | 119 black-box acceptance tests for the security domain; they found and fixed an authentication bypass (URL spelling), non-atomic setup and a parallel-guess race. Independent review still to come |
-| 11 Compliance and similarity review | Tooling done | `scripts/similarity-audit.mjs`, `scripts/check-licenses.mjs`; final runs pending |
-| 12 GitHub release | Not started | Repository not created yet; the name `Jineggegg/agent-studio` was free when checked |
+| 4 Backend foundation, auth, database | **Done** | Kernel; accounts with passkeys, API tokens, lockout, audit log, operator commands; projects; preferences |
+| 5 Agent runtime (Claude Code, Codex) | **Done** | Runtime; Claude Code adapter verified against Claude Code 2.1.283 and Codex adapter against codex-cli 0.160.0 (`docs/guides/agent-smoke-test.md` says exactly what was seen) |
+| 6 Workbench, sessions, tasks | **Done** | Workbench UI; handoff, multi-agent tasks, running work |
+| 7 Projects, GitHub, terminal, files | **Done** | GitHub read paths checked against a real account; merge and other write actions never run against the real service |
+| 8 Memory, API models, automation | **Done** | API-model providers never run against a real provider; Web Push never sent to a real push service |
+| 9 Mobile UI, PWA, remote access | **Done** | Verified in headless Chromium at phone, tablet and desktop sizes; **not on a physical iPhone or iPad**; WebKit runs only in CI |
+| 10 Hardening, integration tests, docs | **Done** | AI-assisted security review: no critical/high/medium findings, two lows fixed; guides in `docs/guides/` |
+| 11 Compliance and similarity review | **Done** | `docs/licenses/THIRD_PARTY_LICENSES.md`, `docs/clean-room/SIMILARITY.md` |
+| 12 GitHub release | In progress | |
 
-## Work packages
+## Verified at the release commit
 
-Wave 1 (server modules and the client foundation, in parallel):
+On Linux with bubblewrap available: `npm run typecheck`, `npm run lint`,
+3,165 unit tests, 1,270 integration tests (12 skipped: real-CLI checks that
+run only on request), `npm run build`, `node scripts/smoke.mjs`, 434
+black-box acceptance tests against the built server, 54 browser tests on
+Chromium (phone, tablet, desktop), `npm audit` (0 vulnerabilities), the
+lockfile and licence checks (562 packages, all on the allow-list), and a
+gitleaks scan of every commit (no leaks).
 
-- [x] Agent runtime core — sessions, runs, event log, queue, permission engine, approvals, MCP bridge, scripted test adapter
-- [x] Web client foundation — design system, shell, data layer, auth and settings screens, launcher, PWA
-- [x] Shared memory — Markdown store, search, scope-isolated agent tools
-- [x] Projects (extended), files, Git, GitHub
-- [x] Terminal and remote hosts
-- [x] Plugin system — sandboxed processes, capability API, panel grants, SDK, example
+## Known gaps and limits
 
-Wave 2 (needs the runtime core and the web foundation):
+- **Not verified on physical devices** (iPhone, iPad, Android). Safe areas,
+  the soft keyboard and gestures were emulated.
+- **Never exercised against the real services**: GitHub merges and other
+  GitHub writes; any real model provider (preset model ids are unverified
+  defaults); delivery through a real Web Push service.
+- **Real CLI checks are manual**: the Claude Code and Codex adapters were
+  verified by hand once each (see the smoke-test guide); some event types
+  (compaction, usage limits, a few Codex item types) were handled from the
+  documented shapes only.
+- A preference changed less than about half a second before a full page load
+  can be lost.
+- Plugin panels log one console message in Chromium for a protective
+  content-security-policy directive it does not recognise.
+- Not built: AI-built apps with a per-app gateway, an agent-driven browser,
+  MCP server and skills management screens, slash commands, voice input and
+  read-aloud, discovery of agent sessions started outside the product, image
+  markup, notification channels other than Web Push, natural-language
+  automation planning, multiple chains per session list group.
 
-- [x] Claude Code adapter (official CLI, stream-json, permission prompts through the bridge)
-- [x] Codex adapter (official CLI; app-server protocol for approvals)
-- [x] API-model providers: configuration, encrypted keys, OpenAI-compatible adapter, confined built-in tools
-- [x] Inbox, notifications, Web Push delivery, automation and deferred runs
-- [x] Usage aggregation; handoff between models, summaries, multi-agent tasks (server)
-- [x] Workbench UI
-- [ ] Project tools UI (files, editor, Git, GitHub, terminal, project settings)
-- [ ] Memory, inbox, automation, models, plugins, usage, handoff and task screens; launcher customisation
+## Operational note
 
-Wave 3:
-
-- [ ] Acceptance suites for the remaining domains; browser tests at three sizes
-- [ ] Independent security review and fixes
-- [ ] README, SECURITY, CONTRIBUTING, CHANGELOG, guides
-- [ ] Final similarity audit, licence inventory, secret scan of the full history
-- [ ] Create the GitHub repository, pass CI, publish, tag the first release
-
-## Verified at the last integration point
-
-`npm run typecheck`, `npm run lint`, 2,031 unit tests, 834 integration tests,
-`npm run build`, `node scripts/smoke.mjs`, and 119 acceptance tests against the
-built server all pass on Linux with bubblewrap available.
-
-Since then (each verified by its own suites; a full run is due at the next
-integration point): the two CLI adapters, API-model providers, inbox,
-notifications and automation.
-
-Operational note: this project is developed on a 6 GB machine that also runs
-other services. Heavy commands are serialised machine-wide and at most two
-development agents work at a time; running five in parallel exhausted memory
-and restarted the machine on 2026-10-14.
-
-Known gaps carried forward: GitHub write actions (merge, update branch) never
-run against the real service; nothing verified on a physical iPhone or iPad; a disabled account's
-running agent is not stopped (the event now exists, the runtime does not yet
-listen for it); notification channels other than in-app and Web Push are not
-planned for the first release.
+This project is developed on a 6 GB machine that also runs other services.
+Heavy commands are serialised machine-wide and at most two development agents
+work at a time; running five in parallel exhausted memory and restarted the
+machine on 2026-10-14.
 
 ## Rules that outlive any one session
 
