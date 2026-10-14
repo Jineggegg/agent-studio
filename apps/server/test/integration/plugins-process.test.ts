@@ -255,6 +255,52 @@ describe('a plugin that keeps failing', () => {
   });
 });
 
+describe('what a plugin says while failing', () => {
+  let t: PluginTestStudio;
+  afterEach(async () => {
+    await t?.close();
+  });
+
+  it('is redacted before it is kept or returned: its start-up error, and a private key written over several chunks', async () => {
+    t = await pluginStudio({ plugins: { limits: { backoffBaseMs: 1, backoffMaxMs: 1 } } });
+    const owner = await t.owner();
+    const token = 'ghp_ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7ZQ7';
+    const key = ['-----BEGIN PRIVATE KEY-----', 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcw', 'ggSjAgEAAoIBAQC7XqLwPpVb4Kd2Hs9Yt1R', '-----END PRIVATE KEY-----'];
+    await t.writeSource('leaky', {
+      manifest: panelOnly('leaky'),
+      files: {
+        'p/index.html': '<!doctype html>',
+        // The key arrives in two writes, a moment apart; then the handshake is answered with an error that quotes a token.
+        'server.js': serverCode(`process.stderr.write(${JSON.stringify(`${key.slice(0, 2).join('\n')}\n`)});
+const pause = () => new Promise((resolve) => setTimeout(resolve, 150));
+definePlugin({
+  onStart: async () => {
+    await pause();
+    process.stderr.write(${JSON.stringify(`${key.slice(2).join('\n')}\nafter the key\n`)});
+    await pause();
+    throw new Error('I refuse to start; my token is ${token}');
+  },
+});`),
+      },
+    });
+    await t.installAndEnable(owner, 'leaky');
+
+    const response = await t.rpcRaw(owner, await t.openPanel(owner, 'leaky', 'main'), 'anything');
+    expect(response.status).toBe(503);
+    const answered = JSON.stringify(response.body);
+    expect(answered).toContain('I refuse to start; my token is [redacted]');
+    expect(answered).not.toContain('ZQ7');
+
+    await eventually(async () => (await t.summary(owner, 'leaky')).logTail.join('\n').includes('after the key'), 5000, 'the log to arrive');
+    const summary = await t.summary(owner, 'leaky');
+    expect(summary.statusDetail).toMatch(/failed to start: I refuse to start; my token is \[redacted\]/);
+    const kept = JSON.stringify(summary);
+    expect(kept).not.toContain('ZQ7');
+    expect(kept).not.toMatch(/MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcw|ggSjAgEAAoIBAQC7XqLwPpVb4Kd2Hs9Yt1R|BEGIN PRIVATE KEY/);
+    expect(summary.logTail).toContain('[redacted]');
+  });
+});
+
 describe('stopping', () => {
   let t: PluginTestStudio;
   afterEach(async () => {

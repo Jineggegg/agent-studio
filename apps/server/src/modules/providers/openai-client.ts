@@ -1,7 +1,7 @@
 import type { Readable } from 'node:stream';
 import { StudioError, unavailable } from '../../kernel/errors.js';
 import { guardedRequest, readBody, type NetPolicy } from '../../kernel/net.js';
-import { redactSecrets } from '../../kernel/redact.js';
+import { REDACTED, redactSecrets } from '../../kernel/redact.js';
 
 /**
  * A minimal client for the OpenAI-compatible "chat completions" streaming
@@ -134,9 +134,10 @@ async function failure(status: number, headers: Record<string, unknown>, body: R
     const parsed = JSON.parse(text) as { error?: { message?: string } | string; message?: string };
     detail = typeof parsed.error === 'string' ? parsed.error : (parsed.error?.message ?? parsed.message ?? '');
   } catch {
-    detail = text.slice(0, 300);
+    detail = text;
   }
-  // A provider may echo the key back in its error text.
+  // A provider may echo the key back in its error text. The key is removed before the text is cut:
+  // a key cut in two at the boundary would no longer be recognised.
   detail = sanitise(detail, apiKey);
   const suffix = detail ? ` (${detail})` : '';
   const retryAfter = Number(headers['retry-after']);
@@ -150,9 +151,18 @@ async function failure(status: number, headers: Record<string, unknown>, body: R
   return new ProviderError(502, 'provider_rejected', `The model provider refused the request (HTTP ${status})${suffix}.`, undefined, status);
 }
 
-/** Error text from a provider, made safe to keep: the key and anything key-shaped removed, bounded. */
+/**
+ * Text that may contain the provider's API key, made safe to keep or show:
+ * the key itself removed wherever it appears (it may have no recognisable
+ * shape), then anything else key-shaped. Cut text only after this.
+ */
+export function withoutKey(text: string, apiKey: string | null): string {
+  return redactSecrets(apiKey ? text.split(apiKey).join(REDACTED) : text);
+}
+
+/** Error text from a provider, made safe to keep: the key and anything key-shaped removed, then bounded. */
 function sanitise(text: string, apiKey: string | null): string {
-  return redactSecrets(apiKey ? text.split(apiKey).join('[redacted]') : text).slice(0, 300);
+  return withoutKey(text, apiKey).slice(0, 300);
 }
 
 /** Streams one completion. Throws a {@link ProviderError} with a stable code when the provider refuses. */

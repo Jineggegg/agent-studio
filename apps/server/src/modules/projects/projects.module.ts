@@ -8,6 +8,7 @@ import {
   updateProjectRequestSchema,
 } from '@agent-studio/protocol';
 import { z } from 'zod';
+import { requireBrowser } from '../../kernel/http.js';
 import type { ModuleContext, StudioModule } from '../../kernel/module.js';
 import { FolderBrowser } from './projects.browse.js';
 import { LinkProber } from './projects.links.js';
@@ -129,7 +130,11 @@ export const projectsModule: StudioModule = {
       access: 'user',
       params: projectParams,
       body: updateProjectRequestSchema,
-      handler: ({ user, params, body }) => projects.update(user, params.projectId, body),
+      handler: ({ user, params, body }) => {
+        // Handing an agent the owner's credentials is a decision for the person, not for a token.
+        if (body.features?.agentCredentials === true) requireBrowser(user);
+        return projects.update(user, params.projectId, body);
+      },
     });
 
     http.route({

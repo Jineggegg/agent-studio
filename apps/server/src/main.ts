@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { runCommand } from './cli.js';
 import { ConfigError, loadConfig } from './kernel/config.js';
+import { redactSecrets, redactedErrorText } from './kernel/redact.js';
 import { createStudio } from './kernel/studio.js';
 import { modules } from './modules/index.js';
 
@@ -38,7 +39,7 @@ async function main(): Promise<void> {
     studio.stop().then(
       () => process.exit(0),
       (error: unknown) => {
-        console.error(error);
+        console.error(redactedErrorText(error));
         process.exit(1);
       },
     );
@@ -49,11 +50,11 @@ async function main(): Promise<void> {
 
 main().catch((error: unknown) => {
   if (error instanceof ConfigError) {
-    console.error(`Configuration problem: ${error.message}`);
+    console.error(`Configuration problem: ${redactSecrets(error.message)}`);
   } else if (process.argv.length > 2 && process.argv[2] !== 'start' && error instanceof Error) {
-    console.error(error.message);
+    console.error(redactSecrets(error.message));
   } else {
-    console.error(error);
+    console.error(redactedErrorText(error));
   }
   process.exit(1);
 });

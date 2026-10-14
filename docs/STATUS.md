@@ -4,7 +4,7 @@ A running record of what is done, what is in flight and what comes next, kept
 so that work can resume after an interruption. It is updated at every
 integration point; nothing is listed as done unless its tests pass.
 
-Last updated: 2026-10-14 (2.0.0-beta.2: one-line installer).
+Last updated: 2026-10-14 (security review and fixes).
 
 ## Phases
 
@@ -49,6 +49,21 @@ worker checking where a message comes from) or recorded as false positives
 with the reason (high-entropy tokens hashed with SHA-256; a certificate
 pinned by fingerprint; patterns that find secrets in text). Test code is no
 longer analysed.
+
+## Security review of 2026-10-14
+
+A second AI-assisted review (sandbox, approvals, git, plugins, logging,
+installer, licences, similarity) found no critical issue. Fixed: agent-written
+git hooks and filters running outside the sandbox from the Git panel (high);
+API tokens able to remove the human approver, the installer settings and TLS
+key visible to agents, unredacted error stacks, a provenance failure that did
+not stop the installer, migrations without a copy beforehand, and missing
+licence notices in the web bundle (medium); and several low ones. Still open,
+with reasons, in the pull request that fixed them: host service sockets
+(D-Bus, docker) reachable from the `mask` sandbox, a check-then-use race in the
+Files API, plugin panels and WebRTC, plugin isolation without bubblewrap, and
+non-atomic release switching in the installer. The similarity audit was re-run
+against the predecessor and its upstream with the same result as at release.
 
 ## Known gaps and limits
 

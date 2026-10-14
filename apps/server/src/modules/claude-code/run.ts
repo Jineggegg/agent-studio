@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describeError } from '../../kernel/errors.js';
 import type { ModuleContext } from '../../kernel/module.js';
+import { OutputTail } from '../../kernel/output-tail.js';
 import { type ProcessSupervisor, credentialPaths, terminate } from '../../kernel/process.js';
 import { AgentRunError, type AgentRunHost, type AgentRunRequest, type AgentRunResult, type PromptAttachment } from '../agents/adapter.js';
 import type { ClaudeCli, CliInstallation } from './cli.js';
@@ -279,6 +280,7 @@ export class ClaudeRun {
       }
       const error = result ? errorFromResult(result, translator.apiError, { model: request.model }) : errorFromExit(exit);
       if (error.code === 'not_signed_in') cli.noteSignIn(false);
+      // exit.stderr was redacted as a whole before it was cut, so cutting it again leaves no fragment of a secret.
       host.log.warn({ code: error.code, exitCode: exit.code, signal: exit.signal, stderr: presentable(exit.stderr.slice(-2000), 800) }, 'Claude Code did not finish the turn');
       throw error;
     } finally {
@@ -301,7 +303,7 @@ export class ClaudeRun {
       }
       this.#child = child;
       this.#inputOpen = true;
-      let stderr = '';
+      const stderr = new OutputTail(STDERR_CHARS);
       let buffer = '';
       let strayLine: string | null = null;
       let ended = false;
@@ -310,7 +312,7 @@ export class ClaudeRun {
         ended = true;
         this.#inputOpen = false;
         this.#clearTimers();
-        resolve({ ...facts, stderr, strayLine });
+        resolve({ ...facts, stderr: stderr.text(), strayLine });
       };
 
       const onLine = (raw: string): void => {
@@ -350,7 +352,7 @@ export class ClaudeRun {
       child.stderr?.setEncoding('utf8');
       child.stderr?.on('data', (chunk: string) => {
         tap?.({ runId: request.runId, stream: 'stderr', text: chunk });
-        stderr = (stderr + chunk).slice(-STDERR_CHARS);
+        stderr.append(chunk);
       });
       child.stdin?.on('error', () => {
         // The CLI closed its input (it exited, or is about to): nothing more can be written.

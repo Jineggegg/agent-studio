@@ -1,6 +1,7 @@
 import {
   type Agent,
   type AgentProjectSettings,
+  type PermissionMode,
   agentProjectSettingsSchema,
   approvalDecisionRequestSchema,
   continueRunRequestSchema,
@@ -22,6 +23,7 @@ import {
 } from '@agent-studio/protocol';
 import { z } from 'zod';
 import { describeError, notFound } from '../../kernel/errors.js';
+import { requireBrowser } from '../../kernel/http.js';
 import type { ModuleContext } from '../../kernel/module.js';
 import type { AgentAdapter } from './adapter.js';
 import type { AttachmentFiles } from './attachments.js';
@@ -39,6 +41,9 @@ const approvalParams = z.object({ approvalId: idSchema });
 const ruleParams = z.object({ ruleId: idSchema });
 const projectParams = z.object({ projectId: idSchema });
 const agentParams = z.object({ agentId: z.string().min(1).max(80) });
+
+/** The modes an API token may put a session in: those that ask a person at least as often as before. */
+const TOKEN_PERMISSION_MODES: ReadonlySet<PermissionMode> = new Set(['ask', 'plan']);
 
 async function describeAgent(context: ModuleContext, adapter: AgentAdapter): Promise<Agent> {
   let status: Agent['status'];
@@ -96,6 +101,8 @@ export function registerAgentRoutes(
     method: 'PUT',
     url: '/api/agents/projects/:projectId/settings',
     access: 'owner',
+    // Auto mode lets agents act without asking anyone: only a person may turn it on (or off).
+    sessionOnly: true,
     params: projectParams,
     body: agentProjectSettingsSchema,
     handler: ({ user, params, body }): AgentProjectSettings => {
@@ -172,6 +179,8 @@ export function registerAgentRoutes(
     body: updateSessionRequestSchema,
     handler: ({ user, params, body }) => {
       const { row } = sessions.requireSession(user, params.sessionId, 'write');
+      // A token may make a session ask more, never less: loosening is for the person who answers the questions.
+      if (body.permissionMode !== undefined && !TOKEN_PERMISSION_MODES.has(body.permissionMode)) requireBrowser(user);
       return sessions.update(user, params.sessionId, body, runs.adapter(row.agent_id));
     },
   });
@@ -402,6 +411,8 @@ export function registerAgentRoutes(
     access: 'user',
     body: createPermissionRuleRequestSchema,
     handler: ({ user, body, reply }) => {
+      // An allow rule answers future questions in advance; like answering one, it takes the person.
+      if (body.effect === 'allow') requireBrowser(user);
       const rule = runs.createRule(user, body);
       void reply.status(201);
       return rule;

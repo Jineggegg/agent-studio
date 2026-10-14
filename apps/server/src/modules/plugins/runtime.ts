@@ -1,5 +1,5 @@
 import { terminate, type ProcessSupervisor } from '../../kernel/process.js';
-import { redactSecrets } from '../../kernel/redact.js';
+import { REDACTED, redactSecrets } from '../../kernel/redact.js';
 import { LineDecoder, classify, encodeLine, type RpcId } from './framing.js';
 import type { Launch } from './isolation.js';
 import { HostRefusal } from './permissions.js';
@@ -38,6 +38,12 @@ export interface ProcessLimits {
 }
 
 type ChildProcess = ReturnType<ProcessSupervisor['spawn']>;
+
+/** The start and end of a PEM private key block, as `redactSecrets` recognises them. */
+const KEY_BEGIN = /-----BEGIN [A-Z ]*PRIVATE KEY-----/;
+const KEY_END = /-----END [A-Z ]*PRIVATE KEY-----/;
+/** Longest unfinished private key held back while waiting for its end (an 8192-bit RSA key is under 7 KB). */
+const MAX_HELD_KEY_CHARS = 16 * 1024;
 
 /** A call into a plugin that did not produce a result. */
 export class PluginCallError extends Error {
@@ -121,6 +127,8 @@ export class PluginProcess {
   #windowCount = 0;
   #hostCalls = 0;
   #stderrRest = '';
+  /** A private key on standard error was too long to hold; its lines are dropped until its end. */
+  #skippingKey = false;
   #resolveClosed: () => void = () => {};
   readonly #closed = new Promise<void>((resolve) => {
     this.#resolveClosed = resolve;
@@ -167,7 +175,7 @@ export class PluginProcess {
     child.stdin?.on('error', () => {
       /* the process went away while being written to; "close" reports it */
     });
-    child.once('error', (error) => this.#finish(`could not be started: ${error.message}`));
+    child.once('error', (error) => this.#finish(`could not be started: ${redactSecrets(error.message)}`));
     child.once('close', (code, signal) => {
       this.#flushStderr();
       this.#finish(signal ? `was ended by ${signal}` : `exited with code ${code ?? 'unknown'}`);
@@ -177,7 +185,8 @@ export class PluginProcess {
       return await this.call('initialize', initialize, limits.handshakeTimeoutMs);
     } catch (error) {
       if (!(error instanceof PluginCallError && error.code === 'timeout')) {
-        this.kill(`failed to start: ${error instanceof Error ? error.message : 'unknown error'}`);
+        // The plugin's own words: they end up in the failure the owner sees and in answers to panels.
+        this.kill(`failed to start: ${error instanceof Error ? redactSecrets(error.message) : 'unknown error'}`);
       }
       await this.#closed;
       throw error;
@@ -281,7 +290,8 @@ export class PluginProcess {
         this.#pending.delete(message.id);
         clearTimeout(entry.timer);
         if (message.kind === 'result') entry.resolve(message.result);
-        else entry.reject(new PluginCallError(message.code, message.message, true));
+        // Whatever the plugin says is redacted where it enters: its error text is shown, stored and returned.
+        else entry.reject(new PluginCallError(message.code, redactSecrets(message.message), true));
         return;
       }
 
@@ -318,17 +328,51 @@ export class PluginProcess {
     }
   }
 
+  /**
+   * Splits what the process writes to standard error into log lines. A
+   * private key spans several lines, and redacting line by line would let all
+   * but its first and last line through: the text is redacted as a whole
+   * before it is split, and a key whose end has not arrived yet is held back
+   * (bounded) until it does. One that never ends is dropped up to its end.
+   */
   #stderr(chunk: Buffer): void {
-    const text = this.#stderrRest + chunk.toString('utf8');
-    const lines = text.split('\n');
-    this.#stderrRest = (lines.pop() ?? '').slice(0, 4000);
+    let text = this.#stderrRest + chunk.toString('utf8');
+    if (this.#skippingKey) {
+      const end = KEY_END.exec(text);
+      if (!end) {
+        // Keep enough to recognise an end marker split between chunks.
+        this.#stderrRest = text.slice(-64);
+        return;
+      }
+      this.#skippingKey = false;
+      text = text.slice(end.index + end[0].length);
+    }
+    text = redactSecrets(text);
+    // Any key still in the text after redaction is one whose end has not arrived yet.
+    const open = KEY_BEGIN.exec(text);
+    const lines = (open ? text.slice(0, open.index) : text).split('\n');
+    const partial = lines.pop() ?? '';
+    if (!open) {
+      this.#stderrRest = partial.slice(0, 4000);
+    } else if (partial.length + text.length - open.index <= MAX_HELD_KEY_CHARS) {
+      this.#stderrRest = partial + text.slice(open.index);
+    } else {
+      // Far longer than any private key: it is replaced, and what follows is dropped up to its end.
+      lines.push(`${partial.slice(0, 4000)}${REDACTED}`);
+      this.#stderrRest = '';
+      this.#skippingKey = true;
+    }
     // A burst of output is cut to what the tail could hold anyway.
     for (const line of lines.slice(-200)) if (line.trim() !== '') this.#deps.log.add(line);
   }
 
   #flushStderr(): void {
-    if (this.#stderrRest.trim() !== '') this.#deps.log.add(this.#stderrRest);
+    // A key that never ended is not logged, neither when held back nor while its lines are being dropped.
+    const open = KEY_BEGIN.exec(this.#stderrRest);
+    const rest = this.#skippingKey ? '' : open ? `${this.#stderrRest.slice(0, open.index)}${REDACTED}` : this.#stderrRest;
+    if (rest.trim() !== '') this.#deps.log.add(rest);
     this.#stderrRest = '';
+    this.#skippingKey = false;
   }
 
   #finish(how: string): void {

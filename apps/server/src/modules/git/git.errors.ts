@@ -18,12 +18,23 @@ export function cleanGitOutput(text: string, maxLength = 1500): string {
     .join('\n')
     // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '')
-    .replace(/([a-z][a-z0-9+.-]*:\/\/)[^/@\s]+@/gi, '$1')
+    // Everything up to the last @ before the path: a password may itself contain an @.
+    .replace(/([a-z][a-z0-9+.-]*:\/\/)[^/?#\s]+@/gi, '$1')
     .replace(/^hint: .*$/gm, '')
     .replace(/\n{2,}/g, '\n')
     .trim();
   const redacted = redactSecrets(cleaned);
   return redacted.length > maxLength ? `${redacted.slice(0, maxLength)}…` : redacted;
+}
+
+/**
+ * Adds what git printed to the tail kept for explaining a failure. Each piece
+ * is redacted while it is whole, and only then is the tail cut to `max`
+ * characters: a credential cut in two at the start of the tail would no longer
+ * be recognised.
+ */
+export function appendToTail(tail: string, text: string, max: number): string {
+  return `${tail}\n${redactSecrets(text)}`.slice(-max);
 }
 
 export function gitError(status: number, code: GitErrorCode, message: string, details?: unknown): StudioError {

@@ -1,4 +1,5 @@
 import type { FastifyBaseLogger } from 'fastify';
+import { OutputTail } from '../../kernel/output-tail.js';
 import type { ProcessSupervisor } from '../../kernel/process.js';
 import { type RpcId, classifyMessage } from './protocol.js';
 
@@ -101,7 +102,7 @@ export class AppServerClient {
   #nextId = 1;
   #partial: Buffer[] = [];
   #partialBytes = 0;
-  #stderr = '';
+  readonly #stderr = new OutputTail(STDERR_TAIL_BYTES);
   #broken: ProcessEnded | ProtocolError | null = null;
   #ended = false;
   /** Resolves when the process has gone, whatever the reason. Never rejects. */
@@ -114,7 +115,7 @@ export class AppServerClient {
 
     child.stdout?.on('data', (chunk: Buffer) => this.#onData(chunk));
     child.stderr?.on('data', (chunk: Buffer) => {
-      this.#stderr = (this.#stderr + chunk.toString('utf8')).slice(-STDERR_TAIL_BYTES);
+      this.#stderr.append(chunk.toString('utf8'));
     });
     // A write after the process has gone must not take the server down with it.
     child.stdin?.on('error', () => {});
@@ -133,9 +134,9 @@ export class AppServerClient {
     });
   }
 
-  /** What the process wrote to its error stream last (unredacted: pass it through `redactSecrets` before use). */
+  /** What the process wrote to its error stream last, redacted as a whole before it was cut to length. */
   get stderrTail(): string {
-    return this.#stderr;
+    return this.#stderr.text();
   }
 
   get ended(): boolean {

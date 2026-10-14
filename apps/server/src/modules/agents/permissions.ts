@@ -274,6 +274,11 @@ const ENV_FILE = /^\.env(\.(?!(?:example|sample|template|dist|defaults)$)[\w.-]+
 
 /** Folders whose recursive removal is never legitimate. */
 const SYSTEM_ROOTS = ['/', '/home', '/Users', '/etc', '/usr', '/var', '/bin', '/sbin', '/lib', '/lib64', '/boot', '/opt', '/root', '/sys', '/proc', '/dev', '/System', '/Library', '/Applications'];
+/** A repository's own files that make git run programs: `.git/` (hooks, config), `.gitattributes` (filters), `.gitmodules`. */
+const GIT_INTERNALS = /(?:^|\/)\.git(?:\/|$)|\/\.git(?:attributes|modules)$/;
+/** Git settings whose value is a program, or that pull in more settings. */
+const GIT_PROGRAM_SETTING =
+  /^(?:core\.(?:sshcommand|fsmonitor|pager|editor|hookspath|askpass|gitproxy)|alias\.|credential\.|diff\.external|diff\.[^.=]+\.(?:textconv|command)|filter\.|merge\.[^.=]+\.driver|protocol\.ext|remote\.[^.=]+\.(?:uploadpack|receivepack)|gpg\.(?:[^.=]+\.)?program|sequence\.editor|uploadpack\.packobjectshook|include\.|includeif\.)/i;
 const BLOCK_DEVICE = /^\/dev\/(sd[a-z]|hd[a-z]|vd[a-z]|xvd[a-z]|nvme\d|mmcblk\d|disk\d|rdisk\d|dm-\d|md\d|loop\d|mapper\/)/;
 const HARMLESS_DEVICES = new Set(['/dev/null', '/dev/stdout', '/dev/stderr', '/dev/stdin', '/dev/tty', '/dev/zero']);
 
@@ -483,6 +488,12 @@ class Classifier {
     this.inspectPath(resolved, shown);
     for (const candidate of resolved.candidates) {
       if (BLOCK_DEVICE.test(candidate)) this.#deny(`${shown} is a raw disk; writing to it destroys what is on it.`, 'catastrophic');
+      // Hooks, filters and other programs named in a repository's own files run
+      // later, when someone uses git on it — including the Git panel, outside
+      // the agent's sandbox.
+      if (GIT_INTERNALS.test(candidate)) {
+        this.flag('privilege', `${shown} is part of git's own configuration; programs named there run whenever git is used on the repository.`);
+      }
     }
     if (resolved.candidates.length > 0 && resolved.candidates.every((candidate) => HARMLESS_DEVICES.has(candidate) || candidate.startsWith('/dev/fd/'))) {
       return;
@@ -937,7 +948,7 @@ class Classifier {
         index += 2;
       } else if (text === '-c') {
         const setting = args[index + 1]?.text ?? '';
-        if (/^(core\.sshcommand|core\.fsmonitor|core\.pager|core\.editor|alias\.|credential\.helper|diff\.external|protocol\.ext)/i.test(setting)) {
+        if (GIT_PROGRAM_SETTING.test(setting)) {
           this.flag('obfuscated', 'A git setting on the command line makes git run another program.');
         }
         index += 2;
@@ -957,6 +968,10 @@ class Classifier {
     const shortHas = (letter: string): boolean => rest.some((text) => /^-[a-zA-Z]+$/.test(text) && text.includes(letter));
     const readOnly = ['status', 'log', 'diff', 'show', 'rev-parse', 'ls-files', 'blame', 'describe', 'shortlog', 'grep', 'cat-file', 'ls-tree', 'ls-remote', 'reflog', 'whatchanged'].includes(sub) && !(sub === 'reflog' && has('expire', 'delete'));
     if (elsewhere && !readOnly) this.flag('outside-project', 'It runs git on a repository outside the project folder.');
+    const configRead = has('--get', '--get-all', '--get-regexp', '--list', '-l', 'get', 'list');
+    if (sub === 'config' && !configRead && rest.some((text) => GIT_PROGRAM_SETTING.test(text))) {
+      this.flag('privilege', 'It sets a git option that names a program, which then runs whenever git is used on the repository.');
+    }
 
     if (sub === 'push') {
       if (has('--force', '--force-with-lease', '--force-if-includes', '--mirror', '--delete', '--prune') || shortHas('f') || shortHas('d') || rest.some((text) => text.startsWith('--force-with-lease=') || /^\+./.test(text) || /^:[^:]/.test(text))) {

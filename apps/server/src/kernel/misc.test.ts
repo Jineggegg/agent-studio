@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ConfigError, loadConfig, parseOrigin } from './config.js';
-import { Database } from './database.js';
+import { Database, KEPT_UPGRADE_SNAPSHOTS } from './database.js';
 import { EventBus } from './events.js';
 import { looksLikeApiPath } from './http.js';
 import { SECRET_HINT, redactSecrets, secretHint } from './redact.js';
@@ -60,6 +63,70 @@ describe('Database', () => {
     db.run('INSERT INTO t (v, w) VALUES (?, ?)', 'a', 'b');
     expect(db.get<{ v: string; w: string }>('SELECT v, w FROM t')).toEqual({ v: 'a', w: 'b' });
     db.close();
+  });
+
+  describe('across versions', () => {
+    let dir: string;
+    const v1 = [{ version: 1, name: 'one', sql: 'CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)' }];
+    const v2 = [...v1, { version: 2, name: 'two', sql: 'ALTER TABLE t ADD COLUMN w TEXT' }];
+    const part = (table: string) => [{ version: 1, name: 'one', sql: `CREATE TABLE ${table} (id INTEGER PRIMARY KEY)` }];
+    const snapshots = () => (existsSync(path.join(dir, 'backups')) ? readdirSync(path.join(dir, 'backups')) : []);
+
+    beforeEach(() => {
+      dir = mkdtempSync(path.join(os.tmpdir(), 'studio-db-'));
+    });
+    afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+    it('copies an existing database aside, owner-only, before the first migration of an upgrade', () => {
+      const file = path.join(dir, 'studio.db');
+      const first = new Database(file);
+      first.migrate('m', v1);
+      expect(first.upgradeSnapshot).toBeNull(); // a new database has nothing to keep
+      first.run('INSERT INTO t (v) VALUES (?)', 'kept');
+      first.close();
+
+      const upgraded = new Database(file);
+      upgraded.migrate('m', v2);
+      upgraded.migrate('other', part('other'));
+      const copy = upgraded.upgradeSnapshot!;
+      expect(snapshots()).toEqual([path.basename(copy)]); // one copy per run, before the first change
+      expect(statSync(copy).mode & 0o777).toBe(0o600);
+      upgraded.close();
+
+      const before = new Database(copy);
+      expect(before.get('SELECT v FROM t')).toEqual({ v: 'kept' });
+      expect(before.all<{ name: string }>('PRAGMA table_info(t)').map((column) => column.name)).toEqual(['id', 'v']);
+      before.close();
+    });
+
+    it('takes no copy when nothing is pending, and keeps only the last few', () => {
+      const file = path.join(dir, 'studio.db');
+      const first = new Database(file);
+      first.migrate('m', v1);
+      first.close();
+      for (let round = 0; round < KEPT_UPGRADE_SNAPSHOTS + 2; round += 1) {
+        const db = new Database(file);
+        db.migrate('m', v1);
+        expect(db.upgradeSnapshot).toBeNull();
+        db.migrate(`new-part-${round}`, part(`p${round}`));
+        expect(db.upgradeSnapshot).not.toBeNull();
+        db.close();
+      }
+      expect(snapshots()).toHaveLength(KEPT_UPGRADE_SNAPSHOTS);
+    });
+
+    it('refuses a database a newer version has moved past, and changes nothing', () => {
+      const file = path.join(dir, 'studio.db');
+      const newer = new Database(file);
+      newer.migrate('m', v2);
+      newer.close();
+
+      const older = new Database(file);
+      expect(() => older.migrate('m', v1)).toThrow(/newer version.*schema 2.*knows 1.*Nothing was changed/s);
+      expect(older.all<{ version: number }>("SELECT version FROM schema_migrations WHERE module = 'm'")).toHaveLength(2);
+      expect(snapshots()).toEqual([]);
+      older.close();
+    });
   });
 
   it('refuses migration lists with gaps', () => {
@@ -131,6 +198,10 @@ describe('EventBus', () => {
   });
 });
 
+// Put together at run time so that the source holds nothing in the exact shape secret scanners look for.
+const FAKE_GOOGLE_KEY = ['AIza', 'SyA-test_0123456789abcdefghijklmnop'].join('');
+const FAKE_GITLAB_TOKEN = ['glpat', '-test0123456789abcdefgh'].join('');
+
 describe('redactSecrets', () => {
   it.each([
     ['key sk-abcdefghijklmnopqrstuvwxyz123456 used', 'sk-abcdefghijklmnopqrstuvwxyz123456'],
@@ -139,6 +210,11 @@ describe('redactSecrets', () => {
     ['DB_PASSWORD=hunter2hunter2', 'hunter2hunter2'],
     ['"api_key": "abcd1234efgh5678"', 'abcd1234efgh5678'],
     ['-----BEGIN PRIVATE KEY-----\nMIIabc\n-----END PRIVATE KEY-----', 'MIIabc'],
+    [`google key ${FAKE_GOOGLE_KEY} rejected`, FAKE_GOOGLE_KEY],
+    [`gitlab ${FAKE_GITLAB_TOKEN}`, FAKE_GITLAB_TOKEN],
+    ['fetch https://deploy:hunter2-test@git.example.com/repo.git failed', 'hunter2-test'],
+    ['fetch https://deploy:p@ss-test@git.example.com/repo.git failed', 'ss-test'],
+    ['GET https://api.example.com/v1/models?key=test-query-secret&page=2', 'test-query-secret'],
   ])('removes the secret from %j', (text, secret) => {
     const result = redactSecrets(text);
     expect(result).not.toContain(secret);

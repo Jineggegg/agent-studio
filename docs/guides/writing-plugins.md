@@ -19,8 +19,8 @@ is small enough to read in a few minutes and is walked through at the end.
   thing it does not ship is the SDK, which the Studio provides.
 - **A plugin starts disabled.** The owner sees what it asks for, grants all or
   some of it, and approves exactly the files that are installed (by their
-  content hash). If the files change afterwards other than through an update
-  the owner asked for, the plugin is disabled until it is approved again.
+  content hash). If the files change afterwards — through an update or
+  otherwise — the plugin is disabled until it is approved again.
 - **Server-side code runs in its own process**, started when first needed and
   stopped when idle. It has no network, sees no file but its own, and gets a
   scrubbed environment. All it can do beyond computing is ask the Studio,
@@ -425,11 +425,12 @@ log, with the content hash and — for a Git source — the commit.
   prompts or the machine's own Git configuration, has a time limit, and runs
   sandboxed where bubblewrap is available. A symbolic link in the repository
   arrives as a text file.
-- **Update** fetches the plugin again from where it came. The new version keeps
-  running only if it asks for no new permission and contributes nothing
-  different (tools and their descriptions, panels, hooks, link tiles); the
-  owner asking for the update is then the approval of the new files. Otherwise
-  it is installed but disabled, and the plugin list says what changed.
+- **Update** fetches the plugin again from where it came. When nothing changed
+  upstream, nothing happens. New files are installed but disabled until the
+  owner approves them — asking for the update is not reviewing the code it
+  brings — and the plugin list says what changed: new permissions, different
+  contributions (tools and their descriptions, panels, hooks, link tiles), or
+  only the content.
 - **Uninstall** removes the code and, if asked, the plugin's data. Data that is
   kept will be seen by a later plugin with the same id; the plugin list marks
   such a plugin.

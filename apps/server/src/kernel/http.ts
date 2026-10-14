@@ -11,7 +11,7 @@ import { isLoopbackHostname, type StudioConfig } from './config.js';
 import { safeEqual } from './crypto.js';
 import { StudioError, badRequest, describeError, forbidden, isStudioError, unauthorized } from './errors.js';
 import type { Authenticator, Principal, TokenScope } from './principal.js';
-import { maskAddress, redactSecrets } from './redact.js';
+import { maskAddress, redactLogFields, redactSecrets } from './redact.js';
 
 /**
  * `public`  — no credentials needed (sign-in, health).
@@ -104,6 +104,45 @@ function hostnameOf(hostHeader: string): string {
   return colon === -1 ? hostHeader : hostHeader.slice(0, colon);
 }
 
+/**
+ * For a route that API tokens may use, but not for this particular change:
+ * throws unless the caller is a person in a signed-in browser.
+ */
+export function requireBrowser(principal: Pick<Principal, 'via'>): void {
+  if (principal.via !== 'session') throw forbidden('This can only be done from a signed-in browser, not with an API token.', 'session_required');
+}
+
+/** The server log's settings. Every entry passes through {@link redactLogFields}. */
+export function loggerOptions(level: string, stream?: { write(line: string): void }) {
+  return {
+    level,
+    ...(stream ? { stream } : {}),
+    redact: {
+      paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
+      censor: '[redacted]',
+    },
+    formatters: {
+      log: (fields: Record<string, unknown>) => redactLogFields(fields),
+    },
+    hooks: {
+      // The message itself: Fastify logs an unhandled error with its message as the text.
+      logMethod(this: unknown, args: unknown[], method: (...args: unknown[]) => void) {
+        method.apply(this, args.map((arg) => (typeof arg === 'string' ? redactSecrets(arg) : arg)));
+      },
+    },
+    serializers: {
+      req: (request: FastifyRequest) => ({
+        method: request.method,
+        // Query strings are dropped: they are the likeliest place for something sensitive.
+        // Path segments that are themselves capabilities are masked.
+        path: (request.url.split('?')[0] ?? '').replace(/(\/api\/plugins\/panel\/)[^/]+/, '$1[grant]'),
+        // Enough to tell networks apart, not enough to identify a person.
+        ip: maskAddress(request.ip),
+      }),
+    },
+  };
+}
+
 export class HttpKernel {
   readonly app: FastifyInstance;
   readonly #config: StudioConfig;
@@ -114,26 +153,7 @@ export class HttpKernel {
     this.#config = config;
     this.#publicHosts = new Map(config.publicOrigins.map((origin) => [new URL(origin).host.toLowerCase(), origin]));
     this.app = Fastify({
-      logger:
-        config.logLevel === 'silent'
-          ? false
-          : {
-              level: config.logLevel,
-              redact: {
-                paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
-                censor: '[redacted]',
-              },
-              serializers: {
-                req: (request: FastifyRequest) => ({
-                  method: request.method,
-                  // Query strings are dropped: they are the likeliest place for something sensitive.
-                  // Path segments that are themselves capabilities are masked.
-                  path: (request.url.split('?')[0] ?? '').replace(/(\/api\/plugins\/panel\/)[^/]+/, '$1[grant]'),
-                  // Enough to tell networks apart, not enough to identify a person.
-                  ip: maskAddress(request.ip),
-                }),
-              },
-            },
+      logger: config.logLevel === 'silent' ? false : loggerOptions(config.logLevel),
       trustProxy: config.trustProxy ? 'loopback' : false,
       bodyLimit: 1024 * 1024,
       // Slow-request protection: a client gets a bounded time to send its request.
@@ -388,7 +408,10 @@ export class HttpKernel {
           error: { code, message: fastifyError.statusCode === 413 ? 'That is too large.' : 'The request could not be read.' },
         });
       }
-      request.log.error({ err: { message: redactSecrets(describeError(error)), stack: error instanceof Error ? error.stack : undefined } }, 'request failed');
+      request.log.error(
+        { err: { message: redactSecrets(describeError(error)), stack: error instanceof Error && error.stack ? redactSecrets(error.stack) : undefined } },
+        'request failed',
+      );
       return reply.status(500).send({ error: { code: 'internal_error', message: 'Something went wrong on the server.' } });
     });
 

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { unavailable } from '../../kernel/errors.js';
-import type { ProcessSupervisor, RunResult } from '../../kernel/process.js';
+import type { ProcessSupervisor, RunResult, Sandbox } from '../../kernel/process.js';
 
 /**
  * How this server runs git.
@@ -20,7 +20,10 @@ import type { ProcessSupervisor, RunResult } from '../../kernel/process.js';
  *   fetch, push …). These behave as git does in a terminal, hooks included,
  *   because a commit that silently skipped the project's hooks would be a lie.
  *   What stays off even here: prompts of any kind, editors, pagers, the
- *   file-system monitor and the `ext::` transport.
+ *   file-system monitor and the `ext::` transport. Where the server has a
+ *   sandbox these run in the agents' `mask` profile: hooks and filters see the
+ *   same files, credentials and network as in a terminal, but not the Studio's
+ *   own data, since an agent may have written them.
  *
  * Arguments are always an array (no shell), the environment is the kernel's
  * scrubbed one, messages are forced to plain English so that failures can be
@@ -127,11 +130,13 @@ const QUERY_ENV = {
 
 export class GitExec {
   readonly #processes: ProcessSupervisor;
+  readonly #sandbox: Pick<Sandbox, 'wrap'> | null;
   readonly timeouts: GitTimeouts;
 
-  constructor(processes: ProcessSupervisor, timeouts: GitTimeouts = { ...DEFAULT_GIT_TIMEOUTS }) {
+  constructor(processes: ProcessSupervisor, timeouts: GitTimeouts = { ...DEFAULT_GIT_TIMEOUTS }, sandbox: Pick<Sandbox, 'wrap'> | null = null) {
     this.#processes = processes;
     this.timeouts = timeouts;
+    this.#sandbox = sandbox;
   }
 
   /** The environment for a git child: the kernel's scrubbed baseline plus the switches above. */
@@ -153,9 +158,17 @@ export class GitExec {
     return env;
   }
 
-  async #run(cwd: string | null, args: readonly string[], env: Record<string, string>, options: GitCallOptions, timeoutMs: number): Promise<RunResult> {
+  async #run(
+    cwd: string | null,
+    args: readonly string[],
+    env: Record<string, string>,
+    options: GitCallOptions,
+    timeoutMs: number,
+    sandboxed = false,
+  ): Promise<RunResult> {
+    const command = sandboxed && this.#sandbox ? this.#sandbox.wrap('git', args, { kind: 'mask' }) : { file: 'git', args: [...args] };
     try {
-      return await this.#processes.run('git', args, {
+      return await this.#processes.run(command.file, command.args, {
         ...(cwd === null ? {} : { cwd }),
         env,
         timeoutMs: options.timeoutMs ?? timeoutMs,
@@ -192,12 +205,12 @@ export class GitExec {
 
   /** A local change the user asked for. Hooks and repository configuration apply, as in a terminal. */
   act(cwd: string, args: readonly string[], options: GitCallOptions = {}): Promise<RunResult> {
-    return this.#run(cwd, [...ALWAYS, ...args], this.env(cwd, options.env), options, this.timeouts.act);
+    return this.#run(cwd, [...ALWAYS, ...args], this.env(cwd, options.env), options, this.timeouts.act, true);
   }
 
   /** Fetch, pull, push: an action that talks to the repository's configured remote. */
   network(cwd: string, args: readonly string[], options: GitCallOptions = {}): Promise<RunResult> {
-    return this.#run(cwd, [...ALWAYS, ...args], this.env(cwd, options.env), options, this.timeouts.network);
+    return this.#run(cwd, [...ALWAYS, ...args], this.env(cwd, options.env), options, this.timeouts.network, true);
   }
 
   /** Arguments and environment for a clone, which runs outside any repository and is streamed by the caller. */

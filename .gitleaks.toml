@@ -3,16 +3,200 @@ title = "Agent Cloud Studio secret scanning"
 [extend]
 useDefault = true
 
-[allowlist]
-description = "Fixtures that only look like secrets"
 # Tests need strings shaped like credentials to prove that redaction, refusal
-# and encryption work. They are confined to test files and are not real.
+# and encryption work. A finding is ignored only when BOTH hold:
+#   - it is in a test file or a test fixture, and
+#   - the value itself is recognisably made up (a run like 0123456789 or
+#     abcdef, a word such as "test" or "standin", a published example vector,
+#     or a private-key block far too short to be a key).
+# A real key pasted into a test file therefore still fails the scan;
+# scripts/gitleaks-canary.sh checks that it does.
+#
+# The allow-lists sit on each rule rather than in one global [[allowlists]]
+# table: gitleaks skips a whole file when a global allow-list's path matches,
+# without applying condition = "AND", which would hide real keys in tests.
+
+[[rules]]
+id = "generic-api-key"
+[[rules.allowlists]]
+description = "Made-up values in tests"
+condition = "AND"
 paths = [
-  '''.*\.test\.tsx?$''',
-  '''apps/server/src/testing/.*''',
-  '''apps/server/src/modules/[^/]+/testing/.*''',
-  '''apps/server/test/.*''',
-  '''tests/.*''',
-  '''docs/requirements/.*''',
-  '''package-lock\.json$''',
+  '''\.test\.tsx?$''',
+  '''^apps/server/src/testing/''',
+  '''^apps/server/src/modules/[^/]+/testing/''',
+  '''^apps/server/test/''',
+  '''^tests/''',
+  '''^scripts/gitleaks-canary\.sh$''',
+]
+regexTarget = "secret"
+regexes = [
+  # Ascending and descending runs nobody's random generator produces.
+  '''123456789|abcdefgh|zyxwvu|abcd1234|12345abcde|Ab12Cd34''',
+  '''abcdef(?:0123|123456)''',
+  # A hand-typed countdown (4f 9a 8b 7c 6d 5e ...).
+  '''4f9a8b7c6d5e4f3a2b1c0d9e8f7a''',
+  # Words that say what the value is.
+  '''(?i)(?:test|standin|planted|attacker|replacement|second|third|perfectly-fine|example)''',
+  # Web Push subscription secrets from published examples (RFC 8291 section 5
+  # and the W3C Push API examples), not from any real subscription.
+  '''^(?:BTBZMqHH6r4Tts7J_aSIgg|tBHItJI5svbpez7KI4CCXg)$''',
+  # The fixed PKCS#8 header every RSA private key starts with; on its own it
+  # is not secret (tests use it to build a key that must come out redacted).
+  '''^MIIE[vw]QIBADANBgkqhkiG9w0BAQEFAASC[A-Za-z0-9+/]{0,4}$''',
+  # The made-up JWTs allowed under the jwt rule further down, which this
+  # rule also picks up.
+  '''^eyJ[A-Za-z0-9_-]+\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.''',
+]
+
+[[rules]]
+id = "curl-auth-header"
+[[rules.allowlists]]
+description = "Made-up values in tests"
+condition = "AND"
+paths = [
+  '''\.test\.tsx?$''',
+  '''^apps/server/src/testing/''',
+  '''^apps/server/src/modules/[^/]+/testing/''',
+  '''^apps/server/test/''',
+  '''^tests/''',
+  '''^scripts/gitleaks-canary\.sh$''',
+]
+regexTarget = "secret"
+regexes = [
+  '''123456789|abcdefghij''',
+  # "user:password123" in base64.
+  '''^dXNlcjpwYXNzd29yZDEyMw==$''',
+]
+
+[[rules]]
+id = "github-pat"
+[[rules.allowlists]]
+description = "Made-up values in tests"
+condition = "AND"
+paths = [
+  '''\.test\.tsx?$''',
+  '''^apps/server/src/testing/''',
+  '''^apps/server/src/modules/[^/]+/testing/''',
+  '''^apps/server/test/''',
+  '''^tests/''',
+  '''^scripts/gitleaks-canary\.sh$''',
+]
+regexTarget = "secret"
+regexes = [
+  '''123456789|zyxwvu''',
+]
+
+[[rules]]
+id = "gitlab-pat"
+[[rules.allowlists]]
+description = "Made-up values in tests"
+condition = "AND"
+paths = [
+  '''\.test\.tsx?$''',
+  '''^apps/server/src/testing/''',
+  '''^apps/server/src/modules/[^/]+/testing/''',
+  '''^apps/server/test/''',
+  '''^tests/''',
+  '''^scripts/gitleaks-canary\.sh$''',
+]
+regexTarget = "secret"
+regexes = [
+  '''123456789|abcdefgh''',
+]
+
+[[rules]]
+id = "aws-access-token"
+[[rules.allowlists]]
+description = "Made-up values in tests"
+condition = "AND"
+paths = [
+  '''\.test\.tsx?$''',
+  '''^apps/server/src/testing/''',
+  '''^apps/server/src/modules/[^/]+/testing/''',
+  '''^apps/server/test/''',
+  '''^tests/''',
+  '''^scripts/gitleaks-canary\.sh$''',
+]
+regexTarget = "secret"
+regexes = [
+  '''ABCDEFGH''',
+]
+
+[[rules]]
+id = "slack-webhook-url"
+[[rules.allowlists]]
+description = "Made-up values in tests"
+condition = "AND"
+paths = [
+  '''\.test\.tsx?$''',
+  '''^apps/server/src/testing/''',
+  '''^apps/server/src/modules/[^/]+/testing/''',
+  '''^apps/server/test/''',
+  '''^tests/''',
+  '''^scripts/gitleaks-canary\.sh$''',
+]
+regexTarget = "secret"
+regexes = [
+  # Placeholder workspace and channel ids.
+  '''/T0{8}/B0{8}/''',
+]
+
+[[rules]]
+id = "jwt"
+[[rules.allowlists]]
+description = "Made-up values in tests"
+condition = "AND"
+paths = [
+  '''\.test\.tsx?$''',
+  '''^apps/server/src/testing/''',
+  '''^apps/server/src/modules/[^/]+/testing/''',
+  '''^apps/server/test/''',
+  '''^tests/''',
+  '''^scripts/gitleaks-canary\.sh$''',
+]
+regexTarget = "secret"
+regexes = [
+  # The textbook payload {"sub":"1234567890"}, or a signature that is the
+  # word "signature".
+  '''^eyJ[A-Za-z0-9_-]+\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.''',
+  '''\.c2lnbmF0dXJl[A-Za-z0-9_-]*$''',
+]
+
+[[rules]]
+id = "private-key"
+[[rules.allowlists]]
+description = "Made-up values in tests"
+condition = "AND"
+paths = [
+  '''\.test\.tsx?$''',
+  '''^apps/server/src/testing/''',
+  '''^apps/server/src/modules/[^/]+/testing/''',
+  '''^apps/server/test/''',
+  '''^tests/''',
+  '''^scripts/gitleaks-canary\.sh$''',
+]
+regexTarget = "secret"
+regexes = [
+  # A block shorter than any real key (RSA and Ed25519 keys run to several
+  # hundred characters at least).
+  '''^-----BEGIN[A-Z ]*PRIVATE KEY-----[\s\S]{0,170}$''',
+]
+
+[[rules]]
+id = "gcp-api-key"
+[[rules.allowlists]]
+description = "Made-up values in tests"
+condition = "AND"
+paths = [
+  '''\.test\.tsx?$''',
+  '''^apps/server/src/testing/''',
+  '''^apps/server/src/modules/[^/]+/testing/''',
+  '''^apps/server/test/''',
+  '''^tests/''',
+  '''^scripts/gitleaks-canary\.sh$''',
+]
+regexTarget = "secret"
+regexes = [
+  '''123456789|abcdefgh|(?i)test''',
 ]

@@ -99,6 +99,7 @@ export function errorFromResult(result: CliResult, apiError: ApiErrorMessage | n
 export interface ExitFacts {
   readonly code: number | null;
   readonly signal: NodeJS.Signals | null;
+  /** The end of the error output, redacted as a whole before it was cut to length. */
   readonly stderr: string;
   /** The first line of standard output that was not JSON, if any. */
   readonly strayLine: string | null;
