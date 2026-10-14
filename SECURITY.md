@@ -146,4 +146,4 @@ Security fixes go into the latest release only.
    your projects.
 7. Supply `AGENT_STUDIO_MASTER_KEY` from a secret manager if backups of the
    data directory leave the machine.
-8. Review **Settings → Account & security → Security log** now and then.
+8. Review the recent security events under **Settings → Account & security** now and then.

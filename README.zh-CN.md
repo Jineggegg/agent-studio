@@ -40,7 +40,7 @@ Agent Cloud Studio 跑在你自己的机器上（工作站、家用服务器或 
 
 ## 快速开始
 
-需要 Node.js **22.13 或更高**和 git，不需要编译器。支持 Linux 和 macOS；Linux 上安装 `bubblewrap` 才有 Agent 沙箱。
+需要 Node.js **22.13 或更高**和 git，不需要编译器。在 Linux 上开发和测试，安装 `bubblewrap` 后 Agent 才有沙箱。macOS 理论上可用但未经测试，且没有沙箱（见 [SECURITY.md](SECURITY.md)）；此时除非你明确允许，否则 Codex 会拒绝运行。
 
 ```bash
 git clone https://github.com/Jineggegg/agent-studio.git

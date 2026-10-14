@@ -3,10 +3,16 @@
 **Status:** accepted
 
 ## Decision
-A run that nobody is watching — a scheduled automation, a deferred message —
-is marked unattended. Where an attended run would ask a person, an unattended
-run is **denied**, and the denial is recorded in the transcript, the
-automation's history and a notification. It never waits and never proceeds.
+A run that nobody is watching — a scheduled automation — is marked
+unattended. Where an attended run would ask a person, an unattended run is
+**denied**, and the denial is recorded in the transcript, the automation's
+history and a notification. It never waits and never proceeds.
+
+A *deferred message* is different: it is a message a person wrote for a
+conversation they are working in, sent at a time they chose. It behaves like a
+typed message — a request that needs approval waits for that person, who is
+told by a push notification — because denying would silently throw away work
+they asked for.
 
 An automation may run in `plan` or `ask` (which therefore means "read, and
 report what it would have changed"), and in `accept-edits` or `auto` only in a

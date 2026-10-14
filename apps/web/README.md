@@ -20,8 +20,7 @@ npm run build -w @agent-studio/web  # production build into apps/web/dist
 `http://127.0.0.1:5420/dev/components` (development builds only) shows every
 component in every state. Look there before writing a new one.
 
-After `npm run build`, **restart the server**: it lists `dist/` once at start,
-so the freshly hashed files of a new build are unknown to a running one.
+After `npm run build` the server serves the new files at once: static files are looked up on each request, so no restart is needed.
 
 ---
 

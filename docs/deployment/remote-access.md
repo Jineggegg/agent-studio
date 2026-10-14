@@ -28,8 +28,11 @@ With Tailscale on the server and on your devices, serve the Studio on your
 tailnet over HTTPS:
 
 ```
-tailscale serve --bg https / http://127.0.0.1:7420
+tailscale serve --bg http://127.0.0.1:7420
 ```
+
+(Tailscale 1.52 or newer; older versions use a different syntax — check
+`tailscale serve --help`. This was not tested as part of this project.)
 
 Then set `AGENT_STUDIO_PUBLIC_ORIGINS=https://<machine>.<tailnet>.ts.net` and
 restart. Only devices on your tailnet can reach it. Do not use `tailscale

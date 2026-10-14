@@ -64,8 +64,10 @@ phone / tablet / laptop ──HTTPS──▶ your server (Agent Cloud Studio) �
 
 ## Quick start
 
-You need Node.js **22.13 or newer** and git. No compiler is required. Linux and
-macOS are supported; on Linux install `bubblewrap` to get the agent sandbox.
+You need Node.js **22.13 or newer** and git. No compiler is required. It is
+developed and tested on Linux, where installing `bubblewrap` gives agents a
+sandbox. macOS should work but is untested, and has no sandbox (see
+[SECURITY.md](SECURITY.md)); Codex then refuses to run unless you allow it.
 
 ```bash
 git clone https://github.com/Jineggegg/agent-studio.git
