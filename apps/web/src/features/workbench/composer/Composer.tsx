@@ -1,5 +1,5 @@
 import { AGENT_LIMITS } from '@agent-studio/protocol';
-import { ArrowUp, ChevronDown, CornerDownRight, File as FileIcon, ListPlus, Paperclip, RotateCw, Square, TextQuote, TriangleAlert, X } from 'lucide-react';
+import { ArrowUp, ChevronDown, CornerDownRight, File as FileIcon, Folder, ListPlus, Paperclip, RotateCw, Square, TextQuote, TriangleAlert, X } from 'lucide-react';
 import { type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode, type Ref, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useT } from '@/i18n';
 import { useCanHover } from '@/platform/media';
@@ -8,6 +8,7 @@ import { Menu, Spinner, isImeConfirm } from '@/ui';
 import { type PendingAttachment, type Rejection, formatBytes } from './attachments';
 import { addFiles, removeAttachment, retryUpload, useAttachments } from './attachmentStore';
 import { type DraftKey, sessionOfDraft, setDraft, useDrafts } from './drafts';
+import { type MentionMatch, type MentionSource, type MentionToken, insertMention, mentionAt } from './mentions';
 
 export interface ComposerHandle {
   focus(): void;
@@ -45,6 +46,8 @@ export interface ComposerProps {
   onClearQuote: () => void;
   /** Agent, model and effort controls. */
   controls?: ReactNode;
+  /** The project's files, for "@": typing `@name` offers them and inserts the chosen path. Absent outside a project. */
+  mentions?: MentionSource | undefined;
   /** Whether the field holds anything (text, a file, a quote): lets the caller decide where Stop lives. */
   onContentChange?: (hasContent: boolean) => void;
   autoFocus?: boolean;
@@ -118,6 +121,7 @@ export function Composer({
   quote,
   onClearQuote,
   controls,
+  mentions,
   onContentChange,
   autoFocus,
   ref,
@@ -139,6 +143,13 @@ export function Composer({
   const composing = useRef(false);
   const compositionEndedAt = useRef(-1000);
   const dragDepth = useRef(0);
+  /** The "@name" being typed at the caret, and what the project has by that name. */
+  const [mention, setMention] = useState<MentionToken | null>(null);
+  const [matches, setMatches] = useState<readonly MentionMatch[]>([]);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [mentionState, setMentionState] = useState<'idle' | 'searching' | 'failed'>('idle');
+  /** A mention put away with Escape stays away until its "@" is typed again. */
+  const dismissedAt = useRef<number | null>(null);
 
   const failedText = t('workbench.attach.failed');
   const hasText = text.trim() !== '';
@@ -176,6 +187,66 @@ export function Composer({
     element.style.overflowY = element.scrollHeight > limit ? 'auto' : 'hidden';
   }, [text]);
 
+  // ---- "@" ----------------------------------------------------------------------
+
+  const syncMention = useCallback(
+    (value: string, caret: number | null, selectionEnd: number | null) => {
+      if (!mentions || caret === null || caret !== selectionEnd || composing.current) return setMention(null);
+      const found = mentionAt(value, caret);
+      if (!found) dismissedAt.current = null;
+      setMention(found && dismissedAt.current !== found.start ? found : null);
+    },
+    [mentions],
+  );
+
+  const mentionQuery = mention?.query ?? null;
+  useEffect(() => {
+    setMentionIndex(0);
+    if (!mentions || mentionQuery === null || mentionQuery.trim() === '') {
+      setMatches([]);
+      setMentionState('idle');
+      return;
+    }
+    // Only the newest answer counts: an earlier, slower one is cancelled, not shown late.
+    const controller = new AbortController();
+    setMentionState('searching');
+    const timer = window.setTimeout(() => {
+      mentions.search(mentionQuery, controller.signal).then(
+        (found) => {
+          if (controller.signal.aborted) return;
+          setMatches(found.slice(0, 10));
+          setMentionState('idle');
+        },
+        () => {
+          if (controller.signal.aborted) return;
+          setMatches([]);
+          setMentionState('failed');
+        },
+      );
+    }, 140);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [mentions, mentionQuery]);
+
+  const chooseMention = useCallback(
+    (match: MentionMatch) => {
+      if (!mention) return;
+      const current = useDrafts.getState().texts[draftKey] ?? '';
+      const next = insertMention(current, mention, match.kind === 'directory' ? `${match.path}/` : match.path);
+      setDraft(draftKey, next.text);
+      setMention(null);
+      window.requestAnimationFrame(() => {
+        const element = field.current;
+        if (!element) return;
+        element.focus({ preventScroll: true });
+        element.setSelectionRange(next.caret, next.caret);
+      });
+    },
+    [mention, draftKey],
+  );
+
   const submit = useCallback(async () => {
     if (lock.current || blocked) return;
     const current = useDrafts.getState().texts[draftKey] ?? '';
@@ -198,6 +269,25 @@ export function Composer({
   }, [blocked, draftKey, mode, onSubmit, quote]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mention && !composing.current && !isImeConfirm(event)) {
+      // While files are on offer the arrows, Enter and Tab belong to the list; Escape puts it away and nothing else.
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        dismissedAt.current = mention.start;
+        return setMention(null);
+      }
+      if (matches.length > 0) {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          return setMentionIndex((index) => (index + (event.key === 'ArrowDown' ? 1 : matches.length - 1)) % matches.length);
+        }
+        if ((event.key === 'Enter' || event.key === 'Tab') && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey) {
+          event.preventDefault();
+          return chooseMention(matches[Math.min(mentionIndex, matches.length - 1)]!);
+        }
+      }
+    }
     if (event.key === 'Tab' && event.shiftKey && onCycleMode && !composing.current) {
       event.preventDefault();
       onCycleMode();
@@ -296,6 +386,42 @@ export function Composer({
           </button>
         </div>
       )}
+      {mention && mentions && (
+        <div className="wb-mentions" id={`mentions-${draftKey}`} role="listbox" aria-label={t('workbench.mention.label')}>
+          {matches.length > 0 ? (
+            matches.map((match, index) => {
+              const folder = match.path.includes('/') ? match.path.slice(0, match.path.lastIndexOf('/')) : '';
+              return (
+                <button
+                  key={match.path}
+                  type="button"
+                  role="option"
+                  id={`mentions-${draftKey}-${index}`}
+                  className="wb-mentions__item"
+                  aria-selected={index === Math.min(mentionIndex, matches.length - 1)}
+                  onClick={() => chooseMention(match)}
+                  onPointerMove={() => setMentionIndex(index)}
+                  {...keepFocus}
+                >
+                  {match.kind === 'directory' ? <Folder size={16} aria-hidden="true" /> : <FileIcon size={16} aria-hidden="true" />}
+                  <span className="wb-mentions__name u-truncate">{match.name}</span>
+                  {folder && <span className="wb-mentions__folder u-truncate">{folder}</span>}
+                </button>
+              );
+            })
+          ) : (
+            <p className="wb-mentions__note">
+              {mention.query.trim() === ''
+                ? t('workbench.mention.hint')
+                : mentionState === 'searching'
+                  ? t('workbench.mention.searching')
+                  : mentionState === 'failed'
+                    ? t('workbench.mention.failed')
+                    : t('workbench.mention.none', { query: mention.query })}
+            </p>
+          )}
+        </div>
+      )}
       <label className="visually-hidden" htmlFor={`composer-${draftKey}`}>
         {placeholder}
       </label>
@@ -310,15 +436,25 @@ export function Composer({
         autoCapitalize="sentences"
         spellCheck
         aria-invalid={tooLong || undefined}
-        onChange={(event) => setDraft(draftKey, event.target.value)}
+        aria-autocomplete={mentions ? 'list' : undefined}
+        aria-controls={mention ? `mentions-${draftKey}` : undefined}
+        aria-activedescendant={mention && matches.length > 0 ? `mentions-${draftKey}-${Math.min(mentionIndex, matches.length - 1)}` : undefined}
+        onChange={(event) => {
+          setDraft(draftKey, event.target.value);
+          syncMention(event.target.value, event.target.selectionStart, event.target.selectionEnd);
+        }}
+        onSelect={(event) => syncMention(event.currentTarget.value, event.currentTarget.selectionStart, event.currentTarget.selectionEnd)}
+        onBlur={() => setMention(null)}
         onKeyDown={onKeyDown}
         onPaste={onPaste}
         onCompositionStart={() => {
           composing.current = true;
+          setMention(null);
         }}
         onCompositionEnd={(event) => {
           composing.current = false;
           compositionEndedAt.current = event.timeStamp;
+          syncMention(event.currentTarget.value, event.currentTarget.selectionStart, event.currentTarget.selectionEnd);
         }}
       />
       {attachments.length > 0 && (

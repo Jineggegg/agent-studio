@@ -14,6 +14,7 @@ import {
   dismissRunResponseSchema,
   draftSchema,
   eventPageSchema,
+  fileNameSearchSchema,
   messageReceiptSchema,
   messageSearchResponseSchema,
   permissionRuleListSchema,
@@ -74,6 +75,10 @@ export const workbenchApi = {
     api.get('/api/sessions/search', { schema: messageSearchResponseSchema, query: { q, projectId: projectId ?? undefined, limit: 20 }, ...(signal ? { signal } : {}) }),
   presence: (report: PresenceRequest, keepalive = false) => api.put('/api/sessions/presence', report, { keepalive, timeoutMs: 8_000 }),
   seen: (sessionId: string) => api.post(`/api/sessions/${enc(sessionId)}/seen`, undefined, { schema: sessionSchema }),
+
+  // ---- "@" in the message field: a project's files by name ----------------------
+  searchFiles: (projectId: string, query: string, signal?: AbortSignal) =>
+    api.get(`/api/projects/${enc(projectId)}/files/search`, { schema: fileNameSearchSchema, query: { query, limit: 10 }, timeoutMs: 10_000, ...(signal ? { signal } : {}) }).then((found) => found.results),
 
   // ---- one session's log ------------------------------------------------------
   state: (sessionId: string, signal?: AbortSignal) => api.get(`/api/sessions/${enc(sessionId)}/state`, { schema: sessionSnapshotSchema, ...(signal ? { signal } : {}) }),

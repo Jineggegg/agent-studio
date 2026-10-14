@@ -1,0 +1,381 @@
+/*
+ * What the project tools share (class prefix `pt-`): the layout of a panel,
+ * its toolbar, a row that slides, folded technical detail. Tokens only.
+ */
+
+.pt-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.pt-toolbar {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 2px;
+  min-height: 48px;
+  padding: 2px 6px;
+  box-shadow: inset 0 -1px 0 var(--color-separator);
+}
+.pt-toolbar__title {
+  flex: 1;
+  min-width: 0;
+  padding: 0 8px;
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+  font-weight: var(--weight-semibold);
+}
+.pt-toolbar__spacer {
+  flex: 1;
+}
+.pt-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.pt-footer {
+  flex: none;
+  padding: 8px 12px calc(8px + var(--safe-bottom));
+  box-shadow: inset 0 1px 0 var(--color-separator);
+  background: var(--color-bg);
+}
+.pt-stage {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-6) var(--space-4);
+  overflow-y: auto;
+}
+.pt-section {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 10px 14px 4px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-weight: var(--weight-semibold);
+}
+.pt-section > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.pt-note {
+  padding: 6px 14px 10px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.pt-problem {
+  padding: 8px 10px 0;
+}
+.pt-problem:last-child {
+  padding-bottom: 8px;
+}
+.pt-problem__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* ---- folded detail --------------------------------------------------------------- */
+
+.pt-details {
+  margin-top: 6px;
+}
+.pt-details > summary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  color: inherit;
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  list-style: none;
+}
+.pt-details > summary::-webkit-details-marker {
+  display: none;
+}
+.pt-details > summary::after {
+  content: '';
+  position: absolute;
+  inset: -8px -10px;
+}
+.pt-details > summary > svg {
+  transition: transform var(--motion-fast) var(--ease-standard);
+  transform: rotate(-90deg);
+}
+.pt-details[open] > summary > svg {
+  transform: none;
+}
+.pt-details > pre {
+  max-height: 180px;
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  overflow: auto;
+  border-radius: var(--radius-xs);
+  background: var(--color-fill);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---- swipe ------------------------------------------------------------------------ */
+
+.pt-swipe {
+  position: relative;
+  overflow: hidden;
+}
+.pt-swipe__actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+}
+.pt-swipe:not([data-revealed]):not([data-swiping]):not([data-settling]) > .pt-swipe__actions {
+  visibility: hidden;
+}
+.pt-swipe__actions > .ui-row__action {
+  min-height: 0;
+  height: 100%;
+}
+.pt-swipe__slider {
+  position: relative;
+  background: var(--color-bg);
+}
+.pt-swipe[data-settling] > .pt-swipe__slider {
+  transition: transform var(--motion-base) var(--ease-out);
+}
+
+/* ---- a name typed in place ---------------------------------------------------------- */
+
+.pt-name {
+  flex: 1;
+  min-width: 0;
+}
+.pt-name__field {
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1.5px var(--color-accent);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-field);
+}
+.pt-name__field[aria-invalid='true'] {
+  box-shadow: inset 0 0 0 1.5px var(--color-danger);
+}
+.pt-name__problem {
+  margin: 4px 0 6px;
+  color: var(--color-danger);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+
+/* ---- a path in two parts ------------------------------------------------------------- */
+
+.pt-path {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.pt-path__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--weight-medium);
+}
+.pt-path__folder {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  /* A long folder loses its beginning, not the part next to the file. */
+  direction: rtl;
+  text-align: left;
+}
+
+/* ---- a search field in a panel ------------------------------------------------------- */
+
+.pt-search {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 4px 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-fill);
+  color: var(--color-text-tertiary);
+}
+.pt-search:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--color-accent);
+}
+.pt-search > input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--color-text);
+  font-size: var(--text-field);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.pt-search > input:focus-visible {
+  /* The field as a whole shows the focus. */
+  outline: none;
+}
+.pt-search > input::placeholder {
+  color: var(--color-text-tertiary);
+}
+.pt-search > input::-webkit-search-cancel-button {
+  display: none;
+}
+.pt-search__clear {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-secondary);
+}
+.pt-search__clear::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+}
+.pt-search__clear:active {
+  background: var(--color-fill-pressed);
+}
+
+/* ---- small things ------------------------------------------------------------------- */
+
+.pt-letter {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+  background: var(--color-fill);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+}
+.pt-letter[data-kind='added'],
+.pt-letter[data-kind='untracked'] {
+  background: var(--color-positive-soft);
+  color: var(--color-positive);
+}
+.pt-letter[data-kind='modified'],
+.pt-letter[data-kind='renamed'] {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+.pt-letter[data-kind='deleted'] {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+.pt-letter[data-kind='conflicted'] {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.pt-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  max-width: 100%;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--radius-full);
+  background: var(--color-fill);
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: 1;
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+.pt-pill > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pt-pill[data-tone='accent'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+.pt-pill[data-tone='positive'] {
+  background: var(--color-positive-soft);
+  color: var(--color-positive);
+}
+.pt-pill[data-tone='warning'] {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.pt-pill[data-tone='danger'] {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+.pt-pill[data-tone='info'] {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+.pt-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-tertiary);
+}
+.pt-dot[data-tone='positive'] {
+  background: var(--color-mark-positive);
+}
+.pt-dot[data-tone='danger'] {
+  background: var(--color-mark-danger);
+}
+.pt-dot[data-tone='warning'] {
+  background: var(--color-mark-attention);
+}
+.pt-dot[data-tone='running'] {
+  background: var(--color-mark-running);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pt-dot[data-tone='running'] {
+    animation: none;
+  }
+}

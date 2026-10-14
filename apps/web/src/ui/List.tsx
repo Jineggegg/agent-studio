@@ -118,12 +118,16 @@ export function ListRow({
   const gesture = useRef<{ id: number; x: number; y: number; origin: number; decided: 'none' | 'swipe' | 'scroll'; lastX: number; lastTime: number; velocity: number } | null>(
     null,
   );
-  /** Set when a touch turned into a swipe: the click that ends it must not activate the row. */
-  const swallowClick = useRef(false);
+  /**
+   * Until when a click is not a tap on the row but the end of a swipe. A browser sends no click after a
+   * finger that moved, so the window closes shortly after the gesture: the next real tap must work.
+   */
+  const swallowClick = useRef(0);
 
   const settle = useCallback(
     (open: boolean) => {
       const element = slider.current;
+      row.current?.removeAttribute('data-swiping');
       if (element) {
         row.current?.setAttribute('data-settling', '');
         element.style.transform = open ? `translateX(${-width}px)` : '';
@@ -160,7 +164,7 @@ export function ListRow({
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!hasActions || event.pointerType === 'mouse') return;
-    swallowClick.current = false;
+    swallowClick.current = 0;
     gesture.current = {
       id: event.pointerId,
       x: event.clientX,
@@ -185,8 +189,9 @@ export function ListRow({
       }
       if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
       state.decided = 'swipe';
-      swallowClick.current = true;
+      swallowClick.current = Number.POSITIVE_INFINITY;
       row.current?.removeAttribute('data-settling');
+      row.current?.setAttribute('data-swiping', '');
       event.currentTarget.setPointerCapture?.(event.pointerId);
     }
     if (state.decided !== 'swipe') return;
@@ -204,14 +209,15 @@ export function ListRow({
     if (!state || state.id !== event.pointerId) return;
     gesture.current = null;
     if (state.decided !== 'swipe') return;
+    swallowClick.current = performance.now() + 400;
     const offset = state.origin + (event.clientX - state.x);
     const open = event.type === 'pointercancel' ? revealed : state.velocity < -0.35 ? true : state.velocity > 0.35 ? false : offset < -width / 2;
     settle(open);
   };
 
   const onClickCapture = (event: ReactMouseEvent) => {
-    if (swallowClick.current) {
-      swallowClick.current = false;
+    if (performance.now() < swallowClick.current) {
+      swallowClick.current = 0;
       event.preventDefault();
       event.stopPropagation();
       return;

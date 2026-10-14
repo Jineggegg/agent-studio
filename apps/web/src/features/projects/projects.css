@@ -1,0 +1,191 @@
+/* A project's own page. Tokens only. */
+
+.proj-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.proj-head__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 4px;
+}
+.proj-head__description {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+}
+.proj-head__description--none {
+  color: var(--color-text-tertiary);
+}
+.proj-head__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.proj-head__badges:empty {
+  display: none;
+}
+.proj-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+:root[data-layout='phone'] .proj-actions > .ui-button {
+  flex: 1 1 100%;
+}
+.proj-header-actions {
+  display: inline-flex;
+  margin: -8px -8px -8px 0;
+}
+.proj-folder {
+  overflow-wrap: anywhere;
+}
+.proj-empty-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.proj-empty-row > span {
+  flex: 1;
+  min-width: 0;
+}
+.proj-empty-row > svg {
+  flex: none;
+}
+
+/* ---- links ---------------------------------------------------------------------- */
+
+.proj-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 14px;
+  color: var(--color-text);
+  text-decoration: none;
+}
+.proj-link + .proj-link {
+  box-shadow: inset 0 1px 0 var(--color-separator);
+}
+@media (hover: hover) {
+  .proj-link:hover {
+    background: var(--color-fill);
+  }
+}
+.proj-link:active {
+  background: var(--color-fill-hover);
+}
+.proj-link:focus-visible {
+  outline-offset: -3px;
+}
+.proj-link > svg {
+  flex: none;
+  color: var(--color-text-tertiary);
+}
+.proj-link__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.proj-link__label {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+}
+.proj-link__host {
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.proj-link__status {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 1 auto;
+  gap: 6px;
+  /* A long answer ("Not checked: private address") takes a second line rather than the name's room. */
+  max-width: 46%;
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.proj-link__status > .pt-dot {
+  flex: none;
+}
+.proj-link__status[data-tone='danger'] {
+  color: var(--color-danger);
+}
+.proj-link__status[data-tone='warning'] {
+  color: var(--color-warning);
+}
+.proj-links-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.proj-link-edit {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 4px 12px 14px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--ring-surface), var(--shadow-1);
+}
+.proj-link-edit__fields {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.proj-link-edit__local {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+.proj-link-edit__local > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.proj-link-edit__local-title {
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+}
+.proj-link-edit__local-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}
+.proj-share-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.proj-share-sheet > p {
+  margin: 0;
+}
+.proj-share-sheet .ui-segmented {
+  width: 100%;
+}

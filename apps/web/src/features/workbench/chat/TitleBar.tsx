@@ -1,7 +1,9 @@
 import type { Project, Session } from '@agent-studio/protocol';
 import { ChevronDown, ChevronLeft, PanelLeft, PanelRight, Plus } from 'lucide-react';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router';
 import { useT } from '@/i18n';
+import { projectSettingsPath } from '@/registry';
 import type { BackAction } from '@/shell/back';
 import { ActivityMark, type ActivityKind, Menu, isImeConfirm } from '@/ui';
 import { AgentMark } from './parts';
@@ -123,7 +125,15 @@ export function TitleBar({ title, session, canRename, onRename, agentId, agentLa
             />
           </>
         ) : (
-          project && <p className="wb-titlebar__project u-truncate">{project.name}</p>
+          project &&
+          (projectSettingsPath(project.id) ? (
+            // The project's own page: its links, what it offers, who it is shared with.
+            <Link className="wb-titlebar__project wb-titlebar__project--link u-truncate" to={projectSettingsPath(project.id)!} title={t('workbench.project.page', { project: project.name })} draggable={false}>
+              {project.name}
+            </Link>
+          ) : (
+            <p className="wb-titlebar__project u-truncate">{project.name}</p>
+          ))
         )}
       </div>
       <div className="wb-titlebar__trailing">

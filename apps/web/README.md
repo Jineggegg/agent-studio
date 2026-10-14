@@ -30,7 +30,10 @@ so the freshly hashed files of a new build are unknown to a running one.
 1. **Talk to the server only through `api` and `realtime`.** They carry the
    anti-forgery header, end the session on 401, run the step-up dialog on
    `reauth_required`, validate answers, and reconnect. Never call `fetch` or
-   `new WebSocket` yourself.
+   `new WebSocket` yourself. (The one exception is the terminal's own socket in
+   `features/terminal/TerminalView.tsx`: a byte stream with its own attach and
+   replay protocol, which the shared live connection does not carry. Its
+   connection logic is `features/terminal/client.ts`, tested against a fake socket.)
 2. **Every string goes through i18n**, in both `en.ts` and `zh-CN.ts`. A test
    fails when the two key sets differ.
 3. **Every interactive element has a hit area of at least 44 × 44 CSS px**,
@@ -84,6 +87,14 @@ apps/web
       settings/           settings shell and the foundation's pages
       workbench/          the chat surface: conversations, transcript, composer, approvals, runs,
                           and the inspector that other features add their panels to
+      files/              the Files panel: lazy tree, search, editor (CodeMirror), previews, upload/download
+      git/                the Git panel: changes, history, branches, compare, worktrees, sync
+      terminal/           the Terminal panel (xterm.js on the terminal socket), terminal sheets,
+                          the "Agent accounts" settings page
+      github/             /github: pull requests, repositories, the guarded merge; the title bar's branch chip
+      projects/           a project's own page (/projects/<id>/settings), cloning a repository;
+                          tools/ holds what the project tools share (problem notes, swipe rows, names, paths)
+      remotes/            the "Remote machines" settings page
       dev/                component gallery (development builds only)
     test/                 test set-up and helpers (renderInApp, jsonResponse, errorResponse)
 ```
@@ -274,7 +285,8 @@ interface InspectorPanel {
   order?: number;                // among the tabs, default 100
   load: () => Promise<{ default: ComponentType<InspectorPanelProps> }>;
   available?: (context: InspectorContext) => boolean;   // default: only inside a project
-  handles?: readonly InspectorRequestType[];            // the chat's requests this panel answers
+  handles?: readonly InspectorRequestType[]             // the chat's requests this panel answers —
+    | ((context: InspectorContext) => readonly InspectorRequestType[]);   // or as a function of who is looking
   keepAlive?: boolean;           // stay mounted (hidden) once opened — a terminal keeps its shell
   useBadge?: (context: InspectorContext) => { count?: number; mark?: ActivityKind; label: string } | null;
 }
@@ -292,7 +304,7 @@ interface InspectorPanelProps {
 }
 
 type InspectorRequest =
-  | { type: 'open-file'; path: string; line?: number }
+  | { type: 'open-file'; path: string; line?: number; view?: 'changes' }   // 'changes': open on the file's diff
   | { type: 'reveal-folder'; path: string }
   | { type: 'run-command'; text: string }
   | { type: 'show-changes'; path?: string };
@@ -316,7 +328,11 @@ const openFile = useInspectorAction('open-file');   // null when no panel handle
 
 Today the transcript asks for `open-file` (a read or an edit's file, each file
 of a diff, and a link to a file in what the agent wrote — which copies the
-path while no panel can open it) and `run-command` (a command an agent ran).
+path while no panel can open it) and `run-command` (a command an agent ran,
+and "Run" on a shell block in what the agent wrote — `transcript/shell.ts`
+decides which blocks are commands). The panels that answer: `files`
+(`open-file`, `reveal-folder`), `terminal` (`run-command`, the owner only —
+`handles` is a function of the role) and `git` (`show-changes`).
 Outside React:
 `panelHandling(type, context)` and `requestInspector(request, context)` (returns
 false and does nothing when no panel answers). Also exported:
@@ -326,6 +342,25 @@ false and does nothing when no panel answers). Also exported:
 In a development build the workbench registers two stand-in panels
 (`features/workbench/dev/`) so the container can be looked at; a production
 build contains neither.
+
+**The title bar takes items from other features** — small, typed and lazy:
+
+```ts
+// src/features/github/index.ts
+import { registerTitleBarItem } from '@/features/workbench/chat/slots';
+
+registerTitleBarItem({ id: 'branch', order: 10, available: ({ role }) => role === 'owner', load: () => import('./BranchChip') });
+
+interface TitleBarItemProps { project: Project; sessionId: string | null; busy: boolean; compact: boolean }   // compact on a phone
+```
+
+Each item downloads on first use and sits in its own error boundary: one that
+fails to load or to draw is simply absent. Nothing is drawn while it loads.
+
+**The message field offers the project's files after "@"**: the composer
+takes a `mentions` source (`composer/mentions.ts`); the chat column supplies
+one that searches the project's file names. Choosing a file puts its path in
+the text.
 
 **Workbench addresses** — everything is under `/workbench`, and the helpers in
 `features/workbench/routes.ts` build them (`workbenchPaths.session(projectId, sessionId)`):
@@ -337,6 +372,7 @@ build contains neither.
 /workbench/p/<project>/s/<session> a conversation
 /workbench/s/<session>             the same, when only the session is known — corrected to the full address
 /projects/<project>                redirects to /workbench/p/<project>  (this is what `projectPath(id)` gives)
+/projects/<project>/settings       the project's own page (`projectSettingsPath(id)` in `@/registry`)
 ```
 
 Link to a conversation from anywhere with `workbenchPaths.lookup(sessionId)`; an
@@ -521,7 +557,7 @@ codes: `errors.<code>`; audit actions: `audit.<action>`.
 | `Glyph` | `<Glyph icon={<Bell size={18} />} tint="red" />` — an icon on a duotone plate |
 | `Tabs`, `tabPanelProps` | `<Tabs label="…" idBase="tools" value={tab} onChange={setTab} tabs={[{ value, label, accessory? }]} />` then `<div {...tabPanelProps('tools', tab)}>` |
 | `LogoMark` | `<LogoMark size={52} plated />` |
-| `Markdown`, `CodeBlock` | `import { Markdown } from '@/ui/markdown'` → `<Markdown>{source}</Markdown>` — `compact`, `resolveImage`, `remoteImages`, `onLinkClick` |
+| `Markdown`, `CodeBlock` | `import { Markdown } from '@/ui/markdown'` → `<Markdown>{source}</Markdown>` — `compact`, `resolveImage`, `remoteImages`, `onLinkClick`, `codeActions` (controls drawn in a code block's bar beside Copy, given `{ language, text }`) |
 
 Icons are `lucide-react`, sized 18–22 px in rows and bars.
 

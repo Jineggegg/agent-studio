@@ -230,6 +230,13 @@
   line-height: var(--leading-caption);
   color: var(--color-text-secondary);
 }
+/* "Copy", preceded by whatever a feature adds for this block ("Run"). */
+.ui-code__actions {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 2px;
+}
 .ui-code__copy {
   position: relative;
   display: inline-flex;

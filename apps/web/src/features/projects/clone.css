@@ -1,0 +1,40 @@
+/* Making a project by cloning: the mode switch in the "New project" sheet and the progress of a clone. Tokens only. */
+
+.project-form[hidden] {
+  display: none;
+}
+.project-form__mode {
+  margin-bottom: var(--space-4);
+}
+.project-form__mode .ui-segmented {
+  width: 100%;
+}
+.proj-clone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+.proj-clone__title {
+  margin: 0;
+  font-size: var(--text-title-3);
+  line-height: var(--leading-title-3);
+  font-weight: var(--weight-semibold);
+}
+.proj-clone__url,
+.proj-clone__target {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  overflow-wrap: anywhere;
+}
+.proj-clone__phase {
+  margin: 0;
+  font-size: var(--text-callout);
+  line-height: var(--leading-callout);
+  font-variant-numeric: tabular-nums;
+}
+.proj-clone > .ui-button {
+  align-self: flex-start;
+}

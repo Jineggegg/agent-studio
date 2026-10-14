@@ -2953,3 +2953,85 @@ button.wb-titlebar__title::after {
 .wb-viewer__nav[data-side='next'] {
   right: calc(var(--safe-right) + 8px);
 }
+
+/* ---- additions for the project tools ------------------------------------------------- */
+
+/* The project's name in the title bar leads to the project's own page. */
+.wb-titlebar__project--link {
+  position: relative;
+  align-self: flex-start;
+  /* A short name ("Demo") still makes a target a finger can find. */
+  min-width: 32px;
+  text-decoration: none;
+}
+.wb-titlebar__project--link::after {
+  content: '';
+  position: absolute;
+  inset: -15px -6px;
+}
+@media (hover: hover) {
+  .wb-titlebar__project--link:hover {
+    color: var(--color-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
+/* "Run" on a shell block. */
+.wb-code-run {
+  color: var(--color-accent-text);
+  font-weight: var(--weight-semibold);
+}
+
+/* "@": the project's files on offer, above the field. */
+.wb-mentions {
+  display: flex;
+  flex-direction: column;
+  max-height: min(264px, 38vh);
+  margin: 0 0 6px;
+  padding: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  box-shadow: inset 0 0 0 1px var(--color-separator);
+}
+.wb-mentions__item {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--text-callout);
+  text-align: left;
+}
+.wb-mentions__item > svg {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+.wb-mentions__item[aria-selected='true'] {
+  background: var(--color-accent-soft);
+}
+.wb-mentions__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-weight: var(--weight-medium);
+}
+.wb-mentions__folder {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-footnote);
+  direction: rtl;
+  text-align: left;
+}
+.wb-mentions__note {
+  margin: 0;
+  padding: 10px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+}

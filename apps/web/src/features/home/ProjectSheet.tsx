@@ -1,10 +1,12 @@
 import type { Project } from '@agent-studio/protocol';
-import { Archive, ArchiveRestore, Pencil, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, Pencil, Settings2, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { describeError } from '@/data/errors';
 import { useRemoveProject, useUpdateProject } from '@/data/projects';
 import { useIsOwner } from '@/data/session';
 import { useT } from '@/i18n';
+import { projectSettingsPath } from '@/registry';
 import { Badge, Banner, Button, ConfirmDialog, Form, Glyph, List, ListRow, Sheet, toTint, toast } from '@/ui';
 import { type ProjectDraft, ProjectFields } from './ProjectFields';
 import { projectSymbol } from './icons';
@@ -28,6 +30,7 @@ const draftOf = (project: Project): ProjectDraft => ({
  */
 export function ProjectSheet({ project, onClose }: ProjectSheetProps) {
   const t = useT();
+  const navigate = useNavigate();
   const isOwner = useIsOwner();
   const update = useUpdateProject();
   const remove = useRemoveProject();
@@ -161,6 +164,23 @@ export function ProjectSheet({ project, onClose }: ProjectSheetProps) {
                 )}
               </div>
             </div>
+
+            {projectSettingsPath(shown.id) && (
+              // The project's own page: links, the agents it offers, what they may do there, and who it is shared with.
+              <List>
+                <ListRow
+                  leading={<Settings2 size={20} />}
+                  title={t('projects.page.open')}
+                  subtitle={t('projects.page.openHint')}
+                  chevron
+                  onPress={() => {
+                    const path = projectSettingsPath(shown.id);
+                    onClose();
+                    if (path) void navigate(path);
+                  }}
+                />
+              </List>
+            )}
 
             <List>
               <ListRow title={t('home.project.folder')} subtitle={<span className="u-mono">{shown.rootDir}</span>} />

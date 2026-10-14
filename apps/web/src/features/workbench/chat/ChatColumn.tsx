@@ -1,11 +1,12 @@
 import type { Approval, PermissionMode, Project, Session } from '@agent-studio/protocol';
 import { useQueryClient } from '@tanstack/react-query';
-import { Component, type ErrorInfo, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type TouchEvent as ReactTouchEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Component, type ComponentType, type ErrorInfo, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type TouchEvent as ReactTouchEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { isApiError } from '@/data/api';
 import { useConnectionState } from '@/data/connection';
 import { describeError, errorKind } from '@/data/errors';
 import { useIsOwner, useUser } from '@/data/session';
 import { useT } from '@/i18n';
+import { useLayoutClass } from '@/platform/layout';
 import { isApplePlatform, useCanHover } from '@/platform/media';
 import { useKeyboardDock } from '@/platform/viewport';
 import type { BackAction } from '@/shell/back';
@@ -17,6 +18,7 @@ import { workbenchApi } from '../api';
 import { ApprovalDock, ApprovalSheet } from '../approvals/ApprovalSurface';
 import { approvalChoices, planContinuationModes } from '../approvals/logic';
 import { Composer, type ComposerHandle, type ComposerSubmission } from '../composer/Composer';
+import type { MentionSource } from '../composer/mentions';
 import { DeliveryBanner } from '../composer/DeliveryBanner';
 import { Queue } from '../composer/Queue';
 import { adoptAttachments, clearSentAttachments, loadPendingAttachments, readyAttachments, restoreAttachments, uploadsSettled } from '../composer/attachmentStore';
@@ -35,6 +37,7 @@ import { seedEmptyChannel, useChannel } from '../transcript/channel';
 import { ContextRing } from '../usage/ContextRing';
 import { AgentModelChip, EffortChip, ModeSwitcher, modeLabel, unavailableText } from './Pickers';
 import { TitleBar } from './TitleBar';
+import { type TitleBarItem, type TitleBarItemProps, subscribeTitleBarItems, titleBarItems, titleBarItemsVersion } from './slots';
 import { AgentMark } from './parts';
 
 export interface ChatColumnProps {
@@ -60,6 +63,59 @@ export interface ChatColumnProps {
   /** Put the caret in the message field on arrival. */
   focusComposer: boolean;
   inspector: { available: boolean; open: boolean; toggle: () => void };
+}
+
+const slotComponents = new Map<string, ComponentType<TitleBarItemProps>>();
+
+/** Downloads an item's code the first time the title bar needs it. Until then — and if that fails — nothing is drawn. */
+function LazySlot({ item, ...props }: TitleBarItemProps & { item: TitleBarItem }) {
+  const [Loaded, setLoaded] = useState<ComponentType<TitleBarItemProps> | null>(() => slotComponents.get(item.id) ?? null);
+  useEffect(() => {
+    if (Loaded) return;
+    let cancelled = false;
+    item.load().then(
+      (module) => {
+        slotComponents.set(item.id, module.default);
+        if (!cancelled) setLoaded(() => module.default);
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [item, Loaded]);
+  return Loaded ? <Loaded {...props} /> : null;
+}
+
+/** What other features put in the title bar (see `./slots`). Each is its own small island: one that fails to load is simply absent. */
+function TitleBarSlot({ project, sessionId, busy }: { project: Project; sessionId: string | null; busy: boolean }) {
+  const user = useUser();
+  const layout = useLayoutClass();
+  const version = useSyncExternalStore(subscribeTitleBarItems, titleBarItemsVersion, titleBarItemsVersion);
+  // `version` is what changes when a feature registers an item.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const items = useMemo(() => titleBarItems({ project, role: user?.role ?? 'member' }), [project, user?.role, version]);
+  return (
+    <>
+      {items.map((item) => (
+        <SlotBoundary key={item.id}>
+          <LazySlot item={item} project={project} sessionId={sessionId} busy={busy} compact={layout === 'phone'} />
+        </SlotBoundary>
+      ))}
+    </>
+  );
+}
+
+class SlotBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  override state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  override render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
 /** One empty list for "nothing yet", so selectors and memos keep their identity. */
@@ -208,6 +264,9 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
     [agent, projectSettings.data],
   );
   const unsettled = outgoing.find((entry) => entry.phase === 'unconfirmed' || entry.phase === 'checking') ?? outgoing.find((entry) => entry.phase === 'failed') ?? null;
+
+  const projectId = project?.id ?? null;
+  const mentions = useMemo<MentionSource | undefined>(() => (projectId ? { search: (query, signal) => workbenchApi.searchFiles(projectId, query, signal) } : undefined), [projectId]);
 
   const title = session?.title ?? t('workbench.newConversation');
   useDocumentTitle(project ? `${title} · ${project.name}` : title);
@@ -508,6 +567,7 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
       inspector={inspector}
       trailing={
         <>
+          {project && <TitleBarSlot project={project} sessionId={sessionId} busy={busy} />}
           <ContextRing context={transcript.context} totals={transcript.totals} agent={agent} />
           {agent && <ModeSwitcher mode={mode} effective={effectiveMode} agent={agent} project={project} disabled={!mine || !writable} onChange={chooseMode} />}
         </>
@@ -629,6 +689,7 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
             onCycleMode={agent ? () => chooseMode(nextMode(agent, mode)) : undefined}
             quote={quote}
             onClearQuote={() => setQuote(null)}
+            mentions={mentions}
             onContentChange={setComposerHasContent}
             autoFocus={focusComposer && (canHover || sessionId === null)}
             controls={

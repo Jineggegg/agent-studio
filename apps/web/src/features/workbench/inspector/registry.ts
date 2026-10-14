@@ -30,7 +30,8 @@ export type InspectorPresentation = 'docked' | 'floating' | 'fullscreen';
 
 /** Something the chat asks a panel to do: a file reference was tapped, a shell block's Run was pressed. */
 export type InspectorRequest =
-  | { type: 'open-file'; path: string; line?: number }
+  /** `view: 'changes'` opens the file on its uncommitted changes rather than on its text. */
+  | { type: 'open-file'; path: string; line?: number; view?: 'changes' }
   | { type: 'reveal-folder'; path: string }
   | { type: 'run-command'; text: string }
   | { type: 'show-changes'; path?: string };
@@ -82,8 +83,11 @@ export interface InspectorPanel {
    * that is not available is not listed; when none is, there is no inspector.
    */
   available?: (context: InspectorContext) => boolean;
-  /** The requests this panel answers. The chat offers "open file" or "Run" only when some available panel does. */
-  handles?: readonly InspectorRequestType[];
+  /**
+   * The requests this panel answers. The chat offers "open file" or "Run" only when some available panel does.
+   * A function when the answer depends on who is asking (a terminal only the owner may use).
+   */
+  handles?: readonly InspectorRequestType[] | ((context: InspectorContext) => readonly InspectorRequestType[]);
   /**
    * Stay mounted (hidden) once opened, while another panel is on show or the
    * inspector is closed — for a terminal that must keep its shell and
@@ -123,9 +127,15 @@ export function subscribeInspectorPanels(listener: () => void): () => void {
 
 export const inspectorPanelsVersion = (): number => version;
 
+/** What a registered panel offers (`available`, `handles`) has changed: the workbench asks again. */
+export function refreshInspectorPanels(): void {
+  version += 1;
+  for (const listener of [...listeners]) listener();
+}
+
 /** The panel that would take a request of this type, if any is available. */
 export function panelHandling(type: InspectorRequestType, context: InspectorContext): InspectorPanel | null {
-  return inspectorPanels(context).find((panel) => panel.handles?.includes(type)) ?? null;
+  return inspectorPanels(context).find((panel) => (typeof panel.handles === 'function' ? panel.handles(context) : panel.handles)?.includes(type)) ?? null;
 }
 
 // ---- what is open ------------------------------------------------------------------

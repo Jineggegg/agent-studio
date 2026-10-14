@@ -1,10 +1,11 @@
 import type { Project } from '@agent-studio/protocol';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { describeError } from '@/data/errors';
 import { isApiError } from '@/data/http';
 import { useCreateProject } from '@/data/projects';
+import { CloneForm, type CloneFormHandle } from '@/features/projects/CloneForm';
 import { useT } from '@/i18n';
-import { Banner, Button, Form, ListRow, Sheet, Switch, TextField, toast } from '@/ui';
+import { Banner, Button, Form, ListRow, SegmentedControl, Sheet, Switch, TextField, toast } from '@/ui';
 import { FolderPicker } from './FolderPicker';
 import { type ProjectDraft, ProjectFields } from './ProjectFields';
 
@@ -22,7 +23,10 @@ function lastSegment(path: string): string {
   return path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() ?? '';
 }
 
-/** Set a project up by hand: a name, the folder on the server it works in, and how its tile looks. */
+/**
+ * Set a project up by hand — a name, the folder on the server it works in, and how its tile looks — or make one by
+ * cloning a repository into the workspace. Both forms stay alive while the sheet is open, so switching loses nothing.
+ */
 export function NewProjectSheet({ open, onClose, onCreated }: NewProjectSheetProps) {
   const t = useT();
   const create = useCreateProject();
@@ -31,7 +35,10 @@ export function NewProjectSheet({ open, onClose, onCreated }: NewProjectSheetPro
   const [createDirectory, setCreateDirectory] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; rootDir?: string; form?: string }>({});
   const [picking, setPicking] = useState(false);
-  const busy = create.isPending;
+  const [mode, setMode] = useState<'manual' | 'clone'>('manual');
+  const [cloning, setCloning] = useState(false);
+  const clone = useRef<CloneFormHandle>(null);
+  const busy = create.isPending || cloning;
 
   // A fresh form each time the sheet opens; the draft survives a mere dismissal mid-typing only until then.
   useEffect(() => {
@@ -94,12 +101,34 @@ export function NewProjectSheet({ open, onClose, onCreated }: NewProjectSheetPro
           </Button>
         }
         trailing={
-          <Button variant="plain" onClick={submit} loading={busy}>
-            {t('common.create')}
+          <Button variant="plain" onClick={() => (mode === 'clone' ? clone.current?.submit() : submit())} loading={create.isPending} disabled={cloning}>
+            {mode === 'clone' ? t('projects.clone.action') : t('common.create')}
           </Button>
         }
       >
-        <Form className="project-form" onSubmit={submit}>
+        <div className="project-form__mode">
+          <SegmentedControl
+            label={t('projects.new.mode')}
+            value={mode}
+            onChange={setMode}
+            disabled={busy}
+            options={[
+              { value: 'manual', label: t('projects.new.manual') },
+              { value: 'clone', label: t('projects.new.clone') },
+            ]}
+          />
+        </div>
+        <div hidden={mode !== 'clone'}>
+          <CloneForm
+            ref={clone}
+            onBusyChange={setCloning}
+            onCreated={(project) => {
+              onClose();
+              onCreated?.(project);
+            }}
+          />
+        </div>
+        <Form className="project-form" onSubmit={submit} hidden={mode !== 'manual'}>
           {errors.form && (
             <Banner tone="danger" role="alert">
               {errors.form}

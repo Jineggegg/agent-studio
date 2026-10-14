@@ -11,3 +11,9 @@
 import './auth';
 import './settings';
 import './workbench';
+import './files';
+import './git';
+import './terminal';
+import './github';
+import './projects';
+import './remotes';

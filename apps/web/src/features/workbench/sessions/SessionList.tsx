@@ -1,11 +1,13 @@
 import type { Agent, MessageSearchHit, Project, Session } from '@agent-studio/protocol';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, ArchiveRestore, ChevronLeft, ChevronsUpDown, MessagesSquare, PanelLeftClose, Pencil, Pin, PinOff, Search, SquarePen, Trash2, X } from 'lucide-react';
+import { Archive, ArchiveRestore, ChevronLeft, ChevronsUpDown, MessagesSquare, PanelLeftClose, Pencil, Pin, PinOff, Search, Settings2, SquarePen, Trash2, X } from 'lucide-react';
 import { type ReactNode, type Ref, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { useStaleness } from '@/data/connection';
 import { describeError } from '@/data/errors';
 import { useUser } from '@/data/session';
 import { type MessageKey, useT } from '@/i18n';
+import { projectSettingsPath } from '@/registry';
 import { useCanHover, usePageVisible } from '@/platform/media';
 import type { BackAction } from '@/shell/back';
 import { ActivityMark, Badge, Button, DelayedSkeleton, EmptyState, ErrorState, Glyph, List, ListRow, Menu, type RowAction, SegmentedControl, Skeleton, Spinner, StaleNotice, confirm, isImeConfirm, toTint, toast } from '@/ui';
@@ -220,6 +222,7 @@ function SessionRow({ session, open, now, agents, projectName, archivedView, onO
 
 function ProjectSwitcher({ project, projects, openSessionId, onChoose }: { project: Project | null; projects: readonly Project[]; openSessionId: string | null; onChoose: (projectId: string) => void }) {
   const t = useT();
+  const navigate = useNavigate();
   const anchor = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const activity = useActivity();
@@ -237,6 +240,7 @@ function ProjectSwitcher({ project, projects, openSessionId, onChoose }: { proje
     return attention ? ('attention' as const) : unseen ? ('unseen' as const) : null;
   })();
   const Icon = projectSymbol(project.icon.symbol);
+  const settingsPath = projectSettingsPath(project.id);
   return (
     <>
       <button ref={anchor} type="button" className="wb-switcher" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} aria-label={t('workbench.project.switch', { project: project.name })}>
@@ -250,18 +254,27 @@ function ProjectSwitcher({ project, projects, openSessionId, onChoose }: { proje
         onClose={() => setOpen(false)}
         anchor={anchor}
         label={t('workbench.project.choose')}
-        items={projects.map((entry) => {
-          const EntryIcon = projectSymbol(entry.icon.symbol);
-          const mark = projectMark(marks.get(entry.id));
-          return {
-            id: entry.id,
-            label: entry.name,
-            ...(mark ? { hint: mark === 'attention' ? t('activity.attention') : mark === 'running' ? t('activity.running') : t('activity.unseen') } : {}),
-            icon: <EntryIcon size={18} />,
-            checked: entry.id === project.id,
-            onSelect: () => entry.id !== project.id && onChoose(entry.id),
-          };
-        })}
+        items={[
+          ...projects.map((entry) => {
+            const EntryIcon = projectSymbol(entry.icon.symbol);
+            const mark = projectMark(marks.get(entry.id));
+            return {
+              id: entry.id,
+              label: entry.name,
+              ...(mark ? { hint: mark === 'attention' ? t('activity.attention') : mark === 'running' ? t('activity.running') : t('activity.unseen') } : {}),
+              icon: <EntryIcon size={18} />,
+              checked: entry.id === project.id,
+              onSelect: () => entry.id !== project.id && onChoose(entry.id),
+            };
+          }),
+          // The open project's own page, when a feature provides one.
+          ...(settingsPath
+            ? [
+                { separator: true as const, id: 'separator-settings' },
+                { id: 'project-settings', label: t('workbench.project.settings', { project: project.name }), icon: <Settings2 size={18} />, onSelect: () => void navigate(settingsPath) },
+              ]
+            : []),
+        ]}
       />
     </>
   );

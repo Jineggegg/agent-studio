@@ -64,6 +64,11 @@ export function projectPath(projectId: string): string | null {
   return featureRouteFor(path) ? path : null;
 }
 
+/** The address of a project's own page — its settings, links and sharing — or null while no feature provides one. */
+export function projectSettingsPath(projectId: string): string | null {
+  return routes.some((route) => route.path === 'projects/:projectId/settings') ? `/projects/${projectId}/settings` : null;
+}
+
 /** For tests. */
 export function __resetFeatureRoutesForTests(): void {
   routes.length = 0;

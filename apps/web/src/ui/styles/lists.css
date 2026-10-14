@@ -232,6 +232,10 @@ label.ui-row__main {
   display: flex;
   align-items: stretch;
 }
+/* At rest they are not painted at all: under a list's rounded, anti-aliased corner they showed as a coloured fringe. */
+.ui-row:not([data-revealed]):not([data-swiping]):not([data-settling]) > .ui-row__actions {
+  visibility: hidden;
+}
 .ui-row__action {
   display: flex;
   flex-direction: column;

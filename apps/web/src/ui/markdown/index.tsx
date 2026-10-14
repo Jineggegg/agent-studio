@@ -24,6 +24,12 @@ export interface MarkdownProps {
   resolveImage?: (src: string) => string | null;
   /** Handle a link yourself (an in-app path). Call `event.preventDefault()` when you did. */
   onLinkClick?: (href: string, event: MouseEvent<HTMLAnchorElement>) => void;
+  /**
+   * Extra controls for the header of a code block, next to "Copy" — a "Run"
+   * button on a shell command, say. Called with the block's language tag and
+   * its exact text; return null for none. Keep its identity stable.
+   */
+  codeActions?: (block: { language: string | undefined; text: string }) => ReactNode;
   /** Tighter spacing, for chat bubbles and notes in lists. */
   compact?: boolean;
   className?: string;
@@ -36,10 +42,12 @@ export interface CodeBlockProps {
   language?: string | undefined;
   /** The exact text to copy. Without it the block's rendered text is copied. */
   text?: string;
+  /** Controls placed before "Copy" in the header. */
+  actions?: ReactNode;
 }
 
 /** A block of code with its language and a copy button. Scrolls sideways rather than wrapping. */
-export function CodeBlock({ children, language, text }: CodeBlockProps) {
+export function CodeBlock({ children, language, text, actions }: CodeBlockProps) {
   const t = useT();
   const pre = useRef<HTMLPreElement>(null);
   const [copied, setCopied] = useState(false);
@@ -59,16 +67,27 @@ export function CodeBlock({ children, language, text }: CodeBlockProps) {
     <div className="ui-code">
       <div className="ui-code__bar">
         <span className="ui-code__language">{language ?? t('markdown.code')}</span>
-        <button type="button" className="ui-code__copy" onClick={() => void copy()} aria-label={copied ? t('common.copied') : t('markdown.copyCode')}>
-          {copied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
-          <span aria-live="polite">{copied ? t('common.copied') : t('common.copy')}</span>
-        </button>
+        <span className="ui-code__actions">
+          {actions}
+          <button type="button" className="ui-code__copy" onClick={() => void copy()} aria-label={copied ? t('common.copied') : t('markdown.copyCode')}>
+            {copied ? <Check size={16} aria-hidden="true" /> : <Copy size={16} aria-hidden="true" />}
+            <span aria-live="polite">{copied ? t('common.copied') : t('common.copy')}</span>
+          </button>
+        </span>
       </div>
       <pre ref={pre} tabIndex={0}>
         {children}
       </pre>
     </div>
   );
+}
+
+/** The text of a node of the syntax tree, whatever highlighting wrapped it in. */
+function textOf(node: unknown): string {
+  if (typeof node !== 'object' || node === null) return '';
+  const { type, value, children } = node as { type?: unknown; value?: unknown; children?: unknown };
+  if (type === 'text') return typeof value === 'string' ? value : '';
+  return Array.isArray(children) ? children.map(textOf).join('') : '';
 }
 
 function languageOf(className: unknown): string | undefined {
@@ -117,7 +136,7 @@ function RemoteImage({ href, host, alt, mode }: { href: string; host: string; al
  *  - remote images are not fetched until the reader taps them;
  *  - code blocks are highlighted and get a copy button.
  */
-export const Markdown = memo(function Markdown({ children, remoteImages = 'open', resolveImage, onLinkClick, compact, className }: MarkdownProps) {
+export const Markdown = memo(function Markdown({ children, remoteImages = 'open', resolveImage, onLinkClick, codeActions, compact, className }: MarkdownProps) {
   const t = useT();
 
   const components: Components = {
@@ -155,7 +174,13 @@ export const Markdown = memo(function Markdown({ children, remoteImages = 'open'
     pre({ children: content, node }) {
       const code = node?.children.find((child) => child.type === 'element' && child.tagName === 'code');
       const language = code && code.type === 'element' ? languageOf(code.properties?.className) : undefined;
-      return <CodeBlock language={language}>{content}</CodeBlock>;
+      if (!codeActions) return <CodeBlock language={language}>{content}</CodeBlock>;
+      const text = textOf(code).replace(/\n$/, '');
+      return (
+        <CodeBlock language={language} text={text} actions={codeActions({ language, text })}>
+          {content}
+        </CodeBlock>
+      );
     },
     table({ children: content }) {
       return (
