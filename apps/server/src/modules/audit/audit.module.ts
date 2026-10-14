@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { newId } from '../../kernel/crypto.js';
 import type { Database, Migration } from '../../kernel/database.js';
 import type { ModuleContext, StudioModule } from '../../kernel/module.js';
-import { redactSecrets } from '../../kernel/redact.js';
+import { maskAddress, redactSecrets } from '../../kernel/redact.js';
 
 declare module '../../kernel/module.js' {
   interface Services {
@@ -50,15 +50,7 @@ export interface AuditEvent {
 
 const RETAIN_PER_CATEGORY = 2000;
 
-/** 203.0.113.42 → 203.0.113.x; IPv6 keeps its /48. */
-export function maskAddress(address: string | null | undefined): string | null {
-  if (!address) return null;
-  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(address);
-  const value = mapped ? mapped[1]! : address;
-  if (value.includes('.')) return value.split('.').slice(0, 3).join('.') + '.x';
-  if (value === '::1') return value;
-  return value.split(':').slice(0, 3).join(':') + '::/48';
-}
+export { maskAddress } from '../../kernel/redact.js';
 
 /**
  * An append-only record of security-relevant events, for the owner to review.

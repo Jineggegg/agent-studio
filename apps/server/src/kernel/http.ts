@@ -11,7 +11,7 @@ import { isLoopbackHostname, type StudioConfig } from './config.js';
 import { safeEqual } from './crypto.js';
 import { StudioError, badRequest, describeError, forbidden, isStudioError, unauthorized } from './errors.js';
 import type { Authenticator, Principal, TokenScope } from './principal.js';
-import { redactSecrets } from './redact.js';
+import { maskAddress, redactSecrets } from './redact.js';
 
 /**
  * `public`  — no credentials needed (sign-in, health).
@@ -34,6 +34,8 @@ export interface RouteConfig {
 declare module 'fastify' {
   interface FastifyRequest {
     principal: Principal | null;
+    /** Set by the identifying hook for API requests; read by the enforcing hook. */
+    studioGate: { declared: RouteConfig | undefined; isApiRoute: boolean; staleSession: boolean; invalidBearer: boolean } | null;
   }
   interface FastifyContextConfig {
     studio?: RouteConfig;
@@ -127,7 +129,8 @@ export class HttpKernel {
                   // Query strings are dropped: they are the likeliest place for something sensitive.
                   // Path segments that are themselves capabilities are masked.
                   path: (request.url.split('?')[0] ?? '').replace(/(\/api\/plugins\/panel\/)[^/]+/, '$1[grant]'),
-                  ip: request.ip,
+                  // Enough to tell networks apart, not enough to identify a person.
+                  ip: maskAddress(request.ip),
                 }),
               },
             },
@@ -143,6 +146,7 @@ export class HttpKernel {
         : {}),
     }) as unknown as FastifyInstance;
     this.app.decorateRequest('principal', null);
+    this.app.decorateRequest('studioGate', null);
     this.app.server.headersTimeout = 15_000;
   }
 
@@ -232,16 +236,6 @@ export class HttpKernel {
       strictTransportSecurity: { maxAge: 15552000, includeSubDomains: false },
       xFrameOptions: { action: 'deny' },
     });
-    await app.register(rateLimit, {
-      global: true,
-      max: config.env === 'test' ? 100_000 : 1200,
-      timeWindow: 60_000,
-      keyGenerator: (request) => request.principal?.userId ?? request.ip,
-      errorResponseBuilder: (_request, context) => ({
-        statusCode: 429,
-        error: { code: 'rate_limited', message: 'Too many requests. Slow down.', details: { retryAfterSeconds: Math.ceil(context.ttl / 1000) } },
-      }),
-    });
     await app.register(websocket, { options: { maxPayload: 1024 * 1024 } });
 
     // A route without an explicit access level is a bug, not a public endpoint.
@@ -273,6 +267,7 @@ export class HttpKernel {
       const declared = request.routeOptions.config.studio;
       const matchedPattern = request.routeOptions.url;
       const isApiRoute = declared !== undefined || matchedPattern?.startsWith('/api/') === true;
+      request.studioGate = null;
       if (!isApiRoute && !looksLikeApiPath(request.url)) return;
       reply.header('cache-control', 'no-store');
 
@@ -280,13 +275,10 @@ export class HttpKernel {
       const authorization = request.headers.authorization;
       let principal: Principal | null = null;
       let staleSession = false;
+      let invalidBearer = false;
       if (authorization?.startsWith('Bearer ')) {
         principal = this.authenticator.fromBearerToken(authorization.slice(7).trim(), meta);
-        // A bearer token that does not resolve is an error rather than "anonymous",
-        // unless the route does its own token handling.
-        if (!principal && declared?.access !== 'self') {
-          throw unauthorized('That API token is not valid.', 'invalid_token');
-        }
+        invalidBearer = principal === null;
       } else {
         const token = request.cookies[SECURE_SESSION_COOKIE] ?? request.cookies[SESSION_COOKIE];
         if (token) {
@@ -295,6 +287,32 @@ export class HttpKernel {
         }
       }
       request.principal = principal;
+      request.studioGate = { declared, isApiRoute, staleSession, invalidBearer };
+    });
+
+    // Rate limiting runs once the caller is known, so a signed-in user has a budget of
+    // their own instead of sharing one with everybody behind the same address.
+    await app.register(rateLimit, {
+      global: true,
+      max: config.env === 'test' ? 100_000 : 1200,
+      timeWindow: 60_000,
+      keyGenerator: (request) => request.principal?.userId ?? request.ip,
+      errorResponseBuilder: (_request, context) => ({
+        statusCode: 429,
+        error: { code: 'rate_limited', message: 'Too many requests. Slow down.', details: { retryAfterSeconds: Math.ceil(context.ttl / 1000) } },
+      }),
+    });
+    // The enforcing half: cross-site defences, then the route's access rules.
+    app.addHook('onRequest', async (request) => {
+      const gate = request.studioGate;
+      if (!gate) return; // not an API request
+      const { declared, isApiRoute, staleSession, invalidBearer } = gate;
+      const principal = request.principal;
+      // A bearer token that does not resolve is an error rather than "anonymous",
+      // unless the route does its own token handling.
+      if (invalidBearer && declared?.access !== 'self') {
+        throw unauthorized('That API token is not valid.', 'invalid_token');
+      }
 
       const origin = request.headers.origin;
       const unsafe = UNSAFE_METHODS.has(request.method);

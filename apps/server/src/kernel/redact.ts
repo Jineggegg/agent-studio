@@ -42,3 +42,13 @@ export const SECRET_HINT = '••••';
 export function secretHint(_value?: string): string {
   return SECRET_HINT;
 }
+
+/** 203.0.113.42 → 203.0.113.x; IPv6 keeps its /48. For logs and records that must not identify a person. */
+export function maskAddress(address: string | null | undefined): string | null {
+  if (!address) return null;
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(address);
+  const value = mapped ? mapped[1]! : address;
+  if (value.includes('.')) return value.split('.').slice(0, 3).join('.') + '.x';
+  if (value === '::1') return value;
+  return value.split(':').slice(0, 3).join(':') + '::/48';
+}
