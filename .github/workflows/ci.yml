@@ -152,7 +152,12 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run build
-      - run: npm run test:e2e
+      # Phone, tablet and desktop in Chromium, plus the phone in WebKit (the engine of Safari on iPhone).
+      # The suite starts its own demo server from the sources and serves apps/web/dist (tests/e2e/README.md).
+      - name: npm run test:e2e
+        run: npm run test:e2e
+        env:
+          E2E_WEBKIT: '1'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
