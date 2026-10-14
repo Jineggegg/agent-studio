@@ -10,6 +10,7 @@ description = "Fixtures that only look like secrets"
 paths = [
   '''.*\.test\.tsx?$''',
   '''apps/server/src/testing/.*''',
+  '''apps/server/src/modules/[^/]+/testing/.*''',
   '''apps/server/test/.*''',
   '''tests/.*''',
   '''docs/requirements/.*''',
