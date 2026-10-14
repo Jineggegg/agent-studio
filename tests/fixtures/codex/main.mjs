@@ -151,7 +151,7 @@ function allowRules(trustedProjectDir) {
   const prefixes = [];
   const directories = [...(PREPARED_HOME ? [path.join(CODEX_HOME, 'rules')] : []), ...(trustedProjectDir ? [path.join(trustedProjectDir, '.codex', 'rules')] : [])];
   for (const directory of directories) {
-    let names = [];
+    let names;
     try {
       names = fs.readdirSync(directory).filter((name) => name.endsWith('.rules'));
     } catch {
@@ -905,7 +905,7 @@ class Turn {
         const space = (argument || 'memory_search {"query":"stand-in"}').indexOf(' ');
         const text = argument || 'memory_search {"query":"stand-in"}';
         const tool = space === -1 ? text : text.slice(0, space);
-        let args = {};
+        let args;
         try {
           args = space === -1 ? {} : JSON.parse(text.slice(space + 1));
         } catch {
@@ -1028,7 +1028,7 @@ class Turn {
             return null;
           }
         };
-        let rules = [];
+        let rules;
         try {
           rules = fs.readdirSync(path.join(CODEX_HOME, 'rules'));
         } catch {

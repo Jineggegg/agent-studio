@@ -82,7 +82,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.{js,mjs}', '*.config.{js,ts}', 'apps/server/src/main.ts', 'apps/server/src/bin/**'],
+    files: ['scripts/**/*.{js,mjs}', 'tests/fixtures/**/*.{js,mjs}', '*.config.{js,ts}', 'apps/server/src/main.ts', 'apps/server/src/bin/**'],
     languageOptions: { globals: { ...globals.node } },
     rules: { 'no-console': 'off' },
   },
