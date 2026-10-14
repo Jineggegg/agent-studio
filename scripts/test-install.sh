@@ -62,10 +62,21 @@ if curl -fs -m 2 "http://127.0.0.1:$PORT/" >/dev/null 2>&1; then
   exit 2
 fi
 
-# The release files, served the way GitHub serves them.
-(cd "$RELEASE_DIR" && exec python3 -m http.server "$FILES_PORT" --bind 127.0.0.1) >"$WORK/files.log" 2>&1 &
+VERSION=$(sed -n 's/.*agent-studio-\(.*\)\.tar\.gz$/\1/p' "$RELEASE_DIR/SHA256SUMS")
+
+# The release files and a release list, laid out and formatted the way GitHub serves them. The newest
+# release in the list has no package (it must be passed over), and the list is far larger than a pipe
+# buffer, as GitHub's is.
+SITE=$WORK/site
+mkdir -p "$SITE/download/v$VERSION" "$SITE/api"
+cp "$RELEASE_DIR"/* "$SITE/download/v$VERSION/"
+{
+  printf '[\n  {\n    "tag_name": "v99.0.0",\n    "body": "%s",\n    "assets": [\n\n    ]\n  },\n' "$(head -c 200000 /dev/zero | tr '\0' 'x')"
+  printf '  {\n    "tag_name": "v%s",\n    "assets": [\n      {\n        "name": "agent-studio-%s.tar.gz",\n        "size": 1\n      }\n    ]\n  }\n]\n' "$VERSION" "$VERSION"
+} >"$SITE/api/releases.json"
+(cd "$SITE" && exec python3 -m http.server "$FILES_PORT" --bind 127.0.0.1) >"$WORK/files.log" 2>&1 &
 FILES_PID=$!
-for _ in $(seq 1 40); do curl -fs "http://127.0.0.1:$FILES_PORT/SHA256SUMS" >/dev/null 2>&1 && break; sleep 0.25; done
+for _ in $(seq 1 40); do curl -fs "http://127.0.0.1:$FILES_PORT/api/releases.json" >/dev/null 2>&1 && break; sleep 0.25; done
 
 run_studio() {
   env HOME="$TEST_HOME" AGENT_STUDIO_SERVICE_NAME=agent-studio-test "$TEST_HOME/.local/bin/agent-studio" "$@"
@@ -74,11 +85,12 @@ run_studio() {
 echo "Installing from $RELEASE_DIR"
 installer_flags=(--no --port "$PORT")
 [ "$SERVICE" = 1 ] || installer_flags+=(--no-service)
-env HOME="$TEST_HOME" AGENT_STUDIO_SERVICE_NAME=agent-studio-test AGENT_STUDIO_RELEASE_BASE="http://127.0.0.1:$FILES_PORT" \
+env HOME="$TEST_HOME" AGENT_STUDIO_SERVICE_NAME=agent-studio-test \
+  AGENT_STUDIO_RELEASES_URL="http://127.0.0.1:$FILES_PORT/api/releases.json" AGENT_STUDIO_DOWNLOAD_URL="http://127.0.0.1:$FILES_PORT/download" \
   bash "$RELEASE_DIR/install.sh" "${installer_flags[@]}" >"$WORK/install.log" 2>&1 || { cat "$WORK/install.log" >&2; die "the installer failed"; }
 check "the installer finished"
 
-VERSION=$(sed -n 's/.*agent-studio-\(.*\)\.tar\.gz$/\1/p' "$RELEASE_DIR/SHA256SUMS")
+grep -q 'Finding the newest release' "$WORK/install.log" || die "the installer did not look up the newest release"
 [ "$(run_studio version)" = "$VERSION" ] || die "agent-studio version does not say $VERSION"
 check "agent-studio version: $VERSION"
 
