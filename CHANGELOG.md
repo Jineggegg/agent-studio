@@ -6,6 +6,8 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [2.0.0-beta.3] — 2026-10-15
+
 ### Added
 - The conversation list beside the chat (tablet and wide) can be made wider or
   narrower by dragging its edge — with a mouse, a pen or a finger — or with ←

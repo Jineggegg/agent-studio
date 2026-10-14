@@ -4,7 +4,7 @@ A running record of what is done, what is in flight and what comes next, kept
 so that work can resume after an interruption. It is updated at every
 integration point; nothing is listed as done unless its tests pass.
 
-Last updated: 2026-10-14 (security review and fixes).
+Last updated: 2026-10-15 (2.0.0-beta.3: security review and fixes).
 
 ## Phases
 
