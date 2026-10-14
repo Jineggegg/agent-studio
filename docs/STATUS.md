@@ -16,7 +16,7 @@ Last updated: 2026-10-14 (adapters, providers, inbox and automation integrated; 
 | 4 Backend foundation, auth, database | **Done** | Kernel + auth (passkeys, tokens, lockout, audit, operator CLI) + projects + preferences; unit, integration and 21 black-box acceptance tests |
 | 5 Agent runtime (Claude Code, Codex) | **Done** (server) | Runtime core; Claude Code adapter (stream-json; verified against Claude Code 2.1.283: attachments, resume, approved and denied writes, steering, stop); Codex adapter (app-server protocol; verified against codex-cli 0.160.0: status, turn, resume, bridge tool, approved and denied changes, stop). See `docs/guides/agent-smoke-test.md` for what was and was not seen from the real CLIs |
 | 6 Workbench, sessions, tasks | In progress | Server side done with the runtime core; workbench UI in progress |
-| 7 Projects, GitHub, terminal, files | Server **done** | Files, Git, worktrees, GitHub (through a stand-in `gh` only — needs one manual check against a real account), terminal with real PTY tests, remote hosts, plugins. UI pending |
+| 7 Projects, GitHub, terminal, files | Server **done** | Files, Git, worktrees, GitHub (automated tests use a stand-in `gh`; the read paths — account, repositories, pull-request inbox, repository page, pull-request detail, CI runs — were checked by hand against a real account on 2026-10-14; merge and the other write actions were not), terminal with real PTY tests, remote hosts, plugins. UI pending |
 | 8 Memory, API models, automation | Server **done** | Memory; API-model providers with a confined tool loop (never run against a real provider — preset model ids are unverified); inbox, notifications, Web Push (never sent to a real push service), automation with exactly-once scheduling. UI pending |
 | 9 Mobile UI, PWA, remote access | In progress | Web foundation **done** (design system, shell, auth and settings screens, launcher, PWA; verified in headless Chromium at phone, tablet and desktop sizes — not yet on a real device). Feature screens pending |
 | 10 Hardening, integration tests, docs | In progress | 119 black-box acceptance tests for the security domain; they found and fixed an authentication bypass (URL spelling), non-atomic setup and a parallel-guess race. Independent review still to come |
@@ -66,8 +66,8 @@ other services. Heavy commands are serialised machine-wide and at most two
 development agents work at a time; running five in parallel exhausted memory
 and restarted the machine on 2026-10-14.
 
-Known gaps carried forward: GitHub module not yet exercised against the real
-service; nothing verified on a physical iPhone or iPad; a disabled account's
+Known gaps carried forward: GitHub write actions (merge, update branch) never
+run against the real service; nothing verified on a physical iPhone or iPad; a disabled account's
 running agent is not stopped (the event now exists, the runtime does not yet
 listen for it); notification channels other than in-app and Web Push are not
 planned for the first release.
