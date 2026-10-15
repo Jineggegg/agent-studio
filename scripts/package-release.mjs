@@ -16,14 +16,13 @@ import { createHash } from 'node:crypto';
 import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { downloadTerminal, TERMINAL_PLATFORMS } from './release-download.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const outIndex = args.indexOf('--out');
 const out = path.resolve(root, outIndex === -1 ? 'dist-release' : args[outIndex + 1]);
 
-/** Platforms whose prebuilt terminal binary goes into the archive (what the installer supports). */
-const PLATFORMS = ['linux-x64', 'linux-arm64', 'darwin-arm64', 'darwin-x64'];
 const PTY = '@lydell/node-pty';
 
 const version = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version;
@@ -86,15 +85,11 @@ run('npm', ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund', '
 // npm installs the terminal binary of this machine only. The others come from the registry, each checked
 // against the integrity the lockfile records for it.
 const lock = JSON.parse(readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
-for (const platform of PLATFORMS) {
+for (const platform of TERMINAL_PLATFORMS) {
   const key = `node_modules/${PTY}-${platform}`;
   if (existsSync(path.join(stage, key))) continue;
   const entry = lock.packages[key];
-  if (!entry?.resolved || !entry.integrity) throw new Error(`The lockfile has no ${key}.`);
-  const tarball = Buffer.from(execFileSync('curl', ['-fsSL', entry.resolved], { maxBuffer: 64 * 1024 * 1024 }));
-  const [algorithm, expected] = entry.integrity.split('-');
-  const actual = createHash(algorithm).update(tarball).digest('base64');
-  if (actual !== expected) throw new Error(`${entry.resolved} does not match the lockfile's integrity.`);
+  const tarball = downloadTerminal(platform, entry);
   const target = path.join(stage, key);
   mkdirSync(target, { recursive: true });
   execFileSync('tar', ['-xzf', '-', '-C', target, '--strip-components=1'], { input: tarball });

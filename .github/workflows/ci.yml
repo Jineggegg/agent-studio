@@ -70,6 +70,8 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - run: npm ci
       - run: npm run test:unit
+      - name: Release download security tests
+        run: node --test scripts/release-download.test.mjs
 
   integration:
     name: Integration tests (Node ${{ matrix.node }})
