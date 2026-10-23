@@ -1,0 +1,134 @@
+.wb-annotation {
+  position: absolute;
+  inset: var(--bar-height) 0 0;
+  padding: var(--space-3);
+  overflow: auto;
+  background: var(--color-bg);
+  color: var(--color-text);
+  touch-action: pan-y;
+}
+.wb-annotation__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.wb-annotation button,
+.wb-annotation input,
+.wb-voice button,
+.wb-task-panel summary,
+.wb-read-aloud {
+  min-height: var(--hit-min);
+  min-width: var(--hit-min);
+}
+.wb-annotation button,
+.wb-voice button {
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.wb-annotation button[aria-pressed='true'] {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent);
+}
+.wb-annotation button:disabled {
+  opacity: 0.5;
+}
+.wb-annotation__stage {
+  display: grid;
+  place-items: center;
+  max-width: 100%;
+  overflow: auto;
+  background: var(--color-sunken);
+  border-radius: var(--radius-md);
+}
+.wb-annotation canvas {
+  display: block;
+  max-width: 100%;
+  max-height: calc(var(--app-height) * 0.5);
+  object-fit: contain;
+  touch-action: none;
+}
+.wb-annotation__instruction {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.wb-annotation textarea {
+  min-height: calc(var(--hit-min) * 2);
+  font-size: var(--text-field);
+  padding: var(--space-2);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-sm);
+}
+.wb-read-aloud {
+  display: inline-grid;
+  place-items: center;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 0;
+}
+.wb-voice {
+  padding: var(--space-2);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-md);
+}
+.wb-voice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.wb-task-panel {
+  margin: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--text-footnote);
+}
+.wb-task-panel summary {
+  padding: var(--space-3);
+  cursor: pointer;
+}
+.wb-task-panel ul {
+  list-style: none;
+  padding: 0 var(--space-3);
+  margin: 0;
+  max-height: calc(var(--hit-min) * 4);
+  overflow: auto;
+}
+.wb-task-panel li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  border-top: 1px solid var(--color-separator);
+}
+.wb-task-panel li strong {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.wb-task-panel p {
+  margin: var(--space-2) var(--space-3);
+  color: var(--color-text-secondary);
+}
+
+.wb-composer__bar:has(.wb-voice) {
+  flex-wrap: wrap;
+}
+.wb-voice {
+  box-sizing: border-box;
+  flex: 0 0 100%;
+  order: -1;
+  overflow-wrap: anywhere;
+}
+.wb-annotation input {
+  font-size: var(--text-field);
+  color: var(--color-text);
+  background: var(--color-surface);
+}

@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -10,6 +10,7 @@ describe('buildChildEnv', () => {
     HOME: '/home/someone',
     AGENT_STUDIO_MASTER_KEY: 'do-not-leak',
     AGENT_STUDIO_DATA_DIR: '/srv/studio',
+    CLOUD_HARNESS_CHROMIUM: '/opt/example/chromium',
     DATABASE_URL: 'postgres://user:pw@db/prod',
     OPENAI_API_KEY: 'sk-from-the-server-environment',
     SSH_AUTH_SOCK: '/run/agent.sock',
@@ -20,17 +21,27 @@ describe('buildChildEnv', () => {
   });
 
   it('passes extra names only when the operator lists them', () => {
-    expect(buildChildEnv({ source, passthrough: ['SSH_AUTH_SOCK'] })).toHaveProperty('SSH_AUTH_SOCK', '/run/agent.sock');
+    expect(buildChildEnv({ source, passthrough: ['SSH_AUTH_SOCK'] })).toHaveProperty(
+      'SSH_AUTH_SOCK',
+      '/run/agent.sock',
+    );
   });
 
   it("never passes the server's own settings, even when asked to", () => {
-    const env = buildChildEnv({ source, passthrough: ['AGENT_STUDIO_MASTER_KEY'] });
+    const env = buildChildEnv({
+      source,
+      passthrough: ['AGENT_STUDIO_MASTER_KEY', 'CLOUD_HARNESS_CHROMIUM'],
+    });
     expect(env).not.toHaveProperty('AGENT_STUDIO_MASTER_KEY');
+    expect(env).not.toHaveProperty('CLOUD_HARNESS_CHROMIUM');
     expect(() => buildChildEnv({ source, extra: { AGENT_STUDIO_DATA_DIR: '/x' } })).toThrow();
+    expect(() => buildChildEnv({ source, extra: { CLOUD_HARNESS_CHROMIUM: '/x' } })).toThrow();
   });
 
   it('adds what the caller sets on purpose', () => {
-    expect(buildChildEnv({ source, extra: { TERM: 'xterm-256color', SKIPPED: undefined } })).toEqual({
+    expect(
+      buildChildEnv({ source, extra: { TERM: 'xterm-256color', SKIPPED: undefined } }),
+    ).toEqual({
       PATH: '/usr/bin',
       HOME: '/home/someone',
       TERM: 'xterm-256color',
@@ -69,7 +80,9 @@ describe('ProcessSupervisor', () => {
   });
 
   it('caps collected output', async () => {
-    const result = await processes.run('sh', ['-c', 'head -c 100000 /dev/zero | tr "\\0" "a"'], { maxOutputBytes: 1000 });
+    const result = await processes.run('sh', ['-c', 'head -c 100000 /dev/zero | tr "\\0" "a"'], {
+      maxOutputBytes: 1000,
+    });
     expect(result.stdout.length).toBe(1000);
     expect(result.truncated).toBe(true);
   });
@@ -111,7 +124,9 @@ describe('Sandbox', () => {
     base = await mkdtemp(path.join(os.homedir(), '.studio-sandbox-test-'));
     protectedDir = path.join(base, 'data');
     project = path.join(base, 'project');
-    await import('node:fs/promises').then((fs) => Promise.all([fs.mkdir(protectedDir), fs.mkdir(project)]));
+    await import('node:fs/promises').then((fs) =>
+      Promise.all([fs.mkdir(protectedDir), fs.mkdir(project)]),
+    );
     await writeFile(path.join(protectedDir, 'master.key'), 'top-secret');
     await writeFile(path.join(base, 'neighbour.txt'), 'outside the project');
     sandbox = await Sandbox.detect('auto', [protectedDir]);
@@ -124,12 +139,62 @@ describe('Sandbox', () => {
   it('is a no-op when turned off', async () => {
     const off = await Sandbox.detect('off', [protectedDir]);
     expect(off.status.mode).toBe('none');
-    expect(off.wrap('echo', ['hi'], { kind: 'mask' })).toEqual({ file: 'echo', args: ['hi'], sandboxed: false });
+    expect(off.wrap('echo', ['hi'], { kind: 'mask' })).toEqual({
+      file: 'echo',
+      args: ['hi'],
+      sandboxed: false,
+    });
+  });
+
+  it('allows writable exposure only for a canonical isolated profile, including when sandboxing is off', async () => {
+    const user = 'a'.repeat(26);
+    const profile = path.join(protectedDir, 'agent-accounts', user, 'b'.repeat(26));
+    await mkdir(profile, { recursive: true });
+    const off = await Sandbox.detect('off', [protectedDir]);
+    expect(() => off.wrap('true', [], { kind: 'mask', writableExpose: [protectedDir] })).toThrow(
+      /account profile/,
+    );
+    expect(() => off.wrap('true', [], { kind: 'mask', writableExpose: [project] })).toThrow(
+      /account profile/,
+    );
+    expect(() => off.wrap('true', [], { kind: 'mask', writableExpose: [profile] })).not.toThrow();
+    const link = path.join(protectedDir, 'agent-accounts', user, 'c'.repeat(26));
+    await symlink(project, link);
+    expect(() => off.wrap('true', [], { kind: 'mask', writableExpose: [link] })).toThrow(
+      /account profile/,
+    );
+  });
+
+  it('exposes only the chosen profile and reapplies private-setting masks after exposure', async (context) => {
+    if (sandbox.status.mode !== 'bwrap') return context.skip();
+    const user = 'd'.repeat(26);
+    const profile = path.join(protectedDir, 'agent-accounts', user, 'e'.repeat(26));
+    const sibling = path.join(protectedDir, 'agent-accounts', user, 'f'.repeat(26));
+    await mkdir(profile, { recursive: true });
+    await mkdir(sibling);
+    await writeFile(path.join(profile, 'config.toml'), 'personal setting');
+    await writeFile(path.join(sibling, 'private.txt'), 'sibling private');
+    const command = sandbox.wrap(
+      'sh',
+      [
+        '-c',
+        `echo refreshed > "${profile}/state.txt"; cat "${profile}/config.toml"; cat "${sibling}/private.txt" 2>/dev/null || true`,
+      ],
+      { kind: 'mask', writableExpose: [profile], hide: [path.join(profile, 'config.toml')] },
+    );
+    const result = await processes.run(command.file, command.args);
+    expect(result.stdout).not.toContain('personal setting');
+    expect(result.stdout).not.toContain('sibling private');
+    expect(await readFile(path.join(profile, 'state.txt'), 'utf8')).toBe('refreshed\n');
   });
 
   it('hides the protected directory from a masked process', async (context) => {
     if (sandbox.status.mode !== 'bwrap') return context.skip();
-    const command = sandbox.wrap('sh', ['-c', `cat "${protectedDir}/master.key" 2>&1; ls -A "${protectedDir}" | wc -l`], { kind: 'mask' });
+    const command = sandbox.wrap(
+      'sh',
+      ['-c', `cat "${protectedDir}/master.key" 2>&1; ls -A "${protectedDir}" | wc -l`],
+      { kind: 'mask' },
+    );
     expect(command.sandboxed).toBe(true);
     const result = await processes.run(command.file, command.args);
     expect(result.stdout).not.toContain('top-secret');
@@ -138,7 +203,11 @@ describe('Sandbox', () => {
 
   it('does not let a masked process reach the server through /proc', async (context) => {
     if (sandbox.status.mode !== 'bwrap') return context.skip();
-    const command = sandbox.wrap('sh', ['-c', `cat /proc/${process.pid}/root${protectedDir}/master.key 2>&1 || true`], { kind: 'mask' });
+    const command = sandbox.wrap(
+      'sh',
+      ['-c', `cat /proc/${process.pid}/root${protectedDir}/master.key 2>&1 || true`],
+      { kind: 'mask' },
+    );
     const result = await processes.run(command.file, command.args);
     expect(result.stdout + result.stderr).not.toContain('top-secret');
   });
@@ -150,7 +219,11 @@ describe('Sandbox', () => {
       `(echo x > "${base}/neighbour.txt") 2>/dev/null && echo wrote-outside || echo blocked-outside`,
       `(echo x > "$HOME/.studio-sandbox-escape") 2>/dev/null && echo wrote-home || echo blocked-home`,
     ].join('; ');
-    const command = sandbox.wrap('sh', ['-c', script], { kind: 'confine', writable: [project], network: false });
+    const command = sandbox.wrap('sh', ['-c', script], {
+      kind: 'confine',
+      writable: [project],
+      network: false,
+    });
     const result = await processes.run(command.file, command.args, { env: processes.env() });
     expect(result.stdout).toContain('wrote-project');
     expect(result.stdout).toContain('blocked-outside');
@@ -159,7 +232,11 @@ describe('Sandbox', () => {
 
   it('cuts the network off when asked', async (context) => {
     if (sandbox.status.mode !== 'bwrap') return context.skip();
-    const command = sandbox.wrap('cat', ['/proc/net/dev'], { kind: 'confine', writable: [project], network: false });
+    const command = sandbox.wrap('cat', ['/proc/net/dev'], {
+      kind: 'confine',
+      writable: [project],
+      network: false,
+    });
     const result = await processes.run(command.file, command.args);
     const interfaces = result.stdout
       .split('\n')

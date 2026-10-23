@@ -1,8 +1,8 @@
 {
   "name": "@agent-studio/protocol",
-  "version": "2.0.0-beta.3",
+  "version": "2.0.0-beta.4",
   "private": true,
-  "description": "Wire contracts shared by the Agent Cloud Studio server and clients: REST payloads, realtime messages and domain types.",
+  "description": "Wire contracts shared by the Cloud Harness server and clients: REST payloads, realtime messages and domain types.",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -11,7 +11,9 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json"

@@ -1,5 +1,15 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readlinkSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readlinkSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { ENV_PREFIX, type SandboxMode } from './config.js';
@@ -52,12 +62,12 @@ export function buildChildEnv(options: {
   const source = options.source ?? process.env;
   const env: Record<string, string> = {};
   for (const name of [...BASELINE_ENV, ...(options.passthrough ?? [])]) {
-    if (name.startsWith(ENV_PREFIX)) continue;
+    if (name.startsWith(ENV_PREFIX) || name.startsWith('CLOUD_HARNESS_')) continue;
     const value = source[name];
     if (value !== undefined) env[name] = value;
   }
   for (const [name, value] of Object.entries(options.extra ?? {})) {
-    if (name.startsWith(ENV_PREFIX)) {
+    if (name.startsWith(ENV_PREFIX) || name.startsWith('CLOUD_HARNESS_')) {
       throw new Error(`${name} must not be given to a child process.`);
     }
     if (value !== undefined) env[name] = value;
@@ -74,7 +84,12 @@ export type SandboxProfile =
    * applied after `hide`, so a path inside a hidden directory can be let back
    * in (read-only).
    */
-  | { readonly kind: 'mask'; readonly expose?: readonly string[]; readonly hide?: readonly string[] }
+  | {
+      readonly kind: 'mask';
+      readonly expose?: readonly string[];
+      readonly hide?: readonly string[];
+      readonly writableExpose?: readonly string[];
+    }
   /** Read-only file system except `writable`; credentials directories hidden; optional network. */
   | {
       readonly kind: 'confine';
@@ -97,7 +112,15 @@ export type SandboxProfile =
     };
 
 /** Program and library directories an isolated process may read. */
-const ISOLATE_SYSTEM_PATHS = ['/usr', '/bin', '/sbin', '/lib', '/lib32', '/lib64', '/libx32'] as const;
+const ISOLATE_SYSTEM_PATHS = [
+  '/usr',
+  '/bin',
+  '/sbin',
+  '/lib',
+  '/lib32',
+  '/lib64',
+  '/libx32',
+] as const;
 
 /** What name resolution and TLS need; given to an isolated process only together with the network. */
 const ISOLATE_NETWORK_PATHS = [
@@ -161,8 +184,8 @@ export class Sandbox {
     this.#protected = protectedPaths;
   }
 
-  static none(reason: string): Sandbox {
-    return new Sandbox({ mode: 'none', reason }, []);
+  static none(reason: string, protectedPaths: readonly string[] = []): Sandbox {
+    return new Sandbox({ mode: 'none', reason }, protectedPaths);
   }
 
   /**
@@ -171,35 +194,67 @@ export class Sandbox {
    * does not.
    */
   static async detect(mode: SandboxMode, protectedPaths: readonly string[]): Promise<Sandbox> {
-    if (mode === 'off') return Sandbox.none('Turned off by configuration.');
+    if (mode === 'off') return Sandbox.none('Turned off by configuration.', protectedPaths);
     if (process.platform !== 'linux') {
       if (mode === 'bwrap') throw new Error('The bwrap sandbox is only available on Linux.');
-      return Sandbox.none(`No sandbox is available on ${process.platform}.`);
+      return Sandbox.none(`No sandbox is available on ${process.platform}.`, protectedPaths);
     }
     const probe = await new Promise<{ ok: boolean; detail: string }>((resolve) => {
-      const child = spawn('bwrap', ['--bind', '/', '/', '--unshare-pid', '--proc', '/proc', '--die-with-parent', '--', 'true'], {
-        stdio: ['ignore', 'ignore', 'pipe'],
-        env: buildChildEnv({}),
-      });
+      const child = spawn(
+        'bwrap',
+        ['--bind', '/', '/', '--unshare-pid', '--proc', '/proc', '--die-with-parent', '--', 'true'],
+        {
+          stdio: ['ignore', 'ignore', 'pipe'],
+          env: buildChildEnv({}),
+        },
+      );
       let stderr = '';
       child.stderr?.on('data', (chunk: Buffer) => {
         stderr += chunk.toString('utf8');
       });
       child.on('error', (error) => resolve({ ok: false, detail: error.message }));
-      child.on('close', (code) => resolve({ ok: code === 0, detail: stderr.trim() || `exit ${code}` }));
+      child.on('close', (code) =>
+        resolve({ ok: code === 0, detail: stderr.trim() || `exit ${code}` }),
+      );
     });
     if (!probe.ok) {
-      if (mode === 'bwrap') throw new Error(`The bwrap sandbox is required but does not work here: ${probe.detail}`);
-      return Sandbox.none(`bubblewrap is not usable here (${probe.detail}).`);
+      if (mode === 'bwrap')
+        throw new Error(`The bwrap sandbox is required but does not work here: ${probe.detail}`);
+      return Sandbox.none(`bubblewrap is not usable here (${probe.detail}).`, protectedPaths);
     }
     return new Sandbox({ mode: 'bwrap' }, protectedPaths);
   }
 
   /** Rewrites a command so that it runs inside the sandbox; a no-op when there is none. */
-  wrap(file: string, args: readonly string[], profile: SandboxProfile): { file: string; args: string[]; sandboxed: boolean } {
+  wrap(
+    file: string,
+    args: readonly string[],
+    profile: SandboxProfile,
+  ): { file: string; args: string[]; sandboxed: boolean } {
+    if (profile.kind === 'mask') {
+      for (const target of profile.writableExpose ?? []) {
+        const protectedRoot = this.#protected.find((root) =>
+          path.relative(root, target).match(/^agent-accounts[/\\][0-9a-z]{26}[/\\][0-9a-z]{26}$/),
+        );
+        if (
+          !protectedRoot ||
+          !path.isAbsolute(target) ||
+          realpathSync(target) !== target ||
+          !lstatSync(target).isDirectory()
+        ) {
+          throw new Error(
+            'Writable exposure is restricted to a canonical account profile directory.',
+          );
+        }
+      }
+    }
     if (this.status.mode !== 'bwrap') return { file, args: [...args], sandboxed: false };
     if (profile.kind === 'isolate') {
-      return { file: 'bwrap', args: [...this.#isolate(profile), '--', file, ...args], sandboxed: true };
+      return {
+        file: 'bwrap',
+        args: [...this.#isolate(profile), '--', file, ...args],
+        sandboxed: true,
+      };
     }
 
     const flags: string[] = ['--die-with-parent', '--unshare-pid'];
@@ -221,7 +276,10 @@ export class Sandbox {
       if (statSync(target).isDirectory()) flags.push('--tmpfs', target);
       else flags.push('--ro-bind', '/dev/null', target);
     }
-    if (profile.kind === 'mask') flags.push(...this.#hide(profile.hide ?? []));
+    if (profile.kind === 'mask') {
+      for (const target of profile.writableExpose ?? []) flags.push('--bind', target, target);
+      flags.push(...this.#hide(profile.hide ?? []));
+    }
     for (const exposed of profile.expose ?? []) {
       if (existsSync(exposed)) flags.push('--ro-bind', exposed, exposed);
     }
@@ -241,7 +299,8 @@ export class Sandbox {
     const flags: string[] = [];
     let standIn: string | null = null;
     for (const listed of paths) {
-      if (!path.isAbsolute(listed)) throw new Error(`Sandbox paths must be absolute, got "${listed}".`);
+      if (!path.isAbsolute(listed))
+        throw new Error(`Sandbox paths must be absolute, got "${listed}".`);
       const entry = statSync(listed, { throwIfNoEntry: false });
       if (!entry) continue;
       const target = realpathSync(listed);
@@ -253,7 +312,8 @@ export class Sandbox {
       }
     }
     // With nothing protected the stand-in lives in a temporary folder: keep at least this process out of it.
-    if (standIn !== null && this.#scratch !== null && path.dirname(standIn) === this.#scratch) flags.push('--tmpfs', this.#scratch);
+    if (standIn !== null && this.#scratch !== null && path.dirname(standIn) === this.#scratch)
+      flags.push('--tmpfs', this.#scratch);
     return flags;
   }
 
@@ -263,8 +323,13 @@ export class Sandbox {
    * process — of this run or any other — can ever put text into it.
    */
   #emptyFile(): string {
-    const home = this.#protected.find((candidate) => statSync(candidate, { throwIfNoEntry: false })?.isDirectory());
-    const directory = home === undefined ? (this.#scratch ??= mkdtempSync(path.join(os.tmpdir(), 'agent-studio-sandbox-'))) : path.join(home, 'sandbox');
+    const home = this.#protected.find((candidate) =>
+      statSync(candidate, { throwIfNoEntry: false })?.isDirectory(),
+    );
+    const directory =
+      home === undefined
+        ? (this.#scratch ??= mkdtempSync(path.join(os.tmpdir(), 'agent-studio-sandbox-')))
+        : path.join(home, 'sandbox');
     const file = path.join(directory, 'empty');
     const existing = lstatSync(file, { throwIfNoEntry: false });
     if (existing?.isFile() && existing.size === 0) return file;
@@ -277,14 +342,21 @@ export class Sandbox {
   /** Builds the root of an `isolate` profile from nothing: only what is listed gets in. */
   #isolate(profile: Extract<SandboxProfile, { kind: 'isolate' }>): string[] {
     for (const target of [...profile.readable, ...profile.writable]) {
-      if (!path.isAbsolute(target)) throw new Error(`Sandbox paths must be absolute, got "${target}".`);
+      if (!path.isAbsolute(target))
+        throw new Error(`Sandbox paths must be absolute, got "${target}".`);
       // A path *inside* protected data may be handed over on purpose (a plugin's
       // own folder); one that contains the protected data never may.
       if (this.#protected.some((secret) => contains(path.resolve(target), secret))) {
         throw new Error(`"${target}" would expose the server's own data to an isolated process.`);
       }
     }
-    const flags: string[] = ['--die-with-parent', '--unshare-pid', '--unshare-ipc', '--unshare-uts', '--unshare-cgroup-try'];
+    const flags: string[] = [
+      '--die-with-parent',
+      '--unshare-pid',
+      '--unshare-ipc',
+      '--unshare-uts',
+      '--unshare-cgroup-try',
+    ];
     if (!profile.network) flags.push('--unshare-net');
     for (const directory of ISOLATE_SYSTEM_PATHS) {
       const entry = lstatSync(directory, { throwIfNoEntry: false });
@@ -314,6 +386,8 @@ export interface SpawnOptions {
   /** The complete environment. Build it with {@link ProcessSupervisor.env}. */
   readonly env?: Readonly<Record<string, string>>;
   readonly stdin?: 'pipe' | 'ignore';
+  /** Dedicated Chromium CDP channels: fd 3 receives requests, fd 4 emits responses. */
+  readonly debugPipe?: boolean;
 }
 
 export interface RunOptions extends SpawnOptions {
@@ -358,7 +432,9 @@ export class ProcessSupervisor {
     const child = spawn(file, [...args], {
       cwd: options.cwd,
       env: options.env ?? this.env(),
-      stdio: [options.stdin ?? 'ignore', 'pipe', 'pipe'],
+      stdio: options.debugPipe
+        ? [options.stdin ?? 'ignore', 'pipe', 'pipe', 'pipe', 'pipe']
+        : [options.stdin ?? 'ignore', 'pipe', 'pipe'],
       shell: false,
       // Own process group, so the whole tree can be signalled at once.
       detached: true,
@@ -376,7 +452,10 @@ export class ProcessSupervisor {
     return new Promise<RunResult>((resolve, reject) => {
       let child: ChildProcess;
       try {
-        child = this.spawn(file, args, { ...options, stdin: options.input === undefined ? 'ignore' : 'pipe' });
+        child = this.spawn(file, args, {
+          ...options,
+          stdin: options.input === undefined ? 'ignore' : 'pipe',
+        });
       } catch (error) {
         reject(error instanceof Error ? error : new Error(String(error)));
         return;
@@ -388,19 +467,34 @@ export class ProcessSupervisor {
       let truncated = false;
       let timedOut = false;
 
-      const collect = (chunks: Buffer[], size: () => number, add: (n: number) => void) => (chunk: Buffer) => {
-        const room = limit - size();
-        if (room <= 0) {
-          truncated = true;
-          return;
-        }
-        const slice = chunk.length > room ? chunk.subarray(0, room) : chunk;
-        if (slice.length < chunk.length) truncated = true;
-        chunks.push(slice);
-        add(slice.length);
-      };
-      child.stdout?.on('data', collect(out, () => outBytes, (n) => (outBytes += n)));
-      child.stderr?.on('data', collect(err, () => errBytes, (n) => (errBytes += n)));
+      const collect =
+        (chunks: Buffer[], size: () => number, add: (n: number) => void) => (chunk: Buffer) => {
+          const room = limit - size();
+          if (room <= 0) {
+            truncated = true;
+            return;
+          }
+          const slice = chunk.length > room ? chunk.subarray(0, room) : chunk;
+          if (slice.length < chunk.length) truncated = true;
+          chunks.push(slice);
+          add(slice.length);
+        };
+      child.stdout?.on(
+        'data',
+        collect(
+          out,
+          () => outBytes,
+          (n) => (outBytes += n),
+        ),
+      );
+      child.stderr?.on(
+        'data',
+        collect(
+          err,
+          () => errBytes,
+          (n) => (errBytes += n),
+        ),
+      );
 
       const timer =
         options.timeoutMs === undefined

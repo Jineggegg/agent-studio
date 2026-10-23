@@ -17,6 +17,17 @@ coverage/
 *.pem
 /data/
 .agent-studio/
+.cloud-harness/
+.data/
+studio-vault/
+__pycache__/
+*.pyc
+*.pyo
+*.dpapi
+/desktop/dist/
+/desktop/release/
+/voice-recordings/
+/device-pairings/
 
 # Test output
 playwright-report/
@@ -30,3 +41,5 @@ tests/e2e/.auth/
 !.vscode/extensions.json
 *.log
 .vitest/
+
+/desktop-dist/

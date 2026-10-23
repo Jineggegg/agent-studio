@@ -1,0 +1,4 @@
+#!/bin/sh
+# The product command delegates to the stable installation entry point.
+set -eu
+exec "$(dirname "$0")/agent-studio" "$@"

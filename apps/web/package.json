@@ -1,8 +1,8 @@
 {
   "name": "@agent-studio/web",
-  "version": "2.0.0-beta.3",
+  "version": "2.0.0-beta.4",
   "private": true,
-  "description": "Agent Cloud Studio web client: a touch-first PWA for phone, tablet and desktop.",
+  "description": "Cloud Harness web client: a touch-first PWA for phone, tablet and desktop.",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@agent-studio/protocol": "2.0.0-beta.3",
+    "@agent-studio/protocol": "2.0.0-beta.4",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-css": "^6.3.1",
     "@codemirror/lang-html": "^6.4.12",

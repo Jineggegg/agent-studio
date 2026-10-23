@@ -3,8 +3,10 @@
 As part of the release checklist, this code base was compared mechanically with
 the private predecessor system it was modelled on (which is itself derived from
 CloudCLI UI). The tool is `scripts/similarity-audit.mjs`; it reads both trees
-and reports figures and locations in **this** tree only — it never prints the
-other tree's content, so running it does not carry any of that code across.
+and prints aggregate figures and locations in **this** tree. Detailed JSON
+reports also contain counterpart file names, so those reports stay local;
+only the aggregate findings below are published. The comparison does not copy
+the other tree's source into the application.
 
 What it measures, from coarse to strict:
 
@@ -19,32 +21,37 @@ What it measures, from coarse to strict:
 4. **Distinctive identifiers** — names of at least fourteen characters
    declared here that also occur there.
 
-## Result
+## Current review
 
-Latest run: 2026-10-14, on the commit released as `v2.0.0-beta.1` (`ed9e07f`).
+The 2026-10-23 Cloud Harness candidate is compared against both the private
+predecessor and public upstream `siteboon/claudecodeui` at
+`7238368fca24e90938e9a6736d38af8b86575eb9`. Build products and dependencies are
+excluded. This tree contains 984 compared files, 114,233 significant lines and
+101,863 unique significant lines.
 
-| Measure | Result |
-|---|---|
-| Files compared | 862 here, 1,496 there |
-| Significant lines | 94,606 unique here, 143,672 there |
-| Identical significant lines | 411 — **0.43 %** of this code base |
-| Regions sharing six or more consecutive lines | **0** |
-| Files here with any three-line window found in a file there | **0** |
-| Files here with ≥ 10 % three-line overlap with one file there | **0** |
-| Distinctive identifiers declared here that occur there | 95 of 2,529 |
+| Measure                                                    | Private predecessor | Public upstream |
+| ---------------------------------------------------------- | ------------------: | --------------: |
+| Compared files                                             |               1,861 |             859 |
+| Significant lines                                          |             185,273 |          66,509 |
+| Identical significant lines                                |         524 (0.51%) |     179 (0.18%) |
+| Regions with six consecutive matching significant lines    |                   0 |               0 |
+| Files with at least 10% three-line-window overlap          |                   0 |               0 |
+| Shared distinctive identifiers, out of 2,751 declared here |                 103 |              38 |
 
-The identical lines are idioms (timers, standard HTML meta tags, `if
-(typeof value === 'string') return value;`). The shared identifiers are names
-any implementation of the same standards or libraries would use —
-`attestationObject`, `clientDataJSON` and `authenticatorData` (WebAuthn),
-`IncomingMessage` (Node.js), `permissionMode`, `retryAfterSeconds`,
-`DEFAULT_TIMEOUT_MS` — and were reviewed one by one.
+There are no three-line file matches against the private predecessor. Against
+the public upstream, one three-line window appears in the existing public
+`apps/server/src/modules/claude-code/tools.ts` (one of 143 windows, 0.70%). That
+file is unchanged in this expansion; the match is conventional tool argument
+handling. Isolated lines and shared identifiers are not treated as evidence of
+copying by themselves.
 
-## What this does and does not show
+The checks look for matching sequences and shared identifiers. They do not
+prove absence of copying, derivation or legal risk. Behavioural requirements
+were deliberately informed by an earlier system; process limitations are
+recorded in [PROCESS.md](PROCESS.md).
 
-It shows that no code was copied in any recognisable form: not a single
-stretch of three consecutive significant lines matches. It does not prove
-that no idea, structure or behaviour was derived from the predecessor — the
-requirements were derived from its behaviour on purpose, and the limits of the
-process that kept implementation details out are described in
-[PROCESS.md](PROCESS.md).
+## Earlier release
+
+The 2026-10-14 comparison at `v2.0.0-beta.1` found 411 identical significant
+lines (0.43%), no six-line regions and no three-line file matches against the
+private predecessor. Those figures describe that earlier tree only.

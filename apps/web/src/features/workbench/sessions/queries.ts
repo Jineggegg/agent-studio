@@ -1,5 +1,16 @@
-import { type Session, USER_AGENT_EVENT, userAgentEventSchema, userTopic } from '@agent-studio/protocol';
-import { type InfiniteData, type QueryClient, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  type Session,
+  USER_AGENT_EVENT,
+  userAgentEventSchema,
+  userTopic,
+} from '@agent-studio/protocol';
+import {
+  type InfiniteData,
+  type QueryClient,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useRealtimeTopic } from '@/data/realtime';
 import { useUser } from '@/data/session';
@@ -16,6 +27,7 @@ import { matchesTitle } from './grouping';
 export const SESSION_PAGE_SIZE = 50;
 
 export interface SessionListParams {
+  groupId?: string;
   /** Null lists every project's sessions. */
   projectId: string | null;
   archived: 'exclude' | 'only';
@@ -44,13 +56,20 @@ export const workbenchKeys = {
 
 /** Whether a session belongs in a list. */
 export function listAccepts(params: SessionListParams, session: Session): boolean {
+  if (params.groupId === 'ungrouped' && session.groupId) return false;
+  if (params.groupId && params.groupId !== 'ungrouped' && session.groupId !== params.groupId)
+    return false;
   if (params.projectId !== null && session.projectId !== params.projectId) return false;
   if ((params.archived === 'only') !== session.archived) return false;
   return matchesTitle(session.title, params.q);
 }
 
 /** Puts a changed session into the pages of a list, replaces it there, or takes it out. The same array comes back when nothing changed. */
-export function upsertInPages(pages: readonly SessionPage[], params: SessionListParams, session: Session): readonly SessionPage[] {
+export function upsertInPages(
+  pages: readonly SessionPage[],
+  params: SessionListParams,
+  session: Session,
+): readonly SessionPage[] {
   const accepts = listAccepts(params, session);
   let found = false;
   let changed = false;
@@ -72,9 +91,16 @@ export function upsertInPages(pages: readonly SessionPage[], params: SessionList
   return changed ? next : pages;
 }
 
-export function removeFromPages(pages: readonly SessionPage[], sessionId: string): readonly SessionPage[] {
+export function removeFromPages(
+  pages: readonly SessionPage[],
+  sessionId: string,
+): readonly SessionPage[] {
   if (!pages.some((page) => page.sessions.some((entry) => entry.id === sessionId))) return pages;
-  return pages.map((page) => (page.sessions.some((entry) => entry.id === sessionId) ? { ...page, sessions: page.sessions.filter((entry) => entry.id !== sessionId) } : page));
+  return pages.map((page) =>
+    page.sessions.some((entry) => entry.id === sessionId)
+      ? { ...page, sessions: page.sessions.filter((entry) => entry.id !== sessionId) }
+      : page,
+  );
 }
 
 type ListData = InfiniteData<SessionPage, number>;
@@ -89,20 +115,26 @@ export function upsertSession(queryClient: QueryClient, session: Session): void 
   // Events can overtake each other; the session that was changed last wins.
   if (current && current.updatedAt > session.updatedAt) return;
   queryClient.setQueryData(workbenchKeys.session(session.id), session);
-  for (const [key, data] of queryClient.getQueriesData<ListData>({ queryKey: workbenchKeys.lists })) {
+  for (const [key, data] of queryClient.getQueriesData<ListData>({
+    queryKey: workbenchKeys.lists,
+  })) {
     const params = key[2];
     if (!data || !isListParams(params)) continue;
     const pages = upsertInPages(data.pages, params, session);
-    if (pages !== data.pages) queryClient.setQueryData<ListData>(key, { ...data, pages: [...pages] });
+    if (pages !== data.pages)
+      queryClient.setQueryData<ListData>(key, { ...data, pages: [...pages] });
   }
 }
 
 export function removeSession(queryClient: QueryClient, sessionId: string): void {
   queryClient.removeQueries({ queryKey: workbenchKeys.session(sessionId), exact: true });
-  for (const [key, data] of queryClient.getQueriesData<ListData>({ queryKey: workbenchKeys.lists })) {
+  for (const [key, data] of queryClient.getQueriesData<ListData>({
+    queryKey: workbenchKeys.lists,
+  })) {
     if (!data) continue;
     const pages = removeFromPages(data.pages, sessionId);
-    if (pages !== data.pages) queryClient.setQueryData<ListData>(key, { ...data, pages: [...pages] });
+    if (pages !== data.pages)
+      queryClient.setQueryData<ListData>(key, { ...data, pages: [...pages] });
   }
 }
 
@@ -112,9 +144,19 @@ export function useSessionList(params: SessionListParams, options: { enabled?: b
   return useInfiniteQuery({
     queryKey: workbenchKeys.list(params),
     queryFn: ({ pageParam, signal }): Promise<SessionPage> =>
-      workbenchApi.listSessions({ projectId: params.projectId, archived: params.archived, q: params.q, limit: SESSION_PAGE_SIZE, offset: pageParam }, signal),
+      workbenchApi.listSessions(
+        {
+          projectId: params.projectId,
+          archived: params.archived,
+          q: params.q,
+          limit: SESSION_PAGE_SIZE,
+          offset: pageParam,
+        },
+        signal,
+      ),
     initialPageParam: 0,
-    getNextPageParam: (last, _pages, lastOffset) => (last.hasMore ? lastOffset + SESSION_PAGE_SIZE : undefined),
+    getNextPageParam: (last, _pages, lastOffset) =>
+      last.hasMore ? lastOffset + SESSION_PAGE_SIZE : undefined,
     enabled: options.enabled ?? true,
     meta: { live: true },
   });
@@ -160,7 +202,9 @@ export function useActivity(options: { enabled?: boolean } = {}) {
  * the user's live topic. Mount it once where the workbench (or its tile) is
  * on show; mounting it twice is harmless.
  */
-export function useWorkbenchLiveUpdates(handlers: { onRemoved?: (sessionId: string) => void } = {}): void {
+export function useWorkbenchLiveUpdates(
+  handlers: { onRemoved?: (sessionId: string) => void } = {},
+): void {
   const user = useUser();
   const queryClient = useQueryClient();
   const handlersRef = useRef(handlers);

@@ -5,7 +5,7 @@ agent, and then onto your phone. It assumes you have read the
 [quick start](../../README.md#quick-start) and want the details: what each step
 does, what you will see, and what to do when a step goes wrong.
 
-Agent Cloud Studio is beta software. The server and its security model are the
+Cloud Harness is beta software. The server and its security model are the
 most mature parts. The client has been tested in desktop browsers and in
 browsers emulating phone and tablet screens, not on a physical iPhone or iPad.
 [docs/STATUS.md](../STATUS.md) lists what is finished.
@@ -30,7 +30,7 @@ browsers emulating phone and tablet screens, not on a physical iPhone or iPad.
 ## Install and build
 
 ```bash
-git clone https://github.com/Jineggegg/agent-studio.git
+git clone https://github.com/Jineggegg/cloud-harness.git
 cd agent-studio
 npm ci
 npm run build
@@ -54,7 +54,7 @@ npm start
 The server prints its address and, on the first run, a one-time setup token:
 
 ```
-  Agent Cloud Studio is running at http://127.0.0.1:7420
+  Cloud Harness is running at http://127.0.0.1:7420
 
   First run — create the owner account with this one-time setup token:
 
@@ -109,12 +109,12 @@ later under **Settings → People**.
 
 If it goes wrong:
 
-| You see | What it means |
-|---|---|
-| "That setup token is not correct. Copy it again from the server's console." | The token does not match. After a restart, use the newest token. |
-| "Too many attempts. Try again at …" | Setup attempts are limited per network address. Wait. |
-| "This Studio is already set up. Sign in instead." | An owner account exists. Use the sign-in page. If you lost the password, see [Operator commands](operations.md#operator-commands). |
-| "This address is not one this server answers to. Add it to AGENT_STUDIO_PUBLIC_ORIGINS." | You opened the Studio under a name it does not know. See [Troubleshooting](operations.md#cannot-reach-it-from-the-phone). |
+| You see                                                                                  | What it means                                                                                                                      |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| "That setup token is not correct. Copy it again from the server's console."              | The token does not match. After a restart, use the newest token.                                                                   |
+| "Too many attempts. Try again at …"                                                      | Setup attempts are limited per network address. Wait.                                                                              |
+| "This Studio is already set up. Sign in instead."                                        | An owner account exists. Use the sign-in page. If you lost the password, see [Operator commands](operations.md#operator-commands). |
+| "This address is not one this server answers to. Add it to AGENT_STUDIO_PUBLIC_ORIGINS." | You opened the Studio under a name it does not know. See [Troubleshooting](operations.md#cannot-reach-it-from-the-phone).          |
 
 ## What you see next
 
@@ -276,9 +276,15 @@ provider from the browser's developer console, on a desktop browser:
      method: 'POST',
      headers,
      body: JSON.stringify({
-       name: p.name, baseUrl: p.baseUrl, allowPrivateNetwork: p.allowPrivateNetwork,
-       keyRequired: p.keyRequired, balance: p.balance, models: p.models,
-       defaultModel: p.defaultModel, preset: p.id, apiKey: prompt('API key'),
+       name: p.name,
+       baseUrl: p.baseUrl,
+       allowPrivateNetwork: p.allowPrivateNetwork,
+       keyRequired: p.keyRequired,
+       balance: p.balance,
+       models: p.models,
+       defaultModel: p.defaultModel,
+       preset: p.id,
+       apiKey: prompt('API key'),
      }),
    });
    const created = await response.json();
@@ -288,7 +294,11 @@ provider from the browser's developer console, on a desktop browser:
 3. Check the connection:
 
    ```js
-   console.log(await (await fetch(`/api/providers/${created.id}/verify`, { method: 'POST', headers, body: '{}' })).json());
+   console.log(
+     await (
+       await fetch(`/api/providers/${created.id}/verify`, { method: 'POST', headers, body: '{}' })
+     ).json(),
+   );
    ```
 
 A status of `403` with `reauth_required` means step 1 is more than 15 minutes
@@ -397,7 +407,7 @@ already done before continuing.
 2. **Open that address** on the phone and sign in.
 3. **Install it.** On iPhone or iPad, in Safari: **Share → Add to Home
    Screen**. On Android, in Chrome: the menu's **Install app** or **Add to Home
-   screen**. The installed app is called **Agent Studio**.
+   screen**. The installed app is called **Cloud Harness**.
 
 Use an `https` address with a host name. Over plain `http` (for example a
 tailnet IP address) the page works, but the browser gives it no background

@@ -1,10 +1,9 @@
 # How this project was kept independent
 
-Agent Cloud Studio 2.0 is a new implementation of the *ideas* in a private,
+Cloud Harness is a new implementation of the _ideas_ in a private,
 AGPL-licensed system (itself a modified copy of CloudCLI UI,
-`siteboon/claudecodeui`). Functionality is not protected by copyright; source
-code is. The process below was designed so that functionality crossed over and
-code did not. This document also records, honestly, where that process fell
+`siteboon/claudecodeui`). The process below was designed to transfer behavioural
+requirements while excluding source code and assets. This document records where that process fell
 short of a strict clean room.
 
 ## The two groups
@@ -77,7 +76,9 @@ Because of points 1 and 2 this project does not claim to be a strict
 clean-room implementation in the legal sense. It claims that it was written
 from requirements by agents instructed not to consult the original, that its
 architecture, data model, wire protocol and visual design are its own, and
-that a mechanical comparison found no copied code.
+that mechanical comparisons detected no matching six-line significant source sequences
+under the metrics described in SIMILARITY.md. These checks cannot prove absence
+of derivation or replace a legal assessment.
 
 ## What is deliberately different
 
@@ -88,3 +89,19 @@ replay); authentication model (server-side sessions in HttpOnly cookies with
 anti-forgery tokens, a one-time setup token, roles, scoped API tokens);
 permission engine and sandbox; agent adapter contract; and component library
 and visual language.
+
+## Cloud Harness expansion (2026-10-23)
+
+This later feature expansion follows `docs/requirements/05-cloud-harness.md`.
+The implementation workers were started without the private analysis history
+and instructed to read only this public tree, the behavioural requirements and
+public protocol documentation. No private commits or assets were transplanted.
+
+Unlike the original development phase described above, the coordinating agent
+had read portions of the predecessor during the requested privacy audit. It
+then integrated the public modules and implemented the provider adapter, tool
+library and branding within this repository's existing design. This is a real
+limitation: that coordinating work is not claimed to have strict clean-room
+separation. The final similarity review must cover those additions as well as
+the independent workers' contributions. Personal deployment data, transcripts,
+accounts and credentials are excluded entirely.

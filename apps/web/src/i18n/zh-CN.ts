@@ -1,10 +1,31 @@
+import { usageGateMessagesZh } from '@/features/usage/messages';
+import { computerMessagesZh } from '@/features/computer/messages';
+import { browserZhCN } from '@/features/browser/messages';
+import { miniAppMessagesZh } from '@/features/mini-apps/messages';
+import { libraryMessagesZh } from '@/features/tool-library/messages';
 import type { en } from './en';
+import { mediaZhCN } from '@/features/workbench/media/messages';
 
 /**
  * 简体中文。键必须与 en.ts 完全一致——类型检查和测试都会核对。
  * 中文没有单复数之分，带 .one / .other 的两项内容相同。
  */
+import { mailMessagesZh } from '@/features/mailbox/messages';
+import { notificationMessagesZh } from '@/features/notifications/messages';
+import { reminderMessagesZh } from '@/features/automation/messages';
+import { conversationMessagesZh } from '@/features/workbench/sessions/messages';
+
 export const zhCN: Record<keyof typeof en, string> = {
+  ...libraryMessagesZh,
+  ...miniAppMessagesZh,
+  ...browserZhCN,
+  ...computerMessagesZh,
+  ...usageGateMessagesZh,
+  ...mediaZhCN,
+  ...mailMessagesZh,
+  ...notificationMessagesZh,
+  ...reminderMessagesZh,
+  ...conversationMessagesZh,
   // ---- 通用 ---------------------------------------------------------------------
   'common.add': '添加',
   'common.cancel': '取消',
@@ -52,7 +73,7 @@ export const zhCN: Record<keyof typeof en, string> = {
   'shell.cue.reconnecting': '正在重新连接…',
   'shell.cue.restored': '已重新连接',
 
-  'update.title': 'Agent Studio 已更新',
+  'update.title': 'Cloud Harness 已更新',
   'update.detail': '刷新后即可使用新版本。',
   'update.refresh': '刷新',
 
@@ -238,9 +259,11 @@ export const zhCN: Record<keyof typeof en, string> = {
   'home.project.restore': '恢复到主屏幕',
   'home.project.restored': '“{name}”已回到主屏幕',
   'home.project.remove': '移除项目',
-  'home.project.removeHint': '移除项目只会清除 Studio 为它保存的内容。文件夹及其中的文件不会被改动。',
+  'home.project.removeHint':
+    '移除项目只会清除 Studio 为它保存的内容。文件夹及其中的文件不会被改动。',
   'home.project.removeConfirm.title': '移除“{name}”？',
-  'home.project.removeConfirm.message': 'Studio 会忘记这个项目以及为它保存的一切，包括其中的对话。文件夹和里面的文件保持原样。',
+  'home.project.removeConfirm.message':
+    'Studio 会忘记这个项目以及为它保存的一切，包括其中的对话。文件夹和里面的文件保持原样。',
   'home.project.removed': '已移除“{name}”',
 
   'home.folder.title': '选择文件夹',
@@ -356,8 +379,10 @@ export const zhCN: Record<keyof typeof en, string> = {
   'account.password.changedDetail': '你的其他设备已被退出登录。',
 
   'account.passkeys': '通行密钥',
-  'account.passkeys.hint': '通行密钥让你用这台设备的指纹、面容或 PIN 登录。每个通行密钥只在创建它的地址上有效——这里是 {host}。',
-  'account.passkeys.unavailableHere': '这个地址无法使用通行密钥。需要 https 和主机名（或 localhost）。',
+  'account.passkeys.hint':
+    '通行密钥让你用这台设备的指纹、面容或 PIN 登录。每个通行密钥只在创建它的地址上有效——这里是 {host}。',
+  'account.passkeys.unavailableHere':
+    '这个地址无法使用通行密钥。需要 https 和主机名（或 localhost）。',
   'account.passkeys.unsupported': '这个浏览器不支持通行密钥。',
   'account.passkeys.none': '还没有通行密钥',
   'account.passkeys.noneHint': '添加一个，登录时就不用再输入密码。',
@@ -371,7 +396,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'account.passkeys.synced': '已同步',
   'account.passkeys.actions': '通行密钥“{name}”的操作',
   'account.passkeys.remove.title': '移除通行密钥“{name}”？',
-  'account.passkeys.remove.message': '它将不能再用于登录 {host}。在设备上它可能仍会显示，需要在那里另行删除。',
+  'account.passkeys.remove.message':
+    '它将不能再用于登录 {host}。在设备上它可能仍会显示，需要在那里另行删除。',
   'account.passkeys.removed': '通行密钥已移除',
 
   'account.devices': '已登录的设备',
@@ -385,7 +411,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'account.devices.signedOut': '“{name}”已退出登录',
 
   'account.tokens': 'API 令牌',
-  'account.tokens.hint': '令牌让脚本无需浏览器就能以你的身份操作。它们不能管理账户、密码或其他令牌。',
+  'account.tokens.hint':
+    '令牌让脚本无需浏览器就能以你的身份操作。它们不能管理账户、密码或其他令牌。',
   'account.tokens.none': '没有 API 令牌',
   'account.tokens.noneHint': '为脚本或其他工具创建一个。',
   'account.tokens.new': '新建令牌',
@@ -415,8 +442,10 @@ export const zhCN: Record<keyof typeof en, string> = {
   'account.tokens.revoked': '已撤销令牌“{name}”',
   'account.tokens.created.title': '你的新令牌',
   'account.tokens.created.once': '请现在复制——它只显示这一次',
-  'account.tokens.created.onceDetail': 'Studio 不保留可以再次显示的副本。如果丢失，请撤销后重新创建。',
-  'account.tokens.created.usage': '在“{name}”所用的程序中，以“Authorization: Bearer …”请求头发送它。',
+  'account.tokens.created.onceDetail':
+    'Studio 不保留可以再次显示的副本。如果丢失，请撤销后重新创建。',
+  'account.tokens.created.usage':
+    '在“{name}”所用的程序中，以“Authorization: Bearer …”请求头发送它。',
   'account.tokens.created.done': '我已保存',
   'account.tokens.copy': '复制令牌',
   'account.tokens.copyFailed': '复制失败。请手动选中令牌并复制。',
@@ -429,11 +458,13 @@ export const zhCN: Record<keyof typeof en, string> = {
 
   'account.signOut': '退出登录',
   'account.signOut.title': '在这台设备上退出登录？',
-  'account.signOut.message': '这台设备会清除你的登录状态和本地保存的设置副本。服务器上正在进行的工作不受影响。',
+  'account.signOut.message':
+    '这台设备会清除你的登录状态和本地保存的设置副本。服务器上正在进行的工作不受影响。',
   'account.signOutEverywhere': '退出所有设备',
   'account.signOutEverywhere.hint': '退出所有设备会结束每台设备上的登录，并停用全部 API 令牌。',
   'account.signOutEverywhere.title': '退出所有设备？',
-  'account.signOutEverywhere.message': '登录了这个账户的所有浏览器和设备（包括这一台）都会退出，实时连接会断开，全部 API 令牌失效。服务器上已经在运行的工作不受影响。',
+  'account.signOutEverywhere.message':
+    '登录了这个账户的所有浏览器和设备（包括这一台）都会退出，实时连接会断开，全部 API 令牌失效。服务器上已经在运行的工作不受影响。',
   'account.signOutEverywhere.done': '已退出所有设备，全部 API 令牌已停用。',
 
   // ---- 成员 ---------------------------------------------------------------------
@@ -450,7 +481,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'people.role.ownerHint': '所有者管理这台 Studio，并能看到所有项目。',
   'people.role.memberHint': '成员使用所有者共享给他们的项目。',
   'people.enabled': '允许登录',
-  'people.enabled.hint': '关闭后，此人会在所有设备上退出登录，其 API 令牌也会停用。已有的工作会保留。',
+  'people.enabled.hint':
+    '关闭后，此人会在所有设备上退出登录，其 API 令牌也会停用。已有的工作会保留。',
   'people.initialPassword': '密码',
   'people.initialPassword.hint': '至少 {count} 个字符。请当面告知对方；登录后可以自行修改。',
   'people.newPassword': '新密码',
@@ -459,7 +491,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'people.passwordReset': '已为 {name} 重置密码',
   'people.delete': '删除账户',
   'people.delete.title': '删除 {name} 的账户？',
-  'people.delete.message': '此人会在所有设备上退出，且无法再登录。其对话会被删除；其写下的记忆笔记会保留，作者署名仍以文字形式留在笔记上。项目文件夹不会被改动。',
+  'people.delete.message':
+    '此人会在所有设备上退出，且无法再登录。其对话会被删除；其写下的记忆笔记会保留，作者署名仍以文字形式留在笔记上。项目文件夹不会被改动。',
   'people.deleted': '已删除 {name} 的账户',
   'people.selfHint': '这是你自己。修改密码和设备请到“账户与安全”；角色需要由另一位所有者修改。',
 
@@ -494,14 +527,17 @@ export const zhCN: Record<keyof typeof en, string> = {
   'about.update.current': '已是最新版本',
   'about.update.dev': '开发服务器始终提供最新代码。',
   'about.cache.clear': '清除缓存文件',
-  'about.cache.hint': '清除缓存只会删除浏览器保存的应用自身文件。服务器上的内容不变，你也不会被退出登录。',
+  'about.cache.hint':
+    '清除缓存只会删除浏览器保存的应用自身文件。服务器上的内容不变，你也不会被退出登录。',
   'about.cache.confirm.title': '清除缓存文件？',
-  'about.cache.confirm.message': '应用的文件会在下次需要时重新下载。你的登录、设置和工作都不受影响。',
+  'about.cache.confirm.message':
+    '应用的文件会在下次需要时重新下载。你的登录、设置和工作都不受影响。',
   'about.cache.cleared': '缓存文件已清除',
   'about.cache.nothing': '没有缓存内容',
   'about.cache.failed': '浏览器不允许清除缓存',
   'about.licence': '许可协议',
-  'about.licence.hint': 'Agent Studio 是采用 MIT 许可的开源软件：可自由使用、修改和分发，不附带任何担保。',
+  'about.licence.hint':
+    'Cloud Harness 是采用 MIT 许可的开源软件：可自由使用、修改和分发，不附带任何担保。',
 
   // ---- 组件图库（仅开发环境） ---------------------------------------------------------
   'dev.gallery.title': '组件',
@@ -604,14 +640,16 @@ export const zhCN: Record<keyof typeof en, string> = {
   'workbench.session.delete': '删除',
   'workbench.session.delete.title': '删除“{title}”？',
   'workbench.session.delete.message': '会话、它的记录以及智能体自己保存的副本都会被永久删除。',
-  'workbench.session.delete.messageWithArchive': '会话、它的记录以及智能体自己保存的副本都会被永久删除。如果只是想收起来并保留，请改用归档。',
+  'workbench.session.delete.messageWithArchive':
+    '会话、它的记录以及智能体自己保存的副本都会被永久删除。如果只是想收起来并保留，请改用归档。',
   'workbench.session.draft': '草稿',
   'workbench.session.gone': '这个会话已不存在',
   'workbench.session.goneDetail': '它已被删除，或者你无权查看。',
   'workbench.session.unreachable': '无法打开这个会话',
 
   'workbench.stage.noProjects': '还没有项目',
-  'workbench.stage.noProjectsOwner': '会话在项目中进行——项目就是这台服务器上的一个文件夹。先创建一个吧。',
+  'workbench.stage.noProjectsOwner':
+    '会话在项目中进行——项目就是这台服务器上的一个文件夹。先创建一个吧。',
   'workbench.stage.noProjectsMember': '会话在项目中进行。请让此 Studio 的所有者与你共享一个项目。',
   'workbench.stage.projectsFailed': '无法加载项目',
   'workbench.stage.unknownProject': '找不到这个项目',
@@ -663,14 +701,17 @@ export const zhCN: Record<keyof typeof en, string> = {
   'workbench.mode.accept-edits': '接受修改',
   'workbench.mode.accept-edits.hint': '修改项目内的文件时不再询问。运行命令和访问网络前仍会询问。',
   'workbench.mode.auto': '自动',
-  'workbench.mode.auto.hint': '一切操作都不再询问，连被工作台判定为危险的请求也一样。只有拒绝规则和内置的拒绝清单会拦下请求。',
+  'workbench.mode.auto.hint':
+    '一切操作都不再询问，连被工作台判定为危险的请求也一样。只有拒绝规则和内置的拒绝清单会拦下请求。',
   'workbench.mode.auto.warningTitle': '“自动”模式不会停下来询问',
-  'workbench.mode.auto.warning': '命令会直接运行、文件会直接改动，事先没有人查看。被工作台判定为危险的请求也不会交给人来决定：只有拒绝规则和内置的拒绝清单会拦下它们。只应在内容丢了也无妨的项目中使用，并且只在所有者允许的项目中使用。',
+  'workbench.mode.auto.warning':
+    '命令会直接运行、文件会直接改动，事先没有人查看。被工作台判定为危险的请求也不会交给人来决定：只有拒绝规则和内置的拒绝清单会拦下它们。只应在内容丢了也无妨的项目中使用，并且只在所有者允许的项目中使用。',
   'workbench.mode.auto.allow': '允许在 {project} 中使用“自动”',
   'workbench.mode.auto.allowedHint': '在这个项目中工作的人都可以选择“自动”。',
   'workbench.mode.auto.notAllowedHint': '已关闭：设为“自动”的会话在这里按“询问”运行。',
   'workbench.mode.auto.ownerOnly': '所有者没有允许在 {project} 中使用“自动”，因此这里无法选择。',
-  'workbench.mode.auto.downgraded': '这个会话设为“自动”，但该项目不允许“自动”：目前按“{mode}”运行。',
+  'workbench.mode.auto.downgraded':
+    '这个会话设为“自动”，但该项目不允许“自动”：目前按“{mode}”运行。',
 
   'workbench.composer.placeholder': '给 {agent} 发消息',
   'workbench.composer.send': '发送',
@@ -717,10 +758,13 @@ export const zhCN: Record<keyof typeof en, string> = {
   'workbench.delivery.checking': '正在核对…',
   'workbench.delivery.failed': '未发送',
   'workbench.delivery.unconfirmedTitle': '不确定你的消息是否送达',
-  'workbench.delivery.unconfirmedDetail': '服务器没有确认收到。请先核对再做其他操作——盲目重发可能让它运行两次。这期间你输入的内容是安全的。',
-  'workbench.delivery.unconfirmedOffline': '服务器确认之前连接就断开了。恢复联网后会自动核对。这期间你输入的内容是安全的。',
+  'workbench.delivery.unconfirmedDetail':
+    '服务器没有确认收到。请先核对再做其他操作——盲目重发可能让它运行两次。这期间你输入的内容是安全的。',
+  'workbench.delivery.unconfirmedOffline':
+    '服务器确认之前连接就断开了。恢复联网后会自动核对。这期间你输入的内容是安全的。',
   'workbench.delivery.notReceived': '服务器确实没有收到。可以放心重新发送原消息。',
-  'workbench.delivery.unverifiable': '无法核对是否送达，因此没有重新发送。等服务器可以访问时再核对一次。',
+  'workbench.delivery.unverifiable':
+    '无法核对是否送达，因此没有重新发送。等服务器可以访问时再核对一次。',
   'workbench.delivery.check': '核对送达情况',
   'workbench.delivery.checkAgain': '再次核对',
   'workbench.delivery.sendAgain': '重新发送原消息',
@@ -834,7 +878,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'workbench.runError.server_restart': '因服务器重启而中断',
   'workbench.recovery.interrupted': '这项任务被中断了',
   'workbench.recovery.failed': '这项任务没有完成',
-  'workbench.recovery.restartDetail': '运行期间服务器重启了。部分工作可能已经完成——继续之前请先查看。',
+  'workbench.recovery.restartDetail':
+    '运行期间服务器重启了。部分工作可能已经完成——继续之前请先查看。',
   'workbench.recovery.interruptedDetail': '部分工作可能已经完成——继续之前请先查看。',
   'workbench.recovery.more.one': '另有 {count} 项',
   'workbench.recovery.more.other': '另有 {count} 项',
@@ -876,7 +921,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'workbench.approval.morePaths.other': '以及另外 {count} 个',
   'workbench.approval.dangerous': '危险操作',
   'workbench.approval.dangerousGeneric': '这可能造成难以挽回的损害。',
-  'workbench.approval.waitingForOwner': '只有此 Studio 的所有者可以允许危险请求。它正在等待所有者处理；你仍然可以拒绝。',
+  'workbench.approval.waitingForOwner':
+    '只有此 Studio 的所有者可以允许危险请求。它正在等待所有者处理；你仍然可以拒绝。',
   'workbench.approval.notYours': '这个请求不由你答复。',
   'workbench.approval.alreadyAnswered': '这个请求已经有人答复了。',
   'workbench.approval.pendingBadge': '等待中',
@@ -957,9 +1003,11 @@ export const zhCN: Record<keyof typeof en, string> = {
   'workbench.inspector.sampleRuler': '第二个示例',
 
   'workbench.rules.title': '智能体权限',
-  'workbench.rules.intro': '这些规则会在询问之前应用到你自己的运行：智能体始终可以做什么、始终被拒绝什么、始终必须询问什么。在会话中选择“允许并记住”会在这里添加一条规则。',
+  'workbench.rules.intro':
+    '这些规则会在询问之前应用到你自己的运行：智能体始终可以做什么、始终被拒绝什么、始终必须询问什么。在会话中选择“允许并记住”会在这里添加一条规则。',
   'workbench.rules.empty': '还没有规则',
-  'workbench.rules.emptyHint': '智能体会按各会话的权限模式询问。在请求上选择“允许并记住”即可保存一条规则。',
+  'workbench.rules.emptyHint':
+    '智能体会按各会话的权限模式询问。在请求上选择“允许并记住”即可保存一条规则。',
   'workbench.rules.add': '添加规则',
   'workbench.rules.added': '规则已添加',
   'workbench.rules.actions': '规则 {rule} 的操作',
@@ -972,7 +1020,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'workbench.rules.tool': '工具',
   'workbench.rules.toolHint': '智能体对该工具的称呼，例如 Bash 或 Edit。* 可匹配任意一段字符。',
   'workbench.rules.pattern': '作用对象',
-  'workbench.rules.patternHint': '可以是命令，如“git status *”；也可以是文件模式，如“src/**/*.ts”。留空则涵盖该工具的所有使用。',
+  'workbench.rules.patternHint':
+    '可以是命令，如“git status *”；也可以是文件模式，如“src/**/*.ts”。留空则涵盖该工具的所有使用。',
   'workbench.rules.where': '适用范围',
   'workbench.rules.scope.account': '所有地方',
   'workbench.rules.scope.projectNamed': '在 {project} 中',
@@ -1031,7 +1080,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'files.delete.fileTitle': '删除“{name}”？',
   'files.delete.folderTitle': '删除文件夹“{name}”及其中的全部内容？',
   'files.delete.fileMessage': '文件会从服务器磁盘上移除，没有回收站可以恢复。',
-  'files.delete.folderMessage': '该文件夹及其中的所有文件和子文件夹都会从服务器磁盘上移除，没有回收站可以恢复。',
+  'files.delete.folderMessage':
+    '该文件夹及其中的所有文件和子文件夹都会从服务器磁盘上移除，没有回收站可以恢复。',
   'files.delete.linkMessage': '只移除链接本身，它指向的内容保留。',
   'files.name.blank': '名称不能为空。',
   'files.name.tooLong': '名称过长（最多 255 字节）。',
@@ -1092,7 +1142,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'files.editor.gone': '此文件不存在',
   'files.editor.notSaved': '未保存',
   'files.editor.saveCancelled': '保存已取消，你的文字仍在这里。',
-  'files.editor.changedElsewhere': '在你编辑期间，服务器上的这个文件发生了变化。你的文字没有被改动；保存时会询问保留哪个版本。',
+  'files.editor.changedElsewhere':
+    '在你编辑期间，服务器上的这个文件发生了变化。你的文字没有被改动；保存时会询问保留哪个版本。',
   'files.editor.hasChanges': '此文件有未提交的修改',
   'files.editor.view.label': '显示内容',
   'files.editor.view.edit': '编辑',
@@ -1128,14 +1179,17 @@ export const zhCN: Record<keyof typeof en, string> = {
   'files.tooLarge.title': '此文件太大，无法在这里打开',
   'files.tooLarge.description': '它有 {size}，编辑器最多打开 {limit} 的文本。请下载后查看。',
   'files.binary.title': '此文件无法显示',
-  'files.binary.description': '它不是文本，也不是工作台可预览的图片、PDF、音频或视频。请下载后用其他程序打开。',
+  'files.binary.description':
+    '它不是文本，也不是工作台可预览的图片、PDF、音频或视频。请下载后用其他程序打开。',
   'files.media.failed': '预览无法加载',
   'files.media.failedDetail': '浏览器无法显示此文件，请改为下载。',
-  'files.media.pdfNote': '部分浏览器不会在受保护的框架内显示 PDF。如果上方是空白，请在新标签页中打开或下载。',
+  'files.media.pdfNote':
+    '部分浏览器不会在受保护的框架内显示 PDF。如果上方是空白，请在新标签页中打开或下载。',
   'files.media.openInTab': '在新标签页中打开',
   'errors.project_folder_missing': '项目的文件夹在服务器上已不存在。',
   'errors.protected_path': '仓库自身的数据（.git）不能通过文件工具读取或修改。',
-  'errors.invalid_name': '该名称无法使用。名称不能为空、不能以空格开头或结尾、不能只由点组成，也不能包含 < > : " / \\ | ? *，另有少数名称被保留。',
+  'errors.invalid_name':
+    '该名称无法使用。名称不能为空、不能以空格开头或结尾、不能只由点组成，也不能包含 < > : " / \\ | ? *，另有少数名称被保留。',
   'errors.permission_denied': '服务器所用的账户无权对这个文件或文件夹执行此操作。',
   'errors.path_outside_root': '该路径指向项目之外。',
   'errors.project_root': '项目文件夹本身不能在这里修改。',
@@ -1176,21 +1230,26 @@ export const zhCN: Record<keyof typeof en, string> = {
   'git.diff.folder': '这是一个新文件夹。暂存后可逐个查看其中的文件。',
   'git.diff.label': '{name} 的修改内容',
   'git.state.none.title': '此文件夹不是 Git 仓库',
-  'git.state.none.text': '没有仓库就没有可回退的历史，也无法提交、建分支或推送。初始化会在这里创建一个空仓库，不会改动你的文件。',
+  'git.state.none.text':
+    '没有仓库就没有可回退的历史，也无法提交、建分支或推送。初始化会在这里创建一个空仓库，不会改动你的文件。',
   'git.state.none.action': '初始化仓库',
   'git.state.none.done': '仓库已创建',
   'git.state.nested.title': '此文件夹属于一个更大的仓库',
-  'git.state.nested.text': '仓库的起点在此项目上层的文件夹中。工作台只管理以项目文件夹为根的仓库，因此这里不显示也不修改任何内容。',
+  'git.state.nested.text':
+    '仓库的起点在此项目上层的文件夹中。工作台只管理以项目文件夹为根的仓库，因此这里不显示也不修改任何内容。',
   'git.state.bare.title': '此仓库没有工作文件',
-  'git.state.bare.text': '这是一个裸仓库，只有历史、没有检出的文件，因此这里没有可显示或提交的修改。',
+  'git.state.bare.text':
+    '这是一个裸仓库，只有历史、没有检出的文件，因此这里没有可显示或提交的修改。',
   'git.state.untrusted.title': 'Git 拒绝使用此文件夹',
-  'git.state.untrusted.text': '该文件夹属于另一个系统账户，服务器上的 Git 不信任它。工作台不会绕过这一限制，需要在服务器上予以允许。',
+  'git.state.untrusted.text':
+    '该文件夹属于另一个系统账户，服务器上的 Git 不信任它。工作台不会绕过这一限制，需要在服务器上予以允许。',
   'git.state.unavailable.title': '服务器上没有安装 Git',
   'git.state.unavailable.text': '在为运行工作台的账户安装 Git 之前，这里的功能都无法使用。',
   'git.state.serverSays': '服务器的说明',
   'git.state.recheck': '重新检查',
   'git.operation.title': '有一个未完成的{operation}挡在前面',
-  'git.operation.text': '它是在工作台之外开始的。请在终端中完成或中止它；在此之前，提交、切换和拉取都会被拒绝。',
+  'git.operation.text':
+    '它是在工作台之外开始的。请在终端中完成或中止它；在此之前，提交、切换和拉取都会被拒绝。',
   'git.operation.merge': '合并',
   'git.operation.rebase': '变基',
   'git.operation.cherry-pick': '拣选',
@@ -1216,19 +1275,24 @@ export const zhCN: Record<keyof typeof en, string> = {
   'git.sync.noRemote': '此仓库没有配置远端，因此无处获取或推送。',
   'git.sync.pull.title.one': '拉取 {count} 个提交？',
   'git.sync.pull.title.other': '拉取 {count} 个提交？',
-  'git.sync.pull.message': '你的分支会前进到 {upstream}。如果两边已经分叉，不会做任何改动，并会告知你。',
+  'git.sync.pull.message':
+    '你的分支会前进到 {upstream}。如果两边已经分叉，不会做任何改动，并会告知你。',
   'git.sync.pullMerge': '以合并提交的方式拉取',
   'git.sync.pullMerge.title': '通过合并来拉取？',
-  'git.sync.pullMerge.message': '会创建一个合并提交，把 {upstream} 合入你的分支。只有两边能无冲突合并时才会创建，否则不做任何改动。',
+  'git.sync.pullMerge.message':
+    '会创建一个合并提交，把 {upstream} 合入你的分支。只有两边能无冲突合并时才会创建，否则不做任何改动。',
   'git.sync.pullMerge.confirm': '合并',
   'git.sync.push.title.one': '推送 {count} 个提交？',
   'git.sync.push.title.other': '推送 {count} 个提交？',
-  'git.sync.push.message': '它们会被推送到 {upstream}。推送绝不会强制进行：如果远端已有新的提交，推送会被拒绝并告知你。',
+  'git.sync.push.message':
+    '它们会被推送到 {upstream}。推送绝不会强制进行：如果远端已有新的提交，推送会被拒绝并告知你。',
   'git.sync.publish.title': '发布 {branch}？',
-  'git.sync.publish.message': '该分支会被推送到 {remote}，并记为它的上游，之后的推送和拉取就知道去向。',
+  'git.sync.publish.message':
+    '该分支会被推送到 {remote}，并记为它的上游，之后的推送和拉取就知道去向。',
   'git.undo': '撤销最近一次提交',
   'git.undo.title': '撤销最近一次提交？',
-  'git.undo.message': '这个提交会从当前分支移除。其中的修改不会丢失：它们保持已暂存状态，可以再次提交。',
+  'git.undo.message':
+    '这个提交会从当前分支移除。其中的修改不会丢失：它们保持已暂存状态，可以再次提交。',
   'git.undo.confirm': '撤销提交',
   'git.undo.done': '已移除提交 {oid}，其修改已暂存',
   'git.undo.hint': '保留其修改为已暂存',
@@ -1236,7 +1300,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'git.undo.detached': '当前没有检出任何分支',
   'git.undo.noCommits': '还没有任何提交',
   'git.identity.title': '提交者是谁？',
-  'git.identity.lead': 'Git 会在每个提交上记录姓名和电子邮箱。这是你自己的身份，用于你在工作台中所做的提交。',
+  'git.identity.lead':
+    'Git 会在每个提交上记录姓名和电子邮箱。这是你自己的身份，用于你在工作台中所做的提交。',
   'git.identity.name': '提交时使用的姓名',
   'git.identity.email': '提交时使用的邮箱',
   'git.identity.note': '保存在你的工作台账户中，不会修改服务器自身的 Git 设置。',
@@ -1251,7 +1316,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'git.changes.untracked': '新文件',
   'git.changes.none': '没有任何修改',
   'git.changes.noneHint': '文件夹与最近一次提交一致。',
-  'git.changes.conflictedNote': '合并的双方都修改了这些文件。请逐个打开、处理有标记的段落，然后暂存。',
+  'git.changes.conflictedNote':
+    '合并的双方都修改了这些文件。请逐个打开、处理有标记的段落，然后暂存。',
   'git.changes.truncated': '修改列表太长，已被截断。提交或放弃一部分后可查看其余内容。',
   'git.kind.added': '新增',
   'git.kind.modified': '已修改',
@@ -1272,13 +1338,15 @@ export const zhCN: Record<keyof typeof en, string> = {
   'git.unstageAll': '全部取消暂存',
   'git.discard': '放弃修改',
   'git.discard.title': '放弃对 {name} 的修改？',
-  'git.discard.message': '文件会恢复到已暂存或上次提交的内容。此后对它所做的全部修改都会丢失，且无法找回。',
+  'git.discard.message':
+    '文件会恢复到已暂存或上次提交的内容。此后对它所做的全部修改都会丢失，且无法找回。',
   'git.discard.messageDeleted': '被删除的文件会按上次暂存或提交的内容恢复。',
   'git.discard.confirm': '放弃',
   'git.discard.done': '已放弃对 {name} 的修改',
   'git.delete': '删除该文件',
   'git.delete.title': '删除 {name}？',
-  'git.delete.message': 'Git 从未跟踪过这个文件，因此任何地方都没有它的旧版本。删除后它将从磁盘上永久消失。',
+  'git.delete.message':
+    'Git 从未跟踪过这个文件，因此任何地方都没有它的旧版本。删除后它将从磁盘上永久消失。',
   'git.delete.confirm': '删除文件',
   'git.delete.done': '已删除文件 {name}',
   'git.commit': '提交',
@@ -1313,16 +1381,19 @@ export const zhCN: Record<keyof typeof en, string> = {
   'git.history.end.other': '这就是全部历史：共 {count} 个提交。',
   'git.branch.switch': '切换',
   'git.branch.switch.title': '带着未提交的修改切换到 {name}？',
-  'git.branch.switch.message': '未提交的修改如果与另一分支不冲突，会随你一起过去。如果它们会被覆盖，则不会切换，并会告知你。',
+  'git.branch.switch.message':
+    '未提交的修改如果与另一分支不冲突，会随你一起过去。如果它们会被覆盖，则不会切换，并会告知你。',
   'git.branch.switched': '当前分支：{name}',
   'git.branch.checkout': '检出',
   'git.branch.delete': '删除分支',
   'git.branch.delete.title': '删除分支 {name}？',
-  'git.branch.delete.message': '只删除本地分支。如果其中有尚未合并到别处的提交，Git 会拒绝，届时会再次向你确认。',
+  'git.branch.delete.message':
+    '只删除本地分支。如果其中有尚未合并到别处的提交，Git 会拒绝，届时会再次向你确认。',
   'git.branch.deleted': '已删除分支 {name}',
   'git.branch.deleteNamed': '删除分支 {name}',
   'git.branch.force.title': '{name} 尚未合并，仍要删除吗？',
-  'git.branch.force.message': '其中的提交不存在于其他任何分支。删除后这些提交将丢失，工作台无法找回。',
+  'git.branch.force.message':
+    '其中的提交不存在于其他任何分支。删除后这些提交将丢失，工作台无法找回。',
   'git.branch.force.confirm': '删除并丢弃其提交',
   'git.branch.current': '当前',
   'git.branch.elsewhere': '在另一个工作树中',
@@ -1356,13 +1427,15 @@ export const zhCN: Record<keyof typeof en, string> = {
   'git.worktree.new': '新建工作树',
   'git.worktree.noLocation': '此仓库旁边没有位于工作区文件夹内的空间，因此无法为它创建工作树。',
   'git.worktree.new.branch': '工作树使用的分支',
-  'git.worktree.new.hint': '已有的分支会按原样检出；新分支从 {base} 创建。文件夹会创建在 {location} 下。',
+  'git.worktree.new.hint':
+    '已有的分支会按原样检出；新分支从 {base} 创建。文件夹会创建在 {location} 下。',
   'git.worktree.new.openAfter': '创建后作为项目打开',
   'git.worktree.new.create': '创建工作树',
   'git.worktree.created': '已为 {branch} 创建工作树',
   'git.worktree.createdNew': '已创建分支 {branch} 及其工作树',
   'git.worktree.empty': '没有额外的工作树',
-  'git.worktree.emptyHint': '工作树是此仓库在另一个分支上的第二份检出，有自己的文件夹，也是一个独立的项目——这样两项工作或两个智能体就不会互相干扰。',
+  'git.worktree.emptyHint':
+    '工作树是此仓库在另一个分支上的第二份检出，有自己的文件夹，也是一个独立的项目——这样两项工作或两个智能体就不会互相干扰。',
   'git.worktree.detached': '游离于提交 {oid}',
   'git.worktree.here': '当前项目',
   'git.worktree.main': '主检出',
@@ -1374,7 +1447,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'git.worktree.nothingToMerge': '没有可合并的内容：它没有基准分支所缺少的提交。',
   'git.worktree.merge': '合并回去',
   'git.worktree.merge.title': '把工作树合并回去',
-  'git.worktree.merge.lead': '{branch} 上的 {count} 个提交将进入主检出中的 {into}。如果有冲突，不会做任何改动，并会列出相关文件。',
+  'git.worktree.merge.lead':
+    '{branch} 上的 {count} 个提交将进入主检出中的 {into}。如果有冲突，不会做任何改动，并会列出相关文件。',
   'git.worktree.merge.refused': '未合并',
   'git.worktree.merge.method': '合并方式',
   'git.worktree.merge.squash': '压缩为一个提交',
@@ -1384,7 +1458,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'git.worktree.merge.message': '提交说明',
   'git.worktree.merge.messageHint': '留空时，Git 会写一条带分支名的说明。',
   'git.worktree.merge.cleanup': '完成后移除工作树并删除其分支',
-  'git.worktree.merge.cleanupHint': '{branch} 的文件夹会从磁盘上移除，其项目会被归档；其中的对话可以恢复。',
+  'git.worktree.merge.cleanupHint':
+    '{branch} 的文件夹会从磁盘上移除，其项目会被归档；其中的对话可以恢复。',
   'git.worktree.merge.action': '合并到 {into}',
   'git.worktree.merge.confirmTitle': '把 {branch} 合并到 {into}？',
   'git.worktree.merge.confirmSquash': '它的修改会成为一个新提交。',
@@ -1394,18 +1469,23 @@ export const zhCN: Record<keyof typeof en, string> = {
   'git.worktree.cleanupFailed': '已合并，但未能清理该工作树',
   'git.worktree.remove': '移除工作树',
   'git.worktree.remove.title': '移除工作树 {name}？',
-  'git.worktree.remove.message': '它的文件夹会从服务器磁盘上移除；分支 {branch} 在已完全合并时会被删除。它的项目会被归档，其中的对话可以恢复。主检出不受影响。',
-  'git.worktree.remove.messageDetached': '它的文件夹会从服务器磁盘上移除，其项目会被归档，其中的对话可以恢复。主检出不受影响。',
+  'git.worktree.remove.message':
+    '它的文件夹会从服务器磁盘上移除；分支 {branch} 在已完全合并时会被删除。它的项目会被归档，其中的对话可以恢复。主检出不受影响。',
+  'git.worktree.remove.messageDetached':
+    '它的文件夹会从服务器磁盘上移除，其项目会被归档，其中的对话可以恢复。主检出不受影响。',
   'git.worktree.force.title': '{name} 中有未提交的修改，仍要移除吗？',
-  'git.worktree.force.message.one': '该文件夹中有 {count} 处未提交的修改，别处没有副本。移除工作树会将其永久删除。',
-  'git.worktree.force.message.other': '该文件夹中有 {count} 处未提交的修改，别处都没有副本。移除工作树会将它们永久删除。',
+  'git.worktree.force.message.one':
+    '该文件夹中有 {count} 处未提交的修改，别处没有副本。移除工作树会将其永久删除。',
+  'git.worktree.force.message.other':
+    '该文件夹中有 {count} 处未提交的修改，别处都没有副本。移除工作树会将它们永久删除。',
   'git.worktree.force.confirm': '移除并丢弃这些修改',
   'git.worktree.removed': '已移除工作树 {name}',
   'git.worktree.branchKept': '分支 {branch} 已保留',
   'errors.git_unavailable': '服务器上无法使用 Git。',
   'errors.git_untrusted': 'Git 拒绝使用此文件夹，因为它属于另一个系统账户。',
   'errors.git_not_a_repository': '此文件夹不是工作台可以操作的 Git 仓库。',
-  'errors.git_invalid_ref': '该名称不能用作分支名。请使用字母、数字和 . _ / + - @ =，不能有空格、不能以短横线开头、不能包含“..”。',
+  'errors.git_invalid_ref':
+    '该名称不能用作分支名。请使用字母、数字和 . _ / + - @ =，不能有空格、不能以短横线开头、不能包含“..”。',
   'errors.git_invalid_remote': '此仓库没有该名称的远端。',
   'errors.git_unknown_ref': '这里没有该名称的分支、标签或提交。',
   'errors.git_no_common_history': '这两个分支没有共同的历史，因此无从比较。',
@@ -1413,14 +1493,17 @@ export const zhCN: Record<keyof typeof en, string> = {
   'errors.git_no_remote': '此仓库没有配置远端。',
   'errors.git_no_upstream': '此分支在远端还没有上游分支，请先发布。',
   'errors.git_detached_head': '当前没有检出任何分支，因此无法在这里执行此操作。',
-  'errors.git_auth_failed': '远端拒绝了服务器上 Git 所用的凭据。请在服务器上为 Git 配置登录（凭据助手或 SSH 密钥），然后重试。',
+  'errors.git_auth_failed':
+    '远端拒绝了服务器上 Git 所用的凭据。请在服务器上为 Git 配置登录（凭据助手或 SSH 密钥），然后重试。',
   'errors.git_network': '无法连接远端。请检查服务器的网络和远端地址。',
   'errors.git_remote_not_found': '找不到远端仓库，或服务器无权读取它。',
   'errors.git_timeout': 'Git 未能在限定时间内完成，已被停止。重试前请先检查仓库状态。',
-  'errors.git_push_rejected': '远端拒绝了推送：远端有此分支没有的提交（非快进）。请先拉取，再重新推送。',
+  'errors.git_push_rejected':
+    '远端拒绝了推送：远端有此分支没有的提交（非快进）。请先拉取，再重新推送。',
   'errors.git_diverged': '此分支与其上游已经分叉：双方各有对方没有的提交。未做任何改动。',
   'errors.git_conflict': '这些修改相互冲突，无法自动合并。未做任何改动。',
-  'errors.git_would_overwrite': '此文件夹中未提交的修改挡在前面，继续会导致它们丢失。请先提交或放弃这些修改。未做任何改动。',
+  'errors.git_would_overwrite':
+    '此文件夹中未提交的修改挡在前面，继续会导致它们丢失。请先提交或放弃这些修改。未做任何改动。',
   'errors.git_operation_in_progress': '有未完成的合并或变基挡在前面。请先在终端中完成或中止它。',
   'errors.git_nothing_to_commit': '没有可提交的内容。',
   'errors.git_identity_missing': 'Git 不知道提交者是谁。请先设置提交用的姓名和邮箱。',
@@ -1456,22 +1539,28 @@ export const zhCN: Record<keyof typeof en, string> = {
   'terminal.close': '关闭此终端',
   'terminal.remove': '移除这个已结束的终端',
   'terminal.close.title': '关闭“{title}”？',
-  'terminal.close.message': '服务器上的这个 shell 以及其中仍在运行的所有程序都会被结束，它们尚未保存的内容将会丢失。',
+  'terminal.close.message':
+    '服务器上的这个 shell 以及其中仍在运行的所有程序都会被结束，它们尚未保存的内容将会丢失。',
   'terminal.close.confirm': '关闭终端',
   'terminal.font.larger': '放大文字',
   'terminal.font.smaller': '缩小文字',
   'terminal.empty.title': '没有打开的终端',
-  'terminal.empty.text': '{shell} 会在服务器上 {project} 的文件夹中启动。离开此页面后它继续运行，回来时仍在这里。',
+  'terminal.empty.text':
+    '{shell} 会在服务器上 {project} 的文件夹中启动。离开此页面后它继续运行，回来时仍在这里。',
   'terminal.empty.reauth': '打开前会先要求输入密码：终端可以做工作台所用账户能做的任何事。',
   'terminal.empty.action': '打开终端',
   'terminal.unavailable.disabled.title': '终端功能已关闭',
-  'terminal.unavailable.disabled.text': '此工作台的运维者已在整个服务器上关闭了终端。文件、Git 和智能体不受影响。',
+  'terminal.unavailable.disabled.text':
+    '此工作台的运维者已在整个服务器上关闭了终端。文件、Git 和智能体不受影响。',
   'terminal.unavailable.owner_only.title': '终端仅供所有者使用',
-  'terminal.unavailable.owner_only.text': '终端以运行工作台的账户身份执行命令，该账户能访问的一切它都能访问，因此不向成员开放。请让所有者代为执行，或交给智能体处理。',
+  'terminal.unavailable.owner_only.text':
+    '终端以运行工作台的账户身份执行命令，该账户能访问的一切它都能访问，因此不向成员开放。请让所有者代为执行，或交给智能体处理。',
   'terminal.unavailable.session_required.title': '终端需要已登录的浏览器',
-  'terminal.unavailable.session_required.text': '无法使用 API 令牌打开终端。请用密码或通行密钥登录后再打开。',
+  'terminal.unavailable.session_required.text':
+    '无法使用 API 令牌打开终端。请用密码或通行密钥登录后再打开。',
   'terminal.unavailable.pty_unavailable.title': '此服务器无法运行终端',
-  'terminal.unavailable.pty_unavailable.text': '服务器上负责启动终端的组件无法在这台机器上加载。你的账户没有问题。',
+  'terminal.unavailable.pty_unavailable.text':
+    '服务器上负责启动终端的组件无法在这台机器上加载。你的账户没有问题。',
   'terminal.unavailable.recheck': '再次检查',
   'terminal.type.notReady': '终端未能及时就绪，因此没有输入任何内容。请等提示符出现后再试。',
   'terminal.type.done': '已输入到终端。在终端中按回车即可运行。',
@@ -1484,7 +1573,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'terminal.copied': '已从终端复制',
   'terminal.clearSelection': '取消选择',
   'terminal.urls.label': '此终端中输出的地址',
-  'terminal.urls.substituted': '原始输出为 {printed}。“localhost”指的是工作台所在的机器，因此改为打开该机器的地址。',
+  'terminal.urls.substituted':
+    '原始输出为 {printed}。“localhost”指的是工作台所在的机器，因此改为打开该机器的地址。',
   'terminal.ended.exited': '程序已结束。',
   'terminal.ended.closed': '此终端已被关闭。',
   'terminal.ended.idle': '此终端因长时间无人连接而被结束。',
@@ -1520,7 +1610,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'terminal.paste.hint': '此浏览器在这里不允许页面读取剪贴板。请粘贴到此输入框，然后发送。',
   'terminal.paste.send': '发送到终端',
   'terminal.sheet.end.title': '结束这里正在运行的程序？',
-  'terminal.sheet.end.message': '此终端中的程序仍在运行。关闭会将其结束；尚未完成的登录也会被放弃。',
+  'terminal.sheet.end.message':
+    '此终端中的程序仍在运行。关闭会将其结束；尚未完成的登录也会被放弃。',
   'terminal.sheet.end.confirm': '结束',
   'terminal.sheet.failed': '终端无法启动',
   'terminal.sheet.starting': '正在服务器上启动…',
@@ -1531,7 +1622,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'accounts.state.missing': '未安装',
   'accounts.empty.title': '没有已注册的智能体',
   'accounts.empty.text': '此服务器尚未提供任何编程智能体或 API 模型。',
-  'accounts.intro': '服务器报告的各智能体程序及其登录账户的情况。凭据保存在服务器上智能体自己的程序中，工作台不会接触到它们。',
+  'accounts.intro':
+    '服务器报告的各智能体程序及其登录账户的情况。凭据保存在服务器上智能体自己的程序中，工作台不会接触到它们。',
   'accounts.recheck': '重新检查状态',
   'accounts.apiNote': '这是通过网络、使用 API 密钥调用的模型。密钥在“提供方”中管理，不在这里。',
   'accounts.memberNote': '只有所有者可以为智能体登录。',
@@ -1543,9 +1635,11 @@ export const zhCN: Record<keyof typeof en, string> = {
   'accounts.signedIn': '已登录',
   'accounts.notSignedIn': '无',
   'accounts.launcherUnavailable': '无法在此服务器上启动。',
-  'accounts.terminalOff': '在这里为智能体登录需要终端，而此服务器上终端不可用。请直接在服务器的 shell 中登录。',
+  'accounts.terminalOff':
+    '在这里为智能体登录需要终端，而此服务器上终端不可用。请直接在服务器的 shell 中登录。',
   'accounts.sheet.title': '登录 {agent}',
-  'accounts.sheet.note': '这是智能体自己的登录流程，运行在服务器上。请按其提示操作；关闭此面板会结束该流程。',
+  'accounts.sheet.note':
+    '这是智能体自己的登录流程，运行在服务器上。请按其提示操作；关闭此面板会结束该流程。',
   'accounts.launcher.claudeLogin': '登录 Claude Code',
   'accounts.launcher.codexLogin': '登录 Codex',
   'accounts.launcher.codexLoginDevice': '用设备码登录 Codex（可在手机上完成）',
@@ -1586,7 +1680,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'github.unreadable': '无法读取 GitHub',
   'github.openOnGithub': '在 GitHub 上打开',
   'github.ownerOnly.title': 'GitHub 仅供所有者使用',
-  'github.ownerOnly.text': '工作台通过所有者在服务器上的登录访问 GitHub。拉取请求、仓库、合并等功能都不会借给其他账户使用。',
+  'github.ownerOnly.text':
+    '工作台通过所有者在服务器上的登录访问 GitHub。拉取请求、仓库、合并等功能都不会借给其他账户使用。',
   'github.account.tool_missing.title': '服务器上没有安装 GitHub 工具',
   'github.account.tool_missing.text': '工作台只通过自己机器上的 gh 命令行工具与 GitHub 通信。',
   'github.account.signed_out.title': '服务器尚未登录 GitHub',
@@ -1600,14 +1695,16 @@ export const zhCN: Record<keyof typeof en, string> = {
   'github.account.serverSays': '服务器的原话',
   'github.account.recheck': '重新检查登录',
   'github.account.howTo': '如何设置',
-  'github.account.howToText': '以运行工作台的账户身份，在服务器的终端中运行以下命令，然后重新检查：',
+  'github.account.howToText':
+    '以运行工作台的账户身份，在服务器的终端中运行以下命令，然后重新检查：',
   'github.account.copyCommand': '复制命令',
   'github.account.tokenNote': '工作台只调用该工具，从不读取、保存或显示登录令牌。',
   'github.account.signedIn': '已登录 GitHub',
   'github.account.readOnly': '只读登录',
   'github.account.checked': '检查于 {when}',
   'github.account.limited.title': '此登录只能读取，不能合并',
-  'github.account.limited.text': '服务器的 GitHub 登录缺少写入仓库的权限，因此可以在这里查看拉取请求，但不能合并。',
+  'github.account.limited.text':
+    '服务器的 GitHub 登录缺少写入仓库的权限，因此可以在这里查看拉取请求，但不能合并。',
   'github.inbox.filter': '显示哪些拉取请求',
   'github.inbox.all': '全部',
   'github.inbox.review': '待我审查',
@@ -1642,7 +1739,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'github.repo.recentMerges': '最近合并',
   'github.repo.openMerge': '在 GitHub 上打开拉取请求 #{number}',
   'github.log.empty': '还没有任何操作记录',
-  'github.log.emptyHint': '从工作台发起的每一次合并和修复都会连同结果记录在这里，被拒绝的也不例外。',
+  'github.log.emptyHint':
+    '从工作台发起的每一次合并和修复都会连同结果记录在这里，被拒绝的也不例外。',
   'github.log.footer': '在向 GitHub 发送任何请求之前，先记录在服务器上。',
   'github.action.merge': '合并',
   'github.action.update_branch': '更新分支',
@@ -1736,7 +1834,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'github.merge.method': '合并方式',
   'github.merge.deleteBranch': '完成后删除 {head}',
   'github.merge.acknowledge': '我已知悉有非必需的检查未通过',
-  'github.merge.acknowledgeHint': '必需的检查已通过。此确认只对这里显示的提交有效，拉取请求一旦变化即失效。',
+  'github.merge.acknowledgeHint':
+    '必需的检查已通过。此确认只对这里显示的提交有效，拉取请求一旦变化即失效。',
   'github.merge.autoDelete': '此仓库会自动删除已合并的分支。',
   'github.merge.queueNote': '基准分支通过合并队列合并：拉取请求会加入队列，轮到时才合并。',
   'github.merge.pendingNote': '部分检查仍在运行。',
@@ -1762,7 +1861,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'github.fix.updateBranch': '更新该分支',
   'github.fix.updateBranchHint': '在 GitHub 上把 {base} 合并进 {head}。',
   'github.fix.updateBranch.title': '更新 #{number} 的分支？',
-  'github.fix.updateBranch.message': 'GitHub 会把 {base} 合并进 {head}（当前位于 {sha}），其检查会重新运行。',
+  'github.fix.updateBranch.message':
+    'GitHub 会把 {base} 合并进 {head}（当前位于 {sha}），其检查会重新运行。',
   'github.fix.markReady': '标记为可以审查',
   'github.fix.markReadyHint': '它将不再是草稿。',
   'github.fix.markReady.title': '把 #{number} 标记为可以审查？',
@@ -1772,7 +1872,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'github.fix.approveRunsHint': '允许来自仓库之外的代码在其工作流中运行。',
   'github.fix.approveRuns.title.one': '批准 {count} 个工作流运行？',
   'github.fix.approveRuns.title.other': '批准全部 {count} 个工作流运行？',
-  'github.fix.approveRuns.message': '这会在可能持有仓库机密的工作流中运行仓库外部人员编写的代码。请只批准你已读过的代码。运行项：',
+  'github.fix.approveRuns.message':
+    '这会在可能持有仓库机密的工作流中运行仓库外部人员编写的代码。请只批准你已读过的代码。运行项：',
   'github.fix.approveRuns.confirm': '批准并运行',
   'github.chip.label': '分支 {branch}，拉取请求 #{number}：{state}',
   'github.chip.branch': '分支 {branch}。打开 Git 面板',
@@ -1796,10 +1897,12 @@ export const zhCN: Record<keyof typeof en, string> = {
   'errors.github_busy': '正在进行的 GitHub 请求过多，请稍后再试。',
   'errors.github_failed': 'GitHub 未能完成此操作。',
   'errors.github_merge_refused': '拉取请求未被合并，详细信息中说明了原因。',
-  'errors.github_head_moved': '在你查看之后，该拉取请求发生了变化。请重新审查后再合并；本次未合并任何内容。',
+  'errors.github_head_moved':
+    '在你查看之后，该拉取请求发生了变化。请重新审查后再合并；本次未合并任何内容。',
   'errors.github_method_not_allowed': '此仓库不允许使用该合并方式。',
   'errors.github_action_in_progress': '针对此拉取请求的另一个操作仍在进行中。',
-  'errors.github_outcome_unknown': 'GitHub 未能及时响应。该操作可能已执行，也可能没有：请先重新载入再重试。',
+  'errors.github_outcome_unknown':
+    'GitHub 未能及时响应。该操作可能已执行，也可能没有：请先重新载入再重试。',
   'errors.github_fix_not_applicable': '该操作已不适用于此拉取请求，未做任何改动。',
   'projects.page.title': '项目设置',
   'projects.page.open': '设置与共享',
@@ -1809,29 +1912,36 @@ export const zhCN: Record<keyof typeof en, string> = {
   'projects.openWorkbench': '在工作台中打开',
   'projects.editDetails': '名称、描述和图标',
   'projects.archive.title': '归档“{name}”？',
-  'projects.archive.message': '它会从主屏幕和工作台中消失。不会删除任何内容：对话、设置和文件都会保留，可在“设置 → 项目”中恢复。',
+  'projects.archive.message':
+    '它会从主屏幕和工作台中消失。不会删除任何内容：对话、设置和文件都会保留，可在“设置 → 项目”中恢复。',
   'projects.restore.hint': '把它放回主屏幕和工作台。',
   'projects.danger.title': '归档或移除',
-  'projects.remove.message': '将从工作台中永久移除：此项目的对话及其附件、定时任务、共享关系和设置；在其中打开的终端会被结束。不受影响：文件夹 {folder} 及其中的所有文件仍保留在服务器磁盘上，智能体自行保存的对话记录也不受影响。',
+  'projects.remove.message':
+    '将从工作台中永久移除：此项目的对话及其附件、定时任务、共享关系和设置；在其中打开的终端会被结束。不受影响：文件夹 {folder} 及其中的所有文件仍保留在服务器磁盘上，智能体自行保存的对话记录也不受影响。',
   'projects.remove.confirm': '移除项目',
   'projects.remove.hint': '删除其对话和设置。磁盘上的文件绝不会被删除。',
-  'projects.remove.footer': '归档只是隐藏项目，一切都保留。移除会删除工作台中关于它的记录——但绝不会删除文件夹或其中的文件。',
+  'projects.remove.footer':
+    '归档只是隐藏项目，一切都保留。移除会删除工作台中关于它的记录——但绝不会删除文件夹或其中的文件。',
   'projects.about.title': '关于此项目',
   'projects.gone.title': '此项目不存在',
   'projects.gone.text': '它可能已被移除，或者没有与你共享。',
   'projects.yourAccess.title': '你在这里可以做什么',
   'projects.yourAccess.footer': '由此工作台的所有者决定谁可以使用项目以及如何使用。',
   'projects.yourAccess.write': '你可以修改此项目',
-  'projects.yourAccess.writeText': '可以与其中的智能体开始对话，编辑和上传文件，暂存、提交、切换分支、拉取和推送，并修改项目的名称、图标和链接。',
+  'projects.yourAccess.writeText':
+    '可以与其中的智能体开始对话，编辑和上传文件，暂存、提交、切换分支、拉取和推送，并修改项目的名称、图标和链接。',
   'projects.yourAccess.read': '你可以查看此项目',
-  'projects.yourAccess.readText': '可以查看其中的文件、修改和历史。不能开始对话、修改文件或在其中运行任何内容。这里的对话只有发起人和所有者能看到。',
+  'projects.yourAccess.readText':
+    '可以查看其中的文件、修改和历史。不能开始对话、修改文件或在其中运行任何内容。这里的对话只有发起人和所有者能看到。',
   'projects.yourAccess.never': '以下操作仅限所有者',
-  'projects.yourAccess.neverText': '打开终端、使用 GitHub、选择项目提供哪些智能体和功能、共享、归档或移除项目。',
+  'projects.yourAccess.neverText':
+    '打开终端、使用 GitHub、选择项目提供哪些智能体和功能、共享、归档或移除项目。',
   'projects.links.title': '链接',
   'projects.links.edit': '编辑链接',
   'projects.links.recheck': '重新检查链接',
   'projects.links.empty': '还没有链接',
-  'projects.links.emptyHint': '添加项目的网站——部署地址、文档、代码仓库——即可一眼看出每个站点是否可访问。',
+  'projects.links.emptyHint':
+    '添加项目的网站——部署地址、文档、代码仓库——即可一眼看出每个站点是否可访问。',
   'projects.links.emptyReadOnly': '添加到此项目的网站会显示在这里。',
   'projects.links.statusFailed': '暂时无法检查这些链接是否可访问。',
   'projects.links.unknown': '未检查',
@@ -1859,34 +1969,44 @@ export const zhCN: Record<keyof typeof en, string> = {
   'projects.links.problem.scheme': '请使用以 http:// 或 https:// 开头的完整地址。',
   'projects.links.problem.credentials': '地址中不要包含用户名和密码。',
   'projects.agents.title': '此项目提供的智能体',
-  'projects.agents.footer': '关闭的智能体无法在此项目中开始对话。在启用对话功能时，至少要保留一个。',
+  'projects.agents.footer':
+    '关闭的智能体无法在此项目中开始对话。在启用对话功能时，至少要保留一个。',
   'projects.agents.saved': '智能体设置已更新',
   'projects.features.title': '此项目允许的内容',
   'projects.features.footer': '这些设置对使用该项目的所有人生效，只有所有者可以修改。',
   'projects.feature.turnedOn': '已开启：{feature}',
   'projects.feature.turnedOff': '已关闭：{feature}',
   'projects.feature.assistant': '与智能体对话',
-  'projects.feature.assistant.text': '开启：项目会出现在工作台中，可以让智能体在其文件夹中工作。关闭：文件和 Git 仍可访问，但不能在此开始或继续任何对话。',
+  'projects.feature.assistant.text':
+    '开启：项目会出现在工作台中，可以让智能体在其文件夹中工作。关闭：文件和 Git 仍可访问，但不能在此开始或继续任何对话。',
   'projects.feature.automation': '无人值守运行',
-  'projects.feature.automation.text': '开启：允许定时任务在无人查看时在此启动智能体运行。关闭：此项目中不会有任何内容自行启动。',
+  'projects.feature.automation.text':
+    '开启：允许定时任务在无人查看时在此启动智能体运行。关闭：此项目中不会有任何内容自行启动。',
   'projects.feature.instructions': '项目指令文件',
-  'projects.feature.instructions.text': '开启：每次对话开始时为 Claude Code 加载此项目的 CLAUDE.md。关闭：不读取该文件。',
+  'projects.feature.instructions.text':
+    '开启：每次对话开始时为 Claude Code 加载此项目的 CLAUDE.md。关闭：不读取该文件。',
   'projects.feature.agentCredentials': '智能体可使用本机的凭据',
-  'projects.feature.agentCredentials.text': '开启：允许智能体使用本机的 SSH 密钥和令牌——智能体要推送或使用 GitHub 工具时需要。此时智能体也能读取这些凭据。关闭：这类命令在智能体运行中会失败，即使已获批准。',
+  'projects.feature.agentCredentials.text':
+    '开启：允许智能体使用本机的 SSH 密钥和令牌——智能体要推送或使用 GitHub 工具时需要。此时智能体也能读取这些凭据。关闭：这类命令在智能体运行中会失败，即使已获批准。',
   'projects.feature.agentCredentials.riskTitle': '允许“{project}”中的智能体使用本机的凭据？',
-  'projects.feature.agentCredentials.riskMessage': '在此项目中工作的智能体将能读取运行工作台的账户的 SSH 和 GPG 密钥、云与容器登录信息、GitHub 工具的令牌以及 Git 凭据——它们运行的任何程序也都能使用这些凭据。隐藏在文件或网页中的指令可能诱使智能体把它们发送到别处。请只对内容可信的项目开启。',
+  'projects.feature.agentCredentials.riskMessage':
+    '在此项目中工作的智能体将能读取运行工作台的账户的 SSH 和 GPG 密钥、云与容器登录信息、GitHub 工具的令牌以及 Git 凭据——它们运行的任何程序也都能使用这些凭据。隐藏在文件或网页中的指令可能诱使智能体把它们发送到别处。请只对内容可信的项目开启。',
   'projects.feature.agentCredentials.riskConfirm': '允许',
   'projects.feature.autoMode': '自动权限模式',
-  'projects.feature.autoMode.text': '开启：此处的对话可以使用自动模式，任何请求都不会事先交给人决定——只有拒绝规则和内置的拒绝清单会拦下请求。关闭：设为自动模式的对话会像“询问”模式一样询问。',
+  'projects.feature.autoMode.text':
+    '开启：此处的对话可以使用自动模式，任何请求都不会事先交给人决定——只有拒绝规则和内置的拒绝清单会拦下请求。关闭：设为自动模式的对话会像“询问”模式一样询问。',
   'projects.feature.autoMode.riskTitle': '允许在“{project}”中使用自动模式？',
-  'projects.feature.autoMode.riskMessage': '在自动模式下，智能体无需事先询问任何人即可运行命令和修改文件，被工作台判定为危险的请求也一样。只有拒绝规则和内置的拒绝清单会拦下它。请只在错误易于撤销的项目中允许。',
+  'projects.feature.autoMode.riskMessage':
+    '在自动模式下，智能体无需事先询问任何人即可运行命令和修改文件，被工作台判定为危险的请求也一样。只有拒绝规则和内置的拒绝清单会拦下它。请只在错误易于撤销的项目中允许。',
   'projects.feature.autoMode.riskConfirm': '允许自动模式',
   'projects.sharing.title': '共享对象',
   'projects.sharing.add': '添加成员',
-  'projects.sharing.footer': '成员只能看到自己发起的对话，看不到别人的。“可查看”的成员可以查看文件、修改和历史，因此在这里没有对话。“可修改”的成员还可以开始自己的对话、编辑文件，以及提交、拉取和推送。两者都不能打开终端、使用 GitHub、更改这些设置，也不能归档或移除项目。所有者始终可以看到全部项目。',
+  'projects.sharing.footer':
+    '成员只能看到自己发起的对话，看不到别人的。“可查看”的成员可以查看文件、修改和历史，因此在这里没有对话。“可修改”的成员还可以开始自己的对话、编辑文件，以及提交、拉取和推送。两者都不能打开终端、使用 GitHub、更改这些设置，也不能归档或移除项目。所有者始终可以看到全部项目。',
   'projects.sharing.empty': '尚未与任何人共享，只有所有者可以打开。',
   'projects.sharing.read': '可查看',
-  'projects.sharing.readHint': '可查看文件、修改和历史；不能修改、不能运行任何内容，在这里也没有对话。',
+  'projects.sharing.readHint':
+    '可查看文件、修改和历史；不能修改、不能运行任何内容，在这里也没有对话。',
   'projects.sharing.write': '可修改',
   'projects.sharing.writeHint': '还可以开始自己的对话、编辑文件，以及提交、拉取和推送。',
   'projects.sharing.accessLabel': '可执行的操作',
@@ -1894,10 +2014,12 @@ export const zhCN: Record<keyof typeof en, string> = {
   'projects.sharing.added': '{name} 现在可以打开 {project}',
   'projects.sharing.adding': '正在添加…',
   'projects.sharing.nobody': '没有可添加的成员',
-  'projects.sharing.nobodyHint': '所有账户要么已拥有此项目，要么是所有者。新账户可在“设置 → 成员”中创建。',
+  'projects.sharing.nobodyHint':
+    '所有账户要么已拥有此项目，要么是所有者。新账户可在“设置 → 成员”中创建。',
   'projects.sharing.remove': '停止共享',
   'projects.sharing.remove.title': '停止与 {name} 共享 {project}？',
-  'projects.sharing.remove.message': '该项目会立即从对方的工作台中消失。对方在其中开始的对话会保留在项目里。',
+  'projects.sharing.remove.message':
+    '该项目会立即从对方的工作台中消失。对方在其中开始的对话会保留在项目里。',
   'projects.sharing.removed': '已不再与 {name} 共享',
   'projects.sharing.actions': '针对 {name} 的操作',
   'projects.new.mode': '创建项目的方式',
@@ -1912,27 +2034,32 @@ export const zhCN: Record<keyof typeof en, string> = {
   'projects.clone.directoryHint': '留空则文件夹名为“{name}”。该文件夹必须尚不存在。',
   'projects.clone.directoryHintEmpty': '留空则使用仓库自身的名称。该文件夹必须尚不存在。',
   'projects.clone.nameHint': '留空则以文件夹名称作为项目名。',
-  'projects.clone.credentialsNote': '克隆私有仓库时，使用服务器上 Git 已有的登录方式（凭据助手或 SSH 密钥）。工作台不保存任何仓库密码或令牌。',
+  'projects.clone.credentialsNote':
+    '克隆私有仓库时，使用服务器上 Git 已有的登录方式（凭据助手或 SSH 密钥）。工作台不保存任何仓库密码或令牌。',
   'projects.clone.running': '正在克隆…',
   'projects.clone.starting': '正在开始',
   'projects.clone.progress': '克隆进度',
   'projects.clone.into': '目标位置：{folder}',
   'projects.clone.cancel': '取消克隆',
-  'projects.clone.runningNote': '克隆在服务器上进行，即使关闭此页面也会继续。取消会停止克隆并移除已获取的内容。',
+  'projects.clone.runningNote':
+    '克隆在服务器上进行，即使关闭此页面也会继续。取消会停止克隆并移除已获取的内容。',
   'projects.clone.done': '已克隆为项目 {name}',
   'projects.clone.failed': '无法克隆该仓库。',
   'projects.clone.cancelled': '克隆已取消。',
   'projects.clone.nothingLeft': '没有留下任何文件夹。',
   'projects.clone.problem.empty': '请填写仓库地址。',
   'projects.clone.problem.spaces': '仓库地址不能包含空格。',
-  'projects.clone.problem.scheme': '请使用 https://host/owner/repository、ssh://host/path 或 user@host:path 形式的地址，不接受其他类型的地址。',
-  'projects.clone.problem.credentials': '地址中不要包含密码或令牌。请改为在服务器上为 Git 配置登录。',
+  'projects.clone.problem.scheme':
+    '请使用 https://host/owner/repository、ssh://host/path 或 user@host:path 形式的地址，不接受其他类型的地址。',
+  'projects.clone.problem.credentials':
+    '地址中不要包含密码或令牌。请改为在服务器上为 Git 配置登录。',
   'errors.invalid_link': '其中一个链接不是可用的 http 或 https 地址。',
   'errors.too_many_links': '一个项目最多只能有 8 个链接。',
   'errors.invalid_agents': '有智能体被重复列出。',
   'errors.agents_required': '请至少保留一个智能体，或为此项目关闭对话功能。',
   'errors.too_many_pins': '置顶的项目过多。',
-  'errors.invalid_repository_url': '服务器不接受这个仓库地址：请使用 https://…、ssh://… 或 user@host:path，且不要带密码或令牌。',
+  'errors.invalid_repository_url':
+    '服务器不接受这个仓库地址：请使用 https://…、ssh://… 或 user@host:path，且不要带密码或令牌。',
   'errors.invalid_directory_name': '文件夹名称只能包含字母、数字、点、短横线和下划线。',
   'errors.target_exists': '那里已经有同名文件夹。请换一个名称或位置。',
   'errors.no_workspace_root': '服务器上没有配置工作区文件夹，因此没有可克隆到的位置。',
@@ -1954,7 +2081,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'remotes.session.in': '已打开的会话，位于 {directory}',
   'remotes.session.running': '已打开的会话',
   'remotes.session.actions': '{title} 的操作',
-  'remotes.session.closeMessage': '工作台到该机器的连接会被结束。若机器上有 tmux，其中的程序会继续运行；否则也会一并结束。',
+  'remotes.session.closeMessage':
+    '工作台到该机器的连接会被结束。若机器上有 tmux，其中的程序会继续运行；否则也会一并结束。',
   'remotes.open': '在该机器上打开终端',
   'remotes.invalid.title': '服务器上的机器列表有误',
   'remotes.invalid.text': '在修正之前不会提供任何机器。服务器指出了问题所在（不会回显具体的值）：',
@@ -1962,20 +2090,26 @@ export const zhCN: Record<keyof typeof en, string> = {
   'remotes.empty.missing': '列出机器的文件尚不存在。由此服务器的运维者创建——见下文。',
   'remotes.empty.text': '列出机器的文件是空的。由此服务器的运维者向其中添加机器——见下文。',
   'remotes.how.title': '如何添加机器',
-  'remotes.how.text': '机器由此服务器的运维者在服务器上的一个文件中列出。无法从浏览器添加、修改或移除——因此浏览器永远无法指定主机、用户、密钥或命令。该文件位于：',
-  'remotes.how.keys': '连接使用服务器账户自己的 SSH 密钥，从不询问密码。首次连接某台机器时，其主机密钥需要已在该账户的 known_hosts 中，除非运维者在文件中允许接受新密钥。',
+  'remotes.how.text':
+    '机器由此服务器的运维者在服务器上的一个文件中列出。无法从浏览器添加、修改或移除——因此浏览器永远无法指定主机、用户、密钥或命令。该文件位于：',
+  'remotes.how.keys':
+    '连接使用服务器账户自己的 SSH 密钥，从不询问密码。首次连接某台机器时，其主机密钥需要已在该账户的 known_hosts 中，除非运维者在文件中允许接受新密钥。',
   'remotes.directory.title': '在 {name} 上打开终端',
   'remotes.directory.label': '起始文件夹',
-  'remotes.directory.hint': '完整路径，只能由字母、数字和 . _ + @ - 组成。留空则使用该机器的默认目录。',
-  'remotes.directory.problem': '请使用以 / 开头的完整路径，只能由字母、数字和 . _ + @ - 组成：不能有空格、不能有“..”、任何一段都不能以短横线开头。',
+  'remotes.directory.hint':
+    '完整路径，只能由字母、数字和 . _ + @ - 组成。留空则使用该机器的默认目录。',
+  'remotes.directory.problem':
+    '请使用以 / 开头的完整路径，只能由字母、数字和 . _ + @ - 组成：不能有空格、不能有“..”、任何一段都不能以短横线开头。',
   'remotes.directory.open': '打开',
   'remotes.sheet.title': '{name} 上的终端',
-  'remotes.sheet.note': '点“完成”只是断开连接。{name} 上的会话会继续运行，并列在该机器下方以便返回。',
+  'remotes.sheet.note':
+    '点“完成”只是断开连接。{name} 上的会话会继续运行，并列在该机器下方以便返回。',
   'remotes.failure.ssh_missing': '服务器上没有安装 SSH 客户端。',
   'remotes.failure.identity_unreadable': '服务器无法读取为这台机器配置的密钥。',
   'remotes.failure.timeout': '该机器未能及时响应。',
   'remotes.failure.auth_failed': '该机器拒绝了服务器的密钥。',
-  'remotes.failure.host_key_failed': '服务器不认识该机器的主机密钥，或者密钥已变更。需要先在服务器上接受它的密钥。',
+  'remotes.failure.host_key_failed':
+    '服务器不认识该机器的主机密钥，或者密钥已变更。需要先在服务器上接受它的密钥。',
   'remotes.failure.dns_failed': '无法解析该机器的名称。',
   'remotes.failure.connection_refused': '该机器拒绝了连接。',
   'remotes.failure.network_unreachable': '没有到达该机器的网络路由。',
@@ -1983,14 +2117,16 @@ export const zhCN: Record<keyof typeof en, string> = {
   'remotes.failure.ssh_failed': '连接失败。',
   'github.account.recentlyChecked': '刚刚才检查过。服务器最多每隔几秒重新检查一次。',
   'remotes.directory.project': '所属项目',
-  'remotes.directory.projectHint': '每个终端都属于一个项目。此终端会与该项目的终端列在一起，项目被移除时也会随之结束。',
+  'remotes.directory.projectHint':
+    '每个终端都属于一个项目。此终端会与该项目的终端列在一起，项目被移除时也会随之结束。',
   'remotes.directory.noProject': '终端需要归属于某个项目，而目前还没有项目。请先创建一个项目。',
   'github.inbox.about.all': '你发起的、请你审查的，以及你名下仓库中尚未关闭的拉取请求。',
   'github.inbox.about.review_requested': '等待你审查的未关闭拉取请求。',
   'github.inbox.about.authored': '你发起的未关闭拉取请求。',
   'github.inbox.about.own_repositories': '你名下仓库中的未关闭拉取请求。',
   'projects.remove.removing': '正在移除“{name}”…',
-  'accounts.signInHint': '登录会在服务器上的终端里运行智能体自己的登录程序；需要提供什么由智能体决定。',
+  'accounts.signInHint':
+    '登录会在服务器上的终端里运行智能体自己的登录程序；需要提供什么由智能体决定。',
   'accounts.serverSays': '服务器的说明：{message}',
   'projects.sharing.unshare': '取消共享',
   // ---- 通知 ----------------------------------------------------------------------------------
@@ -2006,31 +2142,39 @@ export const zhCN: Record<keyof typeof en, string> = {
   'notify.state.on.lineMany.one': '提醒会送达本设备和另外 1 台设备。',
   'notify.state.on.lineMany.other': '提醒会送达本设备和另外 {count} 台设备。',
   'notify.state.channelOff.title': '已设置，但已关闭发送',
-  'notify.state.channelOff.text': '本设备已登记，但你的账户关闭了向设备发送，所以没有设备会收到通知。',
+  'notify.state.channelOff.text':
+    '本设备已登记，但你的账户关闭了向设备发送，所以没有设备会收到通知。',
   'notify.state.channelOff.line': '通知设置里关闭了向设备发送。',
   'notify.state.notSubscribed.title': '本设备尚未设置',
   'notify.state.notSubscribed.text': '这个浏览器允许通知，但还没有登记到你的账户。',
   'notify.state.notSubscribed.line': '本设备还没有设置通知。',
   'notify.state.notAsked.title': '尚未开启',
-  'notify.state.notAsked.text': '智能体需要你、完成或失败时收到通知——应用关闭时也会。浏览器会请求你的许可。',
+  'notify.state.notAsked.text':
+    '智能体需要你、完成或失败时收到通知——应用关闭时也会。浏览器会请求你的许可。',
   'notify.state.notAsked.line': '通知未开启：提醒只出现在收件箱里。',
   'notify.state.denied.title': '已被浏览器阻止',
-  'notify.state.denied.text': '这个网站的通知被阻止了。要允许，请打开网站设置（地址左边的图标），把“通知”设为“允许”，再回到这里——本页面会自动更新。',
-  'notify.state.denied.iosText': 'Agent Studio 的通知已关闭。请打开“设置”→“通知”→“Agent Studio”，打开“允许通知”，再回到这里——本页面会自动更新。',
+  'notify.state.denied.text':
+    '这个网站的通知被阻止了。要允许，请打开网站设置（地址左边的图标），把“通知”设为“允许”，再回到这里——本页面会自动更新。',
+  'notify.state.denied.iosText':
+    'Cloud Harness 的通知已关闭。请打开“设置”→“通知”→“Cloud Harness”，打开“允许通知”，再回到这里——本页面会自动更新。',
   'notify.state.denied.line': '浏览器阻止了通知。请在网站设置里允许；之后这里会自动更新。',
   'notify.state.install.title': '请先添加到主屏幕',
-  'notify.state.install.text': '在 iPhone 和 iPad 上，只有添加到主屏幕的 Agent Studio 才能收到通知，系统需为 iOS 或 iPadOS 16.4 及以上。',
-  'notify.state.install.line': '在 iPhone 或 iPad 上，请从主屏幕打开 Agent Studio 以接收通知。',
+  'notify.state.install.text':
+    '在 iPhone 和 iPad 上，只有添加到主屏幕的 Cloud Harness 才能收到通知，系统需为 iOS 或 iPadOS 16.4 及以上。',
+  'notify.state.install.line': '在 iPhone 或 iPad 上，请从主屏幕打开 Cloud Harness 以接收通知。',
   'notify.install.step1': '点浏览器工具栏里的“分享”。',
   'notify.install.step2': '选择“添加到主屏幕”。',
-  'notify.install.step3': '从主屏幕打开 Agent Studio，再回到本页面。',
+  'notify.install.step3': '从主屏幕打开 Cloud Harness，再回到本页面。',
   'notify.state.unsupported.title': '这个浏览器不支持',
-  'notify.state.unsupported.text': '这个浏览器无法接收网页通知。其他功能照常可用，发生的事情仍会出现在收件箱里。',
+  'notify.state.unsupported.text':
+    '这个浏览器无法接收网页通知。其他功能照常可用，发生的事情仍会出现在收件箱里。',
   'notify.state.unsupported.line': '这个浏览器无法显示通知。自动化照常运行，提醒会出现在收件箱里。',
   'notify.state.insecure.title': '需要安全的地址',
-  'notify.state.insecure.text': '浏览器只在 https 地址（或 localhost）上允许通知。本页面是用普通 http 打开的，所以本设备在这里收不到通知。',
+  'notify.state.insecure.text':
+    '浏览器只在 https 地址（或 localhost）上允许通知。本页面是用普通 http 打开的，所以本设备在这里收不到通知。',
   'notify.state.noWorker.title': '后台服务未运行',
-  'notify.state.noWorker.text': '通知要经由应用的后台服务送到本设备，而它在这个窗口里没有运行。请刷新页面；开发版没有后台服务。',
+  'notify.state.noWorker.text':
+    '通知要经由应用的后台服务送到本设备，而它在这个窗口里没有运行。请刷新页面；开发版没有后台服务。',
   'notify.action.enable': '开启通知',
   'notify.action.enableDevice': '在本设备开启',
   'notify.action.turnOn': '打开发送',
@@ -2047,14 +2191,16 @@ export const zhCN: Record<keyof typeof en, string> = {
   'notify.webPush.devices.other': '{count} 台设备会收到通知',
   'notify.webPush.none': '还没有设置任何设备',
   'notify.devices.header': '设备',
-  'notify.devices.footer': '在 iPhone 和 iPad 上，只有添加到主屏幕的 Agent Studio 能收到通知（iOS 16.4 及以上）。最多 {max} 台设备。',
+  'notify.devices.footer':
+    '在 iPhone 和 iPad 上，只有添加到主屏幕的 Cloud Harness 能收到通知（iOS 16.4 及以上）。最多 {max} 台设备。',
   'notify.device.this': '本设备',
   'notify.device.enabled': '{date} 开启',
   'notify.device.delivered': '上次送达于{when}',
   'notify.device.actions': '“{name}”的操作',
   'notify.device.removing': '正在移除…',
   'notify.device.removeTitle': '移除“{name}”？',
-  'notify.device.removeThis': '这个浏览器将不再收到通知，并放弃它的订阅，不会自己恢复。你随时可以重新开启。',
+  'notify.device.removeThis':
+    '这个浏览器将不再收到通知，并放弃它的订阅，不会自己恢复。你随时可以重新开启。',
   'notify.device.removeOther': '那台设备会立即停止接收通知。',
   'notify.device.removed': '已移除“{name}”',
   'notify.test.title': '发送测试通知',
@@ -2077,7 +2223,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'notify.test.outcome.removed': '——已从列表中移除。',
   'notify.saveFailed': '“{name}”没有保存，已恢复原样。',
   'notify.events.header': '提醒我',
-  'notify.events.footer': '关闭的事件不会通过任何渠道发送，也不会保留。正在屏幕上的会话从不通知。每分钟最多 30 条通知送到你的设备，多出的会被丢弃。',
+  'notify.events.footer':
+    '关闭的事件不会通过任何渠道发送，也不会保留。正在屏幕上的会话从不通知。每分钟最多 30 条通知送到你的设备，多出的会被丢弃。',
   'notify.event.needsYou': '需要你处理',
   'notify.event.needsYou.text': '智能体在等待批准、回答或确认计划。',
   'notify.event.replyFinished': '回复完成',
@@ -2094,7 +2241,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'notify.details.title': '在锁屏上显示详情',
   'notify.details.off': '关：只说是哪个会话、发生了什么——不含会话内容。',
   'notify.details.on': '开：会附上一行会话内容。',
-  'notify.details.footer': '关闭时，通知类似“Claude 完成了回复”。打开后，可能附上等待批准的命令、你请求的开头或错误信息——能看到你锁屏的人都能读到。看起来像密码或密钥的内容会先被去掉。',
+  'notify.details.footer':
+    '关闭时，通知类似“Claude 完成了回复”。打开后，可能附上等待批准的命令、你请求的开头或错误信息——能看到你锁屏的人都能读到。看起来像密码或密钥的内容会先被去掉。',
   'notify.inApp.header': '应用内',
   'notify.inApp.title': '在收件箱里保留列表',
   'notify.inApp.text': '收件箱保留发生过的事情，并标出未读。',
@@ -2120,9 +2268,11 @@ export const zhCN: Record<keyof typeof en, string> = {
   'inbox.tile.clear': '没有待办',
   'inbox.tile.needsUpdate': '需要更新',
   'inbox.group.approvals': '待审批',
-  'inbox.group.approvals.footer': '每一项都在等你在它的会话里做决定。打开它并在那里决定——收件箱里不能批准任何事情。',
+  'inbox.group.approvals.footer':
+    '每一项都在等你在它的会话里做决定。打开它并在那里决定——收件箱里不能批准任何事情。',
   'inbox.group.needsHandling': '需处理',
-  'inbox.group.needsHandling.footer': '失败或中断的运行。打开后可以看到停止的原因，并在那里继续。“标记已处理”只是把这一行收起——不会重试、继续或批准任何东西。',
+  'inbox.group.needsHandling.footer':
+    '失败或中断的运行。打开后可以看到停止的原因，并在那里继续。“标记已处理”只是把这一行收起——不会重试、继续或批准任何东西。',
   'inbox.group.results': '查看结果',
   'inbox.group.results.footer': '最近三天内完成、尚未查看的结果。打开会话即视为已读。',
   'inbox.group.running': '进行中',
@@ -2151,14 +2301,16 @@ export const zhCN: Record<keyof typeof en, string> = {
   'inbox.ack.allDone.other': '已将 {count} 个结果标为已阅',
   'inbox.ack.already': '它已经被处理过了——可能是在另一台设备上。',
   'inbox.ack.unavailable': '列表可能过期时不能标记。',
-  'inbox.ack.queueWaiting': '这次失败的运行后面还有排队的消息。在这里收起它会把那些消息发出去，所以什么都没有改变：请打开会话，继续这次运行或清空它的队列。',
+  'inbox.ack.queueWaiting':
+    '这次失败的运行后面还有排队的消息。在这里收起它会把那些消息发出去，所以什么都没有改变：请打开会话，继续这次运行或清空它的队列。',
   'inbox.ack.inProgress': '它仍在运行或在等待回答，现在还没有可以收起的东西。什么都没有改变。',
   'inbox.ack.gone': '那次运行已经不在了。',
   'inbox.strip.checked': '{when}检查过',
   'inbox.strip.checking': '正在检查…',
   'inbox.strip.offline': '离线——上次检查于{when}',
   'inbox.stale.title': '可能已过期',
-  'inbox.stale.offline': '没有网络。这是 {when} 的列表；网络恢复后会自动重新检查。在此期间不能标记。',
+  'inbox.stale.offline':
+    '没有网络。这是 {when} 的列表；网络恢复后会自动重新检查。在此期间不能标记。',
   'inbox.stale.failed': '上次检查失败：{reason} 这是 {when} 的列表。检查成功之前不能标记。',
   'inbox.stale.reconnecting': '与服务器的实时连接已断开。这是 {when} 的列表。',
   'inbox.empty.title': '没有待办',
@@ -2177,7 +2329,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'inbox.notes.clearRead': '清除已读通知',
   'inbox.notes.clearAll': '清除全部通知',
   'inbox.notes.clearAllTitle': '清除全部通知？',
-  'inbox.notes.clearAllText': '这个列表里的所有通知都会被移除，不论是否已读。它们所指的会话不受影响。',
+  'inbox.notes.clearAllText':
+    '这个列表里的所有通知都会被移除，不论是否已读。它们所指的会话不受影响。',
   'inbox.notes.cleared.one': '已清除 1 条通知',
   'inbox.notes.cleared.other': '已清除 {count} 条通知',
   'inbox.notes.empty': '没有通知',
@@ -2220,7 +2373,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'memory.unavailable.cached': '记忆暂不可用——显示的是上次读到的笔记。',
   'memory.timeout.cached': '记忆响应太慢——显示的是上次读到的笔记。',
   'memory.unavailable.title': '记忆暂不可用',
-  'memory.unavailable.text': '现在无法读取笔记文件或它们的索引。在此期间，会话会在没有记忆的情况下继续。',
+  'memory.unavailable.text':
+    '现在无法读取笔记文件或它们的索引。在此期间，会话会在没有记忆的情况下继续。',
   'memory.timeout.title': '记忆响应太慢',
   'memory.timeout.text': '服务器没有及时回答。记忆可能只是在忙——请重试。',
   'memory.empty.title': '还没有笔记',
@@ -2240,7 +2394,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'memory.reader.loadFailed': '这条笔记无法打开，但仍可以删除。',
   'memory.reminder': '记忆由助手和人写下。它是参考资料，不是指令，绝不能包含密码、密钥或令牌。',
   'memory.credential.title': '看起来包含凭据',
-  'memory.credential.text': '这条笔记似乎包含{kind}，因此永远不会提供给助手。请删掉其中的秘密（或删除这条笔记），把秘密保存在专门的地方。',
+  'memory.credential.text':
+    '这条笔记似乎包含{kind}，因此永远不会提供给助手。请删掉其中的秘密（或删除这条笔记），把秘密保存在专门的地方。',
   'memory.credential.private_key': '私钥',
   'memory.credential.api_key': 'API 密钥',
   'memory.credential.access_token': '访问令牌',
@@ -2288,7 +2443,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'memory.editor.write': '编写',
   'memory.editor.preview': '预览',
   'memory.editor.previewEmpty': '还什么都没写。',
-  'memory.editor.bodyLocked': '这条笔记太长，应用无法完整显示，所以正文只能在文件里修改。标题、标签和关键词可以在这里修改。',
+  'memory.editor.bodyLocked':
+    '这条笔记太长，应用无法完整显示，所以正文只能在文件里修改。标题、标签和关键词可以在这里修改。',
   'memory.editor.bodyLong': '笔记最多 {max} 个字符。',
   'memory.editor.titleMissing': '请给笔记起个标题。',
   'memory.editor.titleSlash': '标题里不能有斜杠。',
@@ -2297,17 +2453,20 @@ export const zhCN: Record<keyof typeof en, string> = {
   'memory.editor.credential': '没有保存：正文似乎包含{kind}。请删掉后再保存。',
   'memory.editor.exists': '那个文件夹里已经有同名笔记。请换一个标题。',
   'memory.editor.folderFull': '那个文件夹已满（{max} 条笔记）。请换一个，或先删除旧笔记。',
-  'memory.editor.tooLong': '这条笔记太长，应用无法完整显示，所以正文没有保存。标题、标签和关键词仍可保存。',
+  'memory.editor.tooLong':
+    '这条笔记太长，应用无法完整显示，所以正文没有保存。标题、标签和关键词仍可保存。',
   'memory.editor.readOnly': '你可以阅读这个文件夹，但不能在里面写入。',
   'memory.editor.created': '笔记已创建',
   'memory.editor.saved': '笔记已保存',
   'memory.editor.discardTitle': '放弃修改？',
   'memory.editor.discardText': '你在这里写的内容会丢失。',
   'memory.editor.discard': '放弃',
-  'memory.editor.changedElsewhere': '这条笔记刚刚在别处被修改。保存时会显示两个版本，并问你保留哪个。',
+  'memory.editor.changedElsewhere':
+    '这条笔记刚刚在别处被修改。保存时会显示两个版本，并问你保留哪个。',
   'memory.editor.deletedElsewhere': '这条笔记刚刚在别处被删除。保存时会问你如何处理你写的内容。',
   'memory.conflict.title': '自你打开后，这条笔记已被修改',
-  'memory.conflict.text': '有人或某个程序——另一台设备、某个助手、对文件的直接编辑——保存了更新的版本。你的内容还没有保存。请选择保留哪个版本。',
+  'memory.conflict.text':
+    '有人或某个程序——另一台设备、某个助手、对文件的直接编辑——保存了更新的版本。你的内容还没有保存。请选择保留哪个版本。',
   'memory.conflict.gone': '这条笔记已经不在原处：它被移动或删除了。你的内容还没有保存。',
   'memory.conflict.theirs': '对方的版本：“{title}”，{when}保存。',
   'memory.conflict.showTheirs': '显示对方的版本',
@@ -2325,9 +2484,11 @@ export const zhCN: Record<keyof typeof en, string> = {
   'memory.status.ok.text.one': '你可见的 {folders} 个文件夹里共有 1 条笔记。',
   'memory.status.ok.text.other': '你可见的 {folders} 个文件夹里共有 {count} 条笔记。',
   'memory.status.stale.title': '运行中，可能略有滞后',
-  'memory.status.stale.text': '刚才无法把搜索索引与笔记文件比对。在应用之外做的最新修改可能还没显示。',
+  'memory.status.stale.text':
+    '刚才无法把搜索索引与笔记文件比对。在应用之外做的最新修改可能还没显示。',
   'memory.status.unreadable.title': '无法读取笔记文件',
-  'memory.status.unreadable.text': '服务器读不了它的记忆文件夹。在服务器上修好之前，助手会在没有记忆的情况下工作。',
+  'memory.status.unreadable.text':
+    '服务器读不了它的记忆文件夹。在服务器上修好之前，助手会在没有记忆的情况下工作。',
   'memory.status.index.title': '搜索索引出了问题',
   'memory.status.index.text': '现在无法列出或搜索笔记。所有者可以重建索引；笔记文件本身是安全的。',
   'memory.status.indexed': '上次索引',
@@ -2359,10 +2520,12 @@ export const zhCN: Record<keyof typeof en, string> = {
   'memory.rebuild.done': '已索引 {notes} 条笔记，用时 {ms} 毫秒。',
   'memory.about.title': '关于记忆',
   'memory.about.folders': '每个项目都有自己的文件夹；“全局”存放适用于所有地方的内容。',
-  'memory.about.agents': '助手在工作前会搜索记忆，并把你告诉它们值得保留的事情记下来，署上自己的名字。',
+  'memory.about.agents':
+    '助手在工作前会搜索记忆，并把你告诉它们值得保留的事情记下来，署上自己的名字。',
   'memory.about.untrusted': '笔记是参考资料。助手被告知绝不执行笔记里出现的指令。',
   'memory.about.secrets': '看起来包含密码或密钥的笔记永远不会提供给助手。',
-  'memory.about.files': '每条笔记都是服务器上的一个 Markdown 文件：可以在应用之外备份、做版本管理或编辑。',
+  'memory.about.files':
+    '每条笔记都是服务器上的一个 Markdown 文件：可以在应用之外备份、做版本管理或编辑。',
   'errors.memory_note_not_found': '那条笔记已经不存在。',
   'errors.memory_folder_not_found': '那个文件夹不存在，或者你看不到它。',
   'errors.memory_read_only': '你可以阅读这个文件夹，但不能修改。',
@@ -2384,12 +2547,16 @@ export const zhCN: Record<keyof typeof en, string> = {
   'automation.on': '开',
   'automation.offShort': '关',
   'automation.project.title': '本项目的自动化',
-  'automation.project.on': '开：这里的自动化按计划运行——给创建者的提醒，以及无人值守的智能体运行——并且可以在本项目的会话里定时发送消息。',
-  'automation.project.off': '关：这里不会自行启动任何事情。自动化保留设置但不会运行，也不能安排定时发送。',
-  'automation.project.detail': '自动化启动的智能体运行以创建者的身份进行，并使用卡片上显示的权限模式：任何需要批准的操作都会被拒绝，绝不会等待。任何事情都不会自动重试。',
+  'automation.project.on':
+    '开：这里的自动化按计划运行——给创建者的提醒，以及无人值守的智能体运行——并且可以在本项目的会话里定时发送消息。',
+  'automation.project.off':
+    '关：这里不会自行启动任何事情。自动化保留设置但不会运行，也不能安排定时发送。',
+  'automation.project.detail':
+    '自动化启动的智能体运行以创建者的身份进行，并使用卡片上显示的权限模式：任何需要批准的操作都会被拒绝，绝不会等待。任何事情都不会自动重试。',
   'automation.project.ownerOnly': '只有本工作台的所有者可以切换它。',
   'automation.project.onTitle': '允许“{project}”使用自动化？',
-  'automation.project.onText': '在这里创建的自动化会自行运行——包括无人值守的智能体运行，并限制在各自显示的权限模式内。之后在本项目里也可以定时发送消息。',
+  'automation.project.onText':
+    '在这里创建的自动化会自行运行——包括无人值守的智能体运行，并限制在各自显示的权限模式内。之后在本项目里也可以定时发送消息。',
   'automation.project.onConfirm': '允许',
   'automation.project.turnedOn': '已为本项目开启自动化',
   'automation.project.turnedOff': '已为本项目关闭自动化',
@@ -2472,13 +2639,16 @@ export const zhCN: Record<keyof typeof en, string> = {
   'automation.session.new': '每次新建',
   'automation.session.existing': '始终同一个',
   'automation.session.newHint': '每次运行都在本项目里开始一个新会话。',
-  'automation.session.existingHint': '每次运行都接着你与这个智能体的某个会话进行。若届时它正忙，这次运行会被跳过。',
+  'automation.session.existingHint':
+    '每次运行都接着你与这个智能体的某个会话进行。若届时它正忙，这次运行会被跳过。',
   'automation.session.choose': '选择一个会话',
-  'automation.session.none': '你在本项目里还没有和这个智能体的会话。可以先在工作台开始一个，或选择“每次新建”。',
+  'automation.session.none':
+    '你在本项目里还没有和这个智能体的会话。可以先在工作台开始一个，或选择“每次新建”。',
   'automation.guard.actsAs': '以 {name} 的身份运行。',
   'automation.guard.mode': '{mode}：{behaviour}',
   'automation.guard.refused': '现在运行会被拒绝：{reason}',
-  'automation.guard.unattended': '运行时不会询问任何人。任何需要批准的操作都会被拒绝，并在结果里说明。',
+  'automation.guard.unattended':
+    '运行时不会询问任何人。任何需要批准的操作都会被拒绝，并在结果里说明。',
   'automation.guard.short': '以 {name} 的身份、在{mode}模式下运行。',
   'automation.guard.wouldRefuse': '现在运行会被拒绝：{reason}',
   'automation.mode.plan': '计划',
@@ -2578,13 +2748,16 @@ export const zhCN: Record<keyof typeof en, string> = {
   'automation.later.scheduling': '正在安排…',
   'automation.later.scheduled': '将于{when}发送',
   'automation.later.pastTime': '请选择一个将来的时间。',
-  'automation.later.note': '到时即使没有打开浏览器也会发送，就像那时输入的一样，并使用本会话当时的模型和模式。若届时智能体正忙，它会在队列里等候。',
+  'automation.later.note':
+    '到时即使没有打开浏览器也会发送，就像那时输入的一样，并使用本会话当时的模型和模式。若届时智能体正忙，它会在队列里等候。',
   'automation.later.empty': '请先写好消息。',
   'automation.later.files': '稍后发送只带文字。请先移除附加的文件，或现在就发送。',
   'automation.later.quote': '稍后发送只带文字。请先移除引用，或现在就发送。',
   'automation.later.tooLong': '定时消息最多 {max} 个字符。',
-  'automation.later.offOwner': '只有在项目开启了自动化时才能稍后发送消息。你可以在它的自动化页面开启。',
-  'automation.later.offMember': '只有在项目开启了自动化时才能稍后发送消息；本工作台的所有者可以开启它。',
+  'automation.later.offOwner':
+    '只有在项目开启了自动化时才能稍后发送消息。你可以在它的自动化页面开启。',
+  'automation.later.offMember':
+    '只有在项目开启了自动化时才能稍后发送消息；本工作台的所有者可以开启它。',
   'automation.later.openAutomations': '打开自动化',
   'automation.later.listLabel': '定时消息',
   'automation.later.count.one': '1 条定时消息',
@@ -2649,7 +2822,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'usage.cost.unknown': '未知',
   'usage.cost.atLeast': '至少 {amount}',
   'usage.cost.unknownCaveat.one': '这 1 次运行没有费用：它的智能体没有报告，模型也没有价格。',
-  'usage.cost.unknownCaveat.other': '这 {count} 次运行都没有费用：它们的智能体没有报告，模型也没有价格。',
+  'usage.cost.unknownCaveat.other':
+    '这 {count} 次运行都没有费用：它们的智能体没有报告，模型也没有价格。',
   'usage.cost.partialCaveat.one': '有 1 次运行没有费用，实际金额更高。',
   'usage.cost.partialCaveat.other': '有 {count} 次运行没有费用，实际金额更高。',
   'usage.chart.perDay': '每天的{metric}',
@@ -2682,10 +2856,12 @@ export const zhCN: Record<keyof typeof en, string> = {
   'usage.breakdown.removedUser': '已删除的账户',
   'usage.breakdown.others.one': '另外 1 项',
   'usage.breakdown.others.other': '另外 {count} 项',
-  'usage.reasoningNote': '令牌数是智能体报告的；推理计入输出。费用是智能体报告的或按标价估算的——是估算，不是账单。',
+  'usage.reasoningNote':
+    '令牌数是智能体报告的；推理计入输出。费用是智能体报告的或按标价估算的——是估算，不是账单。',
   'usage.plan.sectionTitle': '套餐额度',
   'usage.plan.title': '套餐额度',
-  'usage.plan.footer': '每个智能体自己的程序最近一次报告的账户额度。工作台不会主动查询：智能体在运行中再次报告时，读数才会更新。',
+  'usage.plan.footer':
+    '每个智能体自己的程序最近一次报告的账户额度。工作台不会主动查询：智能体在运行中再次报告时，读数才会更新。',
   'usage.plan.noAgents': '没有设置自带套餐的智能体。',
   'usage.plan.none': '还没有读数——{agent}在运行中报告额度后就会出现。',
   'usage.plan.observed': '{when}报告',
@@ -2714,7 +2890,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'usage.budget.addTitle': '新预算',
   'usage.budget.editTitle': '编辑预算',
   'usage.budget.empty': '没有预算',
-  'usage.budget.emptyText': '预算是给某个智能体或全部用量设的月度标线，按令牌或美元计。达到 80% 和 100% 时会通知；绝不会因此停止任何事情。',
+  'usage.budget.emptyText':
+    '预算是给某个智能体或全部用量设的月度标线，按令牌或美元计。达到 80% 和 100% 时会通知；绝不会因此停止任何事情。',
   'usage.budget.footer': '预算只是提示：达到时不会阻止任何事情。',
   'usage.budget.everything': '全部',
   'usage.budget.for': '对象',
@@ -2770,7 +2947,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'usage.spend.scopeOwn': '只计入你自己的运行。',
   'usage.spend.saved': '金额已记录',
   'usage.spend.sheetTitle': '为{name}记录充值',
-  'usage.spend.sheetText': '写下账户某天的余额——充值后，或从提供方自己的页面上看到的。花费会从这里往下扣。',
+  'usage.spend.sheetText':
+    '写下账户某天的余额——充值后，或从提供方自己的页面上看到的。花费会从这里往下扣。',
   'usage.spend.amount': '金额',
   'usage.spend.currency': '币种',
   'usage.spend.currencyHint': '三个字母，例如 USD。',
@@ -2787,7 +2965,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'providers.summary.count.one': '1 个提供方',
   'providers.summary.count.other': '{count} 个提供方',
   'providers.list.header': 'API 提供方',
-  'providers.list.footer': 'API 模型通过提供方的密钥，像编程智能体一样在会话中回答。密钥加密保存，之后不会再显示。',
+  'providers.list.footer':
+    'API 模型通过提供方的密钥，像编程智能体一样在会话中回答。密钥加密保存，之后不会再显示。',
   'providers.problems.header': '上次检查失败',
   'providers.row.keyConfigured': '密钥已保存',
   'providers.row.keyUnreadable': '需要重新输入密钥',
@@ -2800,7 +2979,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'providers.status.ok': '已连通',
   'providers.status.failing': '连接失败',
   'providers.member.noneTitle': '没有提供 API 模型',
-  'providers.member.none': '本工作台的所有者可以添加 API 提供方；之后它们的模型会出现在工作台的模型菜单里。',
+  'providers.member.none':
+    '本工作台的所有者可以添加 API 提供方；之后它们的模型会出现在工作台的模型菜单里。',
   'providers.member.ready': '可以在工作台的模型菜单里使用。',
   'providers.member.notConfigured': '尚不可用：所有者还没有为它保存密钥。',
   'providers.member.noModels': '还没有提供任何模型。',
@@ -2811,7 +2991,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'providers.add.kind': '起点',
   'providers.add.custom': '自定义或自托管',
   'providers.add.customText': '任何兼容 OpenAI 的服务器',
-  'providers.add.unverified': '这些默认值来自公开文档，未经验证：地址、模型名和上下文窗口都可能变化。请核对，或在保存密钥后使用“发现模型”。',
+  'providers.add.unverified':
+    '这些默认值来自公开文档，未经验证：地址、模型名和上下文窗口都可能变化。请核对，或在保存密钥后使用“发现模型”。',
   'providers.add.docs': '{name} 的 API 文档',
   'providers.section.connection': '连接',
   'providers.section.details': '提供方',
@@ -2827,8 +3008,10 @@ export const zhCN: Record<keyof typeof en, string> = {
   'providers.field.baseUrl': '地址',
   'providers.field.baseUrlHint': 'API 的基础地址；会在后面加上“/chat/completions”。',
   'providers.field.private': '允许访问我的网络中的地址',
-  'providers.field.privateText': '允许工作台为这个提供方访问本机和你的内网——家里的模型服务器需要它，例如 http://192.168.1.20:8000/v1。',
-  'providers.field.privateWarning': '只为你自己掌控的服务器打开它。能修改这个提供方的人可以把它指向你网络里的其他机器，而工作台发送过去的内容包括会话。',
+  'providers.field.privateText':
+    '允许工作台为这个提供方访问本机和你的内网——家里的模型服务器需要它，例如 http://192.168.1.20:8000/v1。',
+  'providers.field.privateWarning':
+    '只为你自己掌控的服务器打开它。能修改这个提供方的人可以把它指向你网络里的其他机器，而工作台发送过去的内容包括会话。',
   'providers.field.enabled': '向所有人提供',
   'providers.field.enabledOn': '开：它的模型会出现在所有已登录用户的工作台模型菜单中。',
   'providers.field.enabledOff': '关：它不出现在模型菜单中，与它的会话也无法继续。',
@@ -2865,7 +3048,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'providers.keyProblem.whitespace': '密钥里不能有空格或换行。',
   'providers.keyProblem.characters': '包含 API 密钥不会有的字符。',
   'providers.keyProblem.looks_like_url': '这是一个地址，不是密钥。',
-  'providers.keyProblem.sign_in_token': '这是登录令牌，不是 API 密钥。请在提供方的控制台里创建 API 密钥。',
+  'providers.keyProblem.sign_in_token':
+    '这是登录令牌，不是 API 密钥。请在提供方的控制台里创建 API 密钥。',
   'providers.keyProblem.admin_key': '这是组织管理员密钥。请使用普通的 API 密钥。',
   'providers.keyProblem.other_service': '这看起来是其他服务的凭据。',
   'providers.keyProblem.other': '这个密钥无法保存。',
@@ -2886,7 +3070,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'providers.check.saveFirst': '验证之前请先保存修改。',
   'providers.discover.run': '发现模型',
   'providers.discover.text': '向提供方询问它的模型，并添加新的模型，在你提供之前保持隐藏。',
-  'providers.discover.textFirst': '向提供方询问它的模型并全部添加。目前还没有提供任何模型，所以它们会直接出现在模型菜单里；不需要的可以关掉。',
+  'providers.discover.textFirst':
+    '向提供方询问它的模型并全部添加。目前还没有提供任何模型，所以它们会直接出现在模型菜单里；不需要的可以关掉。',
   'providers.discover.saveFirst': '发现模型之前请先保存修改。',
   'providers.discover.needsKey': '请先保存 API 密钥。',
   'providers.discover.added.one': '找到 {found} 个；添加了 1 个新模型。',
@@ -2947,7 +3132,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'errors.invalid_models': '模型列表无效：请检查 ID、窗口和价格。',
   'errors.invalid_url': '这不是网址。',
   'errors.insecure_url': '请使用 https 地址。只有在打开相应开关后，内网地址才接受普通 http。',
-  'errors.address_not_allowed': '这个地址位于本机或你的内网。要使用它，请打开“允许访问我的网络中的地址”。',
+  'errors.address_not_allowed':
+    '这个地址位于本机或你的内网。要使用它，请打开“允许访问我的网络中的地址”。',
   'errors.invalid_api_key': '这个密钥无法保存。',
   'errors.provider_not_configured': '这个提供方没有保存 API 密钥。',
   'errors.provider_key_unreadable': '保存的密钥已无法读取。请重新输入。',
@@ -2977,7 +3163,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'plugins.installed': '已安装',
   'plugins.installedFooter': '插件只有在你查看过它请求的权限并允许之后才会运行。',
   'plugins.empty.title': '还没有插件',
-  'plugins.empty.text': '插件可以为智能体添加工具，也可以添加页面和链接。每个插件运行前都要经你审阅，并且与工作台隔离运行。',
+  'plugins.empty.text':
+    '插件可以为智能体添加工具，也可以添加页面和链接。每个插件运行前都要经你审阅，并且与工作台隔离运行。',
   'plugins.version': '版本 {version}',
   'plugins.unknownAuthor': '未署名的作者',
   'plugins.serverSays': '服务器的说明',
@@ -2995,7 +3182,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'plugins.state.newDetail': '它还从未被允许运行。查看它请求的权限后即可开启。',
   'plugins.state.changedDetail': '自你允许以来它有了变化，因此在你重新审阅之前保持关闭。',
   'plugins.state.blocked': '已阻止',
-  'plugins.state.blockedDetail': '这台机器已无法像你允许它时那样隔离它。请重新审阅以在较弱的隔离下允许它，或恢复沙箱。',
+  'plugins.state.blockedDetail':
+    '这台机器已无法像你允许它时那样隔离它。请重新审阅以在较弱的隔离下允许它，或恢复沙箱。',
   'plugins.reason.permissions': '请求的权限不同了',
   'plugins.reason.contributions': '它添加的内容变了',
   'plugins.reason.content': '它的文件变了',
@@ -3010,15 +3198,20 @@ export const zhCN: Record<keyof typeof en, string> = {
   'plugins.isolation.otherProcesses': '工作台的其他进程',
   'plugins.isolation.kept': '插件无法接触{things}。',
   'plugins.isolation.notKept': '它仍可以接触{things}。',
-  'plugins.isolation.unsandboxedAllowed': '运维人员已允许带服务器代码的插件在没有隔离的情况下运行。',
+  'plugins.isolation.unsandboxedAllowed':
+    '运维人员已允许带服务器代码的插件在没有隔离的情况下运行。',
   'plugins.permission.notifications': '给你发送通知',
-  'plugins.permission.notificationsText': '它可以向正在使用它的人显示通知。这项权限本身不能读取任何内容。',
+  'plugins.permission.notificationsText':
+    '它可以向正在使用它的人显示通知。这项权限本身不能读取任何内容。',
   'plugins.permission.projects': '读取你项目中的文件',
-  'plugins.permission.projectsText': '它可以列出使用者的项目并读取其中的文件（看起来像凭据的文件会被隐去）。读到的内容它可以保存下来——如果它还能联网，也可以发往别处。',
+  'plugins.permission.projectsText':
+    '它可以列出使用者的项目并读取其中的文件（看起来像凭据的文件会被隐去）。读到的内容它可以保存下来——如果它还能联网，也可以发往别处。',
   'plugins.permission.host': '向 {host} 发送请求',
-  'plugins.permission.hostText': '工作台会替它向 {host}（且仅此一个地址）发送 https 请求。它发往那里的内容——包括它读到的任何东西——都会离开这台机器。通过这种方式无法访问其他地址。',
+  'plugins.permission.hostText':
+    '工作台会替它向 {host}（且仅此一个地址）发送 https 请求。它发往那里的内容——包括它读到的任何东西——都会离开这台机器。通过这种方式无法访问其他地址。',
   'plugins.permission.network': '不受限制的网络访问',
-  'plugins.permission.networkText': '它的进程保留这台机器的网络：服务器能访问的任何地址都可以访问，包括本机上的服务和你的局域网。适用于你自己的私有工具。',
+  'plugins.permission.networkText':
+    '它的进程保留这台机器的网络：服务器能访问的任何地址都可以访问，包括本机上的服务和你的局域网。适用于你自己的私有工具。',
   'plugins.risk.low': '风险低',
   'plugins.risk.medium': '风险中等',
   'plugins.risk.high': '风险高',
@@ -3048,8 +3241,10 @@ export const zhCN: Record<keyof typeof en, string> = {
   'plugins.review.notKept': '在这台机器上，它仍可以接触{things}。',
   'plugins.review.networkUncontained': '因此无论你在这里允许哪些权限，它都能访问网络。',
   'plugins.review.cannotRun': '它无法在这台机器上运行',
-  'plugins.review.cannotRunText': '带服务器代码的插件需要隔离，而这台机器没有隔离手段。运维人员可以安装 bubblewrap，或明确允许未隔离的插件。',
-  'plugins.review.trust': '它的页面运行在封闭的框架中：读不到你的会话，也只能通过工作台转达的少数请求与工作台交互。',
+  'plugins.review.cannotRunText':
+    '带服务器代码的插件需要隔离，而这台机器没有隔离手段。运维人员可以安装 bubblewrap，或明确允许未隔离的插件。',
+  'plugins.review.trust':
+    '它的页面运行在封闭的框架中：读不到你的会话，也只能通过工作台转达的少数请求与工作台交互。',
   'plugins.enabled': '{name} 已开启',
   'plugins.disabled': '{name} 已关闭',
   'plugins.update.current': '{name} {version} 已是最新版本。',
@@ -3057,7 +3252,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'plugins.uninstalled': '{name} 已卸载，它存储的数据已保留。',
   'plugins.uninstalled.withData': '{name} 及其存储的数据已删除。',
   'plugins.uninstall.title': '卸载“{name}”？',
-  'plugins.uninstall.text': '它的文件会被删除，进程会停止，它的页面、标签页和链接对所有人都会消失。',
+  'plugins.uninstall.text':
+    '它的文件会被删除，进程会停止，它的页面、标签页和链接对所有人都会消失。',
   'plugins.uninstall.deleteData': '同时删除它存储的数据',
   'plugins.uninstall.deleteDataOn': '它的存储和数据文件夹会被永久删除。',
   'plugins.uninstall.deleteDataOff': '数据会保留；以后安装的同 ID 插件会再次看到这些数据。',
@@ -3090,9 +3286,11 @@ export const zhCN: Record<keyof typeof en, string> = {
   'plugins.install.fromFolder': '服务器文件夹',
   'plugins.install.fromGit': 'Git 地址',
   'plugins.install.noFolder': '尚未设置插件文件夹',
-  'plugins.install.noFolderText': '运维人员可以把 AGENT_STUDIO_PLUGIN_SOURCE_DIR 设为服务器上存放插件的文件夹，届时这里会列出其中的插件。',
+  'plugins.install.noFolderText':
+    '运维人员可以把 AGENT_STUDIO_PLUGIN_SOURCE_DIR 设为服务器上存放插件的文件夹，届时这里会列出其中的插件。',
   'plugins.install.folderEmpty': '插件文件夹是空的',
-  'plugins.install.folderEmptyText': '把插件的文件夹（含 plugin.json）放进服务器的插件文件夹，就能在这里安装。',
+  'plugins.install.folderEmptyText':
+    '把插件的文件夹（含 plugin.json）放进服务器的插件文件夹，就能在这里安装。',
   'plugins.install.folderFooter': '运维人员在服务器上设置的插件文件夹中的各个文件夹。',
   'plugins.install.invalid': '不是可以安装的插件。',
   'plugins.install.installed': '已安装',
@@ -3175,7 +3373,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'collab.menu.askHint': '同一个问题，答案并排比较',
   'collab.menu.running': '正在运行的一切',
   'collab.handoff.title': '交给另一个智能体继续',
-  'collab.handoff.lead': '会在此项目中用你选择的智能体开始一个新对话，并给它一份与 {agent} 的这段对话的简报；这段对话本身保持不变。',
+  'collab.handoff.lead':
+    '会在此项目中用你选择的智能体开始一个新对话，并给它一份与 {agent} 的这段对话的简报；这段对话本身保持不变。',
   'collab.handoff.busyTitle': '这里还有回复在运行',
   'collab.handoff.busy': '请等它结束或先停止它，再交接这段对话。',
   'collab.handoff.who': '由谁继续',
@@ -3188,8 +3387,10 @@ export const zhCN: Record<keyof typeof en, string> = {
   'collab.handoff.brief': '交给它的内容',
   'collab.handoff.digest': '摘录',
   'collab.handoff.summary': '总结',
-  'collab.handoff.digestText': '按规则从这段对话中整理：你问了什么、智能体得出了什么结论、改了哪些文件、运行了哪些命令、还剩什么——凭据会被去掉。不经过任何模型。',
-  'collab.handoff.summaryText': '由一个智能体只读地阅读摘录并写出更短的总结，最多约一分半钟；它的用量会计入统计。写不出来时改用摘录。',
+  'collab.handoff.digestText':
+    '按规则从这段对话中整理：你问了什么、智能体得出了什么结论、改了哪些文件、运行了哪些命令、还剩什么——凭据会被去掉。不经过任何模型。',
+  'collab.handoff.summaryText':
+    '由一个智能体只读地阅读摘录并写出更短的总结，最多约一分半钟；它的用量会计入统计。写不出来时改用摘录。',
   'collab.handoff.noWriters': '现在这里没有能写总结的智能体：需要一个已登录且能只读工作的智能体。',
   'collab.handoff.writer': '由谁来写',
   'collab.handoff.writerModel': '使用的模型',
@@ -3243,7 +3444,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'collab.task.title': '任务',
   'collab.task.newTitle': '同时问几个智能体',
   'collab.task.ask': '同时问几个智能体',
-  'collab.task.lead': '同一个问题会交给每个智能体，各自在单独的对话中回答。你可以并排查看它们的答案——还可以让另一个智能体来比较。',
+  'collab.task.lead':
+    '同一个问题会交给每个智能体，各自在单独的对话中回答。你可以并排查看它们的答案——还可以让另一个智能体来比较。',
   'collab.task.project': '项目',
   'collab.task.noProjects': '没有可以让你开始对话的项目。',
   'collab.task.prompt': '要问什么',
@@ -3261,13 +3463,16 @@ export const zhCN: Record<keyof typeof en, string> = {
   'collab.task.where': '在哪里工作',
   'collab.task.shared': '同一个文件夹',
   'collab.task.worktrees': '各用一个工作树',
-  'collab.task.sharedText': '大家都在项目自己的文件夹里工作，所以每个智能体都只做规划——只读和搜索，不做任何修改。几个智能体同时改同一个文件夹会互相覆盖。',
-  'collab.task.worktreesText': '每个智能体各得一个 Git 工作树和自己的分支，基于项目当前的提交创建（未提交的修改不在其中），并可以按其权限模式在里面修改文件。不会自动合并：由你来比较和决定。',
+  'collab.task.sharedText':
+    '大家都在项目自己的文件夹里工作，所以每个智能体都只做规划——只读和搜索，不做任何修改。几个智能体同时改同一个文件夹会互相覆盖。',
+  'collab.task.worktreesText':
+    '每个智能体各得一个 Git 工作树和自己的分支，基于项目当前的提交创建（未提交的修改不在其中），并可以按其权限模式在里面修改文件。不会自动合并：由你来比较和决定。',
   'collab.task.worktreesShort': '各用工作树',
   'collab.task.sharedShort': '同一个文件夹',
   'collab.task.worktreesOwnerOnly': '只有此工作台的所有者才能给每个智能体一个工作树。',
   'collab.task.synthesis': '比较这些答案',
-  'collab.task.synthesisText': '所有智能体结束后，再由一个智能体只读地阅读这些答案，说明它们的差异以及它会采用哪一个。',
+  'collab.task.synthesisText':
+    '所有智能体结束后，再由一个智能体只读地阅读这些答案，说明它们的差异以及它会采用哪一个。',
   'collab.task.synthesisAgent': '由谁比较',
   'collab.task.submit': '问 {count} 个智能体',
   'collab.task.starting': '正在开始…',
@@ -3282,7 +3487,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'collab.task.problem.participantUnusable': '其中一个智能体无法在这里参与，请换一个。',
   'collab.task.problem.worktreesOwnerOnly': '只有所有者才能给每个智能体一个工作树。',
   'collab.task.problem.synthesisUnusable': '选来做比较的智能体在这里无法只读工作，请换一个。',
-  'collab.task.problem.needsRepository': '「{project}」无法给每个智能体一个工作树：这需要一个至少有一次提交的 Git 仓库。请改选「同一个文件夹」，或先在项目里设置好 Git。',
+  'collab.task.problem.needsRepository':
+    '「{project}」无法给每个智能体一个工作树：这需要一个至少有一次提交的 Git 仓库。请改选「同一个文件夹」，或先在项目里设置好 Git。',
   'collab.task.state.running': '进行中',
   'collab.task.state.attention': '需要你处理',
   'collab.task.state.completed': '已完成',
@@ -3290,7 +3496,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'collab.task.progress': '{total} 个中已结束 {ended} 个',
   'collab.task.startedAt': '{when}开始',
   'collab.task.status': '任务进展',
-  'collab.task.attentionText': '有智能体在等待批准，或者有一个失败、被中断了。打开它的对话来回答、继续或忽略。',
+  'collab.task.attentionText':
+    '有智能体在等待批准，或者有一个失败、被中断了。打开它的对话来回答、继续或忽略。',
   'collab.task.asked': '提问内容',
   'collab.task.answers': '各自的回答',
   'collab.task.stopAll': '全部停止',
@@ -3345,7 +3552,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'collab.tasks.allProjects': '所有项目',
   'collab.tasks.none': '还没有多智能体任务',
   'collab.tasks.noneOpen': '没有进行中的任务',
-  'collab.tasks.noneText': '在项目里或对话的“…”菜单中同时问几个智能体同一个问题，再比较它们的回答。',
+  'collab.tasks.noneText':
+    '在项目里或对话的“…”菜单中同时问几个智能体同一个问题，再比较它们的回答。',
   'collab.tasks.older': '显示更早的任务',
   'collab.tasks.projectEmpty': '还没有。可以同时问几个智能体同一个问题，再比较它们的回答。',
   'collab.tasks.projectEmptyReadOnly': '还没有。',
@@ -3402,7 +3610,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'errors.handoff_in_progress': '这段对话已在交接中。',
   'errors.too_many_tasks': '你进行中的多智能体任务已达上限。请等一个结束，或停止一个。',
   'errors.task_needs_repository': '各用工作树需要项目是一个至少有一次提交的 Git 仓库。',
-  'errors.mode_requires_worktrees': '在共用的文件夹中，每个智能体都只能做规划。其他模式需要各用一个工作树。',
+  'errors.mode_requires_worktrees':
+    '在共用的文件夹中，每个智能体都只能做规划。其他模式需要各用一个工作树。',
   'errors.task_running': '还有智能体在处理这个任务，请先停止它。',
   'home.edit.start': '编辑主屏幕',
   'home.edit.hide': '隐藏 {name}',
@@ -3515,7 +3724,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'home.settings.resetAction': '重置主屏幕布局',
   'home.settings.resetHint': '顺序、文件夹、隐藏的图标和分页恢复为标准排列。',
   'home.settings.resetTitle': '重置主屏幕布局？',
-  'home.settings.resetText': '在每台设备上，顺序、文件夹、隐藏的图标和分页都会恢复为标准排列。名称、小组件和项目不受影响。',
+  'home.settings.resetText':
+    '在每台设备上，顺序、文件夹、隐藏的图标和分页都会恢复为标准排列。名称、小组件和项目不受影响。',
   'home.settings.resetConfirm': '重置布局',
   'home.settings.resetDone': '已重置主屏幕布局',
   'onboarding.title': '欢迎',
@@ -3542,7 +3752,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'onboarding.identity.nameInvalid': '名字不能包含尖括号或换行。',
   'onboarding.identity.emailInvalid': '这看起来不像电子邮件地址。',
   'onboarding.agents.title': '智能体账号',
-  'onboarding.agents.lead': '服务器上安装了哪些编程智能体、是否已登录。可以在这里登录，也可以稍后在“设置 → 智能体账号”中登录。',
+  'onboarding.agents.lead':
+    '服务器上安装了哪些编程智能体、是否已登录。可以在这里登录，也可以稍后在“设置 → 智能体账号”中登录。',
   'onboarding.project.title': '第一个项目',
   'onboarding.project.lead': '项目就是服务器上一个供智能体工作的文件夹。',
   'onboarding.project.have.one': '你已经有 {count} 个项目了。',
@@ -3550,7 +3761,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'onboarding.project.create': '新建项目…',
   'onboarding.project.created': '{name} 已就绪',
   'onboarding.notifications.title': '这台设备上的通知',
-  'onboarding.notifications.lead': '智能体需要你或完成工作时，在这台设备上通知你——即使工作台没有打开。',
+  'onboarding.notifications.lead':
+    '智能体需要你或完成工作时，在这台设备上通知你——即使工作台没有打开。',
   'onboarding.notifications.later': '下一步，暂不开启通知',
   'onboarding.done.title': '全部就绪',
   'onboarding.done.text': '工作台已经可以使用了。这里的一切以后都可以在设置中修改。',
@@ -3558,7 +3770,8 @@ export const zhCN: Record<keyof typeof en, string> = {
   'onboarding.done.home': '前往主屏幕',
   'onboarding.card.title': '设置你的工作台',
   'onboarding.card.titleContinue': '完成设置',
-  'onboarding.card.owner': '提交者身份、智能体账号、第一个项目、通知——几分钟就好，每一步都可以跳过。',
+  'onboarding.card.owner':
+    '提交者身份、智能体账号、第一个项目、通知——几分钟就好，每一步都可以跳过。',
   'onboarding.card.member': '你的提交者身份和这台设备上的通知——一分钟就好，每一步都可以跳过。',
   'onboarding.card.progress': '{total} 步中已完成 {done} 步。',
   'onboarding.card.start': '开始',

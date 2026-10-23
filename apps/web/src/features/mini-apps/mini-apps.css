@@ -1,0 +1,60 @@
+.apps-page {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--gutter);
+}
+.apps-form {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+.apps-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-lg);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.apps-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.apps-log {
+  max-height: 24rem;
+  max-width: 100%;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  padding: var(--space-3);
+  background: var(--color-sunken);
+  border-radius: var(--radius-sm);
+}
+.apps-page summary {
+  min-height: var(--hit-min);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.apps-preview {
+  display: grid;
+  grid-template-rows: auto auto minmax(20rem, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  min-height: 70vh;
+}
+.apps-preview iframe {
+  width: 100%;
+  height: 100%;
+  min-height: 24rem;
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+:root[data-layout='phone'] .apps-card {
+  padding: var(--space-3);
+}

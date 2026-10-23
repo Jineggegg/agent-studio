@@ -1,6 +1,6 @@
 # Architecture
 
-Agent Cloud Studio is one server process you run on your own machine and a web
+Cloud Harness is one server process you run on your own machine and a web
 client that works as an installed app on a phone, a tablet or a desktop. The
 server owns everything that matters — agent runs, approvals, credentials,
 files — and the client is a view onto it that can disappear and come back at
@@ -57,19 +57,19 @@ tests/e2e             browser tests on phone, tablet and desktop viewports
 Small, dependency-light, and where every dangerous capability is concentrated
 so that feature code cannot get it wrong by accident.
 
-| File | Responsibility |
-|---|---|
-| `config.ts` | Reads `AGENT_STUDIO_*` only; safe defaults (loopback, production) |
-| `http.ts` | Fastify set-up; Host allow-list; session/bearer authentication; **every `/api` route must declare its access level or the server will not start**; Origin and anti-forgery checks; security headers; uniform errors |
-| `realtime.ts` | The WebSocket hub: per-topic authorisation, replay, snapshots, heartbeats, back-pressure, immediate disconnect when a credential is revoked |
-| `database.ts` | `node:sqlite` wrapper: prepared statements only, transactions, per-module numbered migrations |
-| `process.ts` | The only place that spawns processes: argument arrays, allow-listed environment, process-group termination, the bubblewrap sandbox profiles |
-| `paths.ts` | Confines client-supplied paths to a root, following symbolic links; opens through checked descriptors where a path may change mid-call |
-| `net.ts` | Outbound HTTP to configured/user-supplied addresses: post-resolution address checks, no redirects |
-| `secrets.ts`, `crypto.ts` | Master key, key derivation, AES-256-GCM secret store, scrypt, tokens |
-| `agent-tools.ts` | Registry of tools the Studio offers to every agent |
-| `redact.ts` | Last-line removal of credential-shaped text from logs and audit entries |
-| `module.ts`, `studio.ts` | The module contract and the composition root |
+| File                      | Responsibility                                                                                                                                                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `config.ts`               | Reads `AGENT_STUDIO_*` only; safe defaults (loopback, production)                                                                                                                                                   |
+| `http.ts`                 | Fastify set-up; Host allow-list; session/bearer authentication; **every `/api` route must declare its access level or the server will not start**; Origin and anti-forgery checks; security headers; uniform errors |
+| `realtime.ts`             | The WebSocket hub: per-topic authorisation, replay, snapshots, heartbeats, back-pressure, immediate disconnect when a credential is revoked                                                                         |
+| `database.ts`             | `node:sqlite` wrapper: prepared statements only, transactions, per-module numbered migrations                                                                                                                       |
+| `process.ts`              | The only place that spawns processes: argument arrays, allow-listed environment, process-group termination, the bubblewrap sandbox profiles                                                                         |
+| `paths.ts`                | Confines client-supplied paths to a root, following symbolic links; opens through checked descriptors where a path may change mid-call                                                                              |
+| `net.ts`                  | Outbound HTTP to configured/user-supplied addresses: post-resolution address checks, no redirects                                                                                                                   |
+| `secrets.ts`, `crypto.ts` | Master key, key derivation, AES-256-GCM secret store, scrypt, tokens                                                                                                                                                |
+| `agent-tools.ts`          | Registry of tools the Studio offers to every agent                                                                                                                                                                  |
+| `redact.ts`               | Last-line removal of credential-shaped text from logs and audit entries                                                                                                                                             |
+| `module.ts`, `studio.ts`  | The module contract and the composition root                                                                                                                                                                        |
 
 A lint rule forbids `child_process` outside `process.ts`, and
 `dangerouslySetInnerHTML` anywhere in the client.
@@ -81,23 +81,23 @@ and realtime topics in `setup`, and may run code in `start`/`stop`. Modules use
 each other through typed services on the context and through events on the
 in-process bus; none reads another's tables.
 
-| Module | What it owns |
-|---|---|
-| `audit` | Append-only security log with masked addresses |
-| `auth` | Accounts, roles, sessions, API tokens, passkeys, throttling, first-run setup |
-| `system` | Health, version, configuration self-checks |
-| `preferences` | Account-level settings synced across devices |
-| `projects` | The unit of access control: every project-scoped feature asks it first |
-| `agents` | Sessions, runs, the event log, queue, permission engine, approvals, attachments, the MCP bridge endpoints, usage records |
-| `claude-code`, `codex` | Adapters that drive the official CLIs |
-| `providers` | API-model configuration, encrypted keys, the OpenAI-compatible adapter and its built-in tools |
-| `files`, `git`, `github` | Project files, Git operations, GitHub through the host's `gh` sign-in |
-| `terminal`, `remotes` | Persistent PTY sessions for the owner; operator-configured SSH hosts |
-| `memory` | Markdown notes, full-text search, scope-isolated tools for agents |
-| `inbox` | Notifications, Web Push, the task inbox |
-| `automation` | Schedules and deferred runs |
-| `usage` | Token and cost aggregation |
-| `plugins` | Installation, sandboxed plugin processes, capability API, panel grants |
+| Module                   | What it owns                                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `audit`                  | Append-only security log with masked addresses                                                                           |
+| `auth`                   | Accounts, roles, sessions, API tokens, passkeys, throttling, first-run setup                                             |
+| `system`                 | Health, version, configuration self-checks                                                                               |
+| `preferences`            | Account-level settings synced across devices                                                                             |
+| `projects`               | The unit of access control: every project-scoped feature asks it first                                                   |
+| `agents`                 | Sessions, runs, the event log, queue, permission engine, approvals, attachments, the MCP bridge endpoints, usage records |
+| `claude-code`, `codex`   | Adapters that drive the official CLIs                                                                                    |
+| `providers`              | API-model configuration, encrypted keys, the OpenAI-compatible adapter and its built-in tools                            |
+| `files`, `git`, `github` | Project files, Git operations, GitHub through the host's `gh` sign-in                                                    |
+| `terminal`, `remotes`    | Persistent PTY sessions for the owner; operator-configured SSH hosts                                                     |
+| `memory`                 | Markdown notes, full-text search, scope-isolated tools for agents                                                        |
+| `inbox`                  | Notifications, Web Push, the task inbox                                                                                  |
+| `automation`             | Schedules and deferred runs                                                                                              |
+| `usage`                  | Token and cost aggregation                                                                                               |
+| `plugins`                | Installation, sandboxed plugin processes, capability API, panel grants                                                   |
 
 ## A request, end to end
 
@@ -187,17 +187,17 @@ and are never returned by the API — only "configured" and a short hint.
 
 ## Trust boundaries
 
-| Boundary | What crosses it | What enforces it |
-|---|---|---|
-| Internet → server | HTTP/WebSocket | TLS at the proxy; Host allow-list; sessions; origin + anti-forgery checks; rate limits |
-| Member → owner-only functions | API calls | Declared route access; project membership |
-| Browser script → session | — | `HttpOnly` cookie; strict CSP; no raw HTML rendering |
-| Agent → host | Tool calls | Permission engine + approvals; sandbox; confined file APIs |
-| Agent → Studio's secrets | — | Scrubbed environment; data directory hidden in the sandbox; run-scoped bridge tokens |
-| Plugin → Studio | JSON-RPC capability calls | Separate sandboxed process; granted permissions; brokered network |
-| Plugin UI → session | `postMessage` only | `sandbox` iframe without same-origin; panel grants |
-| Server → other hosts | Model APIs, push services, links | Guarded HTTP client; allow-lists |
-| Note content → models | Text | Framed as reference data; credential-bearing notes withheld |
+| Boundary                      | What crosses it                  | What enforces it                                                                       |
+| ----------------------------- | -------------------------------- | -------------------------------------------------------------------------------------- |
+| Internet → server             | HTTP/WebSocket                   | TLS at the proxy; Host allow-list; sessions; origin + anti-forgery checks; rate limits |
+| Member → owner-only functions | API calls                        | Declared route access; project membership                                              |
+| Browser script → session      | —                                | `HttpOnly` cookie; strict CSP; no raw HTML rendering                                   |
+| Agent → host                  | Tool calls                       | Permission engine + approvals; sandbox; confined file APIs                             |
+| Agent → Studio's secrets      | —                                | Scrubbed environment; data directory hidden in the sandbox; run-scoped bridge tokens   |
+| Plugin → Studio               | JSON-RPC capability calls        | Separate sandboxed process; granted permissions; brokered network                      |
+| Plugin UI → session           | `postMessage` only               | `sandbox` iframe without same-origin; panel grants                                     |
+| Server → other hosts          | Model APIs, push services, links | Guarded HTTP client; allow-lists                                                       |
+| Note content → models         | Text                             | Framed as reference data; credential-bearing notes withheld                            |
 
 The honest limits of these boundaries are in `SECURITY.md`.
 

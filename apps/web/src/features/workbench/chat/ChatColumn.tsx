@@ -1,6 +1,22 @@
+import { CommandPicker } from '@/features/tool-library/CommandPicker';
+import { BackgroundTasks } from '../tasks/BackgroundTasks';
+import { SessionControls } from '../sessions/SessionControls';
 import type { Approval, PermissionMode, Project, Session } from '@agent-studio/protocol';
 import { useQueryClient } from '@tanstack/react-query';
-import { Component, type ComponentType, type ErrorInfo, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type TouchEvent as ReactTouchEvent, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  Component,
+  type ComponentType,
+  type ErrorInfo,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  type TouchEvent as ReactTouchEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { isApiError } from '@/data/api';
 import { useConnectionState } from '@/data/connection';
 import { describeError, errorKind } from '@/data/errors';
@@ -16,7 +32,18 @@ import type { BackAction } from '@/shell/back';
 import { useDocumentTitle } from '@/shell/title';
 import { type ActivityKind, Banner, Button, ErrorState, toast } from '@/ui';
 import { isAnyOverlayOpen } from '@/ui/overlay';
-import { type AgentChoice, agentUnavailable, choiceFor, defaultChoice, findModel, modelLabel, nextMode, resolveEffort, useAgents, useProjectAgentSettings } from '../agents';
+import {
+  type AgentChoice,
+  agentUnavailable,
+  choiceFor,
+  defaultChoice,
+  findModel,
+  modelLabel,
+  nextMode,
+  resolveEffort,
+  useAgents,
+  useProjectAgentSettings,
+} from '../agents';
 import { workbenchApi } from '../api';
 import { ApprovalDock, ApprovalSheet } from '../approvals/ApprovalSurface';
 import { approvalChoices, planContinuationModes } from '../approvals/logic';
@@ -24,11 +51,39 @@ import { Composer, type ComposerHandle, type ComposerSubmission } from '../compo
 import type { MentionSource } from '../composer/mentions';
 import { DeliveryBanner } from '../composer/DeliveryBanner';
 import { Queue } from '../composer/Queue';
-import { adoptAttachments, clearSentAttachments, loadPendingAttachments, readyAttachments, restoreAttachments, uploadsSettled } from '../composer/attachmentStore';
+import {
+  addFiles,
+  adoptAttachments,
+  clearSentAttachments,
+  loadPendingAttachments,
+  readyAttachments,
+  restoreAttachments,
+  uploadsSettled,
+} from '../composer/attachmentStore';
 import { blocksSending, newRequestId } from '../composer/delivery';
-import { clearDraftAfterSend, flushDraft, getDraft, loadDraft, newChatDraftKey, restoreNewDraft, sessionDraftKey, setDraft } from '../composer/drafts';
-import { checkDelivery, dismissFailed, retryOriginal, sendMessage, useOutbox } from '../composer/outbox';
-import { type ListScope, rememberAgentChoice, rememberConversation, useDeviceMemory } from '../device';
+import {
+  clearDraftAfterSend,
+  flushDraft,
+  getDraft,
+  loadDraft,
+  newChatDraftKey,
+  restoreNewDraft,
+  sessionDraftKey,
+  setDraft,
+} from '../composer/drafts';
+import {
+  checkDelivery,
+  dismissFailed,
+  retryOriginal,
+  sendMessage,
+  useOutbox,
+} from '../composer/outbox';
+import {
+  type ListScope,
+  rememberAgentChoice,
+  rememberConversation,
+  useDeviceMemory,
+} from '../device';
 import { usePresence } from '../presence';
 import { RecoveryCard, RunStatusRow } from '../run/RunStatus';
 import { runProgress } from '../run/status';
@@ -40,7 +95,13 @@ import { seedEmptyChannel, useChannel } from '../transcript/channel';
 import { ContextRing } from '../usage/ContextRing';
 import { AgentModelChip, EffortChip, ModeSwitcher, modeLabel, unavailableText } from './Pickers';
 import { TitleBar } from './TitleBar';
-import { type TitleBarItem, type TitleBarItemProps, subscribeTitleBarItems, titleBarItems, titleBarItemsVersion } from './slots';
+import {
+  type TitleBarItem,
+  type TitleBarItemProps,
+  subscribeTitleBarItems,
+  titleBarItems,
+  titleBarItemsVersion,
+} from './slots';
 import { AgentMark } from './parts';
 
 export interface ChatColumnProps {
@@ -72,7 +133,9 @@ const slotComponents = new Map<string, ComponentType<TitleBarItemProps>>();
 
 /** Downloads an item's code the first time the title bar needs it. Until then — and if that fails — nothing is drawn. */
 function LazySlot({ item, ...props }: TitleBarItemProps & { item: TitleBarItem }) {
-  const [Loaded, setLoaded] = useState<ComponentType<TitleBarItemProps> | null>(() => slotComponents.get(item.id) ?? null);
+  const [Loaded, setLoaded] = useState<ComponentType<TitleBarItemProps> | null>(
+    () => slotComponents.get(item.id) ?? null,
+  );
   useEffect(() => {
     if (Loaded) return;
     let cancelled = false;
@@ -91,18 +154,41 @@ function LazySlot({ item, ...props }: TitleBarItemProps & { item: TitleBarItem }
 }
 
 /** What other features put in the title bar (see `./slots`). Each is its own small island: one that fails to load is simply absent. */
-function TitleBarSlot({ project, sessionId, busy, placement = 'start' }: { project: Project; sessionId: string | null; busy: boolean; placement?: 'start' | 'end' }) {
+function TitleBarSlot({
+  project,
+  sessionId,
+  busy,
+  placement = 'start',
+}: {
+  project: Project;
+  sessionId: string | null;
+  busy: boolean;
+  placement?: 'start' | 'end';
+}) {
   const user = useUser();
   const layout = useLayoutClass();
-  const version = useSyncExternalStore(subscribeTitleBarItems, titleBarItemsVersion, titleBarItemsVersion);
+  const version = useSyncExternalStore(
+    subscribeTitleBarItems,
+    titleBarItemsVersion,
+    titleBarItemsVersion,
+  );
   // `version` is what changes when a feature registers an item.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const items = useMemo(() => titleBarItems({ project, role: user?.role ?? 'member' }, placement), [project, user?.role, version, placement]);
+  const items = useMemo(
+    () => titleBarItems({ project, role: user?.role ?? 'member' }, placement),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [project, user?.role, version, placement],
+  );
   return (
     <>
       {items.map((item) => (
         <SlotBoundary key={item.id}>
-          <LazySlot item={item} project={project} sessionId={sessionId} busy={busy} compact={layout === 'phone'} />
+          <LazySlot
+            item={item}
+            project={project}
+            sessionId={sessionId}
+            busy={busy}
+            compact={layout === 'phone'}
+          />
         </SlotBoundary>
       ))}
     </>
@@ -125,7 +211,10 @@ class SlotBoundary extends Component<{ children: ReactNode }, { failed: boolean 
 const NONE: never[] = [];
 
 /** If drawing the conversation fails, the list and the tools beside it keep working, and the session itself is intact. */
-class ChatBoundary extends Component<{ children: ReactNode; fallback: (reset: () => void) => ReactNode }, { failed: boolean }> {
+class ChatBoundary extends Component<
+  { children: ReactNode; fallback: (reset: () => void) => ReactNode },
+  { failed: boolean }
+> {
   override state = { failed: false };
 
   static getDerivedStateFromError() {
@@ -138,12 +227,18 @@ class ChatBoundary extends Component<{ children: ReactNode; fallback: (reset: ()
   }
 
   override render() {
-    return this.state.failed ? this.props.fallback(() => this.setState({ failed: false })) : this.props.children;
+    return this.state.failed
+      ? this.props.fallback(() => this.setState({ failed: false }))
+      : this.props.children;
   }
 }
 
 function scrollsSideways(target: EventTarget | null, stop: Element): boolean {
-  for (let element = target instanceof Element ? target : null; element && element !== stop; element = element.parentElement) {
+  for (
+    let element = target instanceof Element ? target : null;
+    element && element !== stop;
+    element = element.parentElement
+  ) {
     if (element.scrollWidth > element.clientWidth + 1) {
       const overflow = window.getComputedStyle(element).overflowX;
       if (overflow === 'auto' || overflow === 'scroll') return true;
@@ -186,7 +281,24 @@ export function ChatColumn(props: ChatColumnProps) {
   );
 }
 
-function Chat({ project, sessionId, scope, projects, listHidden, listMark, onShowList, back, onSessionCreated, onNewChat, onChooseProject, onNewProject, onForget, focusSeq, focusComposer, inspector }: ChatColumnProps) {
+function Chat({
+  project,
+  sessionId,
+  scope,
+  projects,
+  listHidden,
+  listMark,
+  onShowList,
+  back,
+  onSessionCreated,
+  onNewChat,
+  onChooseProject,
+  onNewProject,
+  onForget,
+  focusSeq,
+  focusComposer,
+  inspector,
+}: ChatColumnProps) {
   const t = useT();
   const user = useUser();
   const isOwner = useIsOwner();
@@ -233,7 +345,8 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
   const mode: PermissionMode = session?.permissionMode ?? choice?.mode ?? 'ask';
   const effectiveMode: PermissionMode = session?.effectivePermissionMode ?? mode;
   // An agent that is no longer offered here is still named by its id; one that is merely not read yet is not.
-  const agentName = agent?.displayName ?? (agents.length > 0 ? agentId : null) ?? t('workbench.agent.generic');
+  const agentName =
+    agent?.displayName ?? (agents.length > 0 ? agentId : null) ?? t('workbench.agent.generic');
 
   const draftKey = sessionId ? sessionDraftKey(sessionId) : newChatDraftKey(project?.id ?? null);
   const mine = session ? session.userId === user?.id : true;
@@ -257,19 +370,35 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
   const progress = useMemo(() => runProgress(transcript), [transcript]);
   const pendingApprovals = transcript.pendingApprovals;
   const currentApproval: Approval | null = pendingApprovals[0] ?? null;
-  const viewer = useMemo(() => ({ userId: user?.id ?? '', role: user?.role ?? ('member' as const) }), [user]);
+  const viewer = useMemo(
+    () => ({ userId: user?.id ?? '', role: user?.role ?? ('member' as const) }),
+    [user],
+  );
   const blocked = starting !== null || outgoing.some(blocksSending);
   // A plan can be approved "and continued in" another mode: which ones depends on the agent and on the project.
   const planWaiting = pendingApprovals.some((approval) => approval.kind === 'plan');
   const projectSettings = useProjectAgentSettings(planWaiting && project ? project.id : null);
   const continuation = useMemo(
-    () => planContinuationModes(agent?.capabilities.permissionModes ?? [], projectSettings.data?.autoMode === true),
+    () =>
+      planContinuationModes(
+        agent?.capabilities.permissionModes ?? [],
+        projectSettings.data?.autoMode === true,
+      ),
     [agent, projectSettings.data],
   );
-  const unsettled = outgoing.find((entry) => entry.phase === 'unconfirmed' || entry.phase === 'checking') ?? outgoing.find((entry) => entry.phase === 'failed') ?? null;
+  const unsettled =
+    outgoing.find((entry) => entry.phase === 'unconfirmed' || entry.phase === 'checking') ??
+    outgoing.find((entry) => entry.phase === 'failed') ??
+    null;
 
   const projectId = project?.id ?? null;
-  const mentions = useMemo<MentionSource | undefined>(() => (projectId ? { search: (query, signal) => workbenchApi.searchFiles(projectId, query, signal) } : undefined), [projectId]);
+  const mentions = useMemo<MentionSource | undefined>(
+    () =>
+      projectId
+        ? { search: (query, signal) => workbenchApi.searchFiles(projectId, query, signal) }
+        : undefined,
+    [projectId],
+  );
 
   const title = session?.title ?? t('workbench.newConversation');
   useDocumentTitle(project ? `${title} · ${project.name}` : title);
@@ -296,13 +425,21 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
   // ---- what cannot be had from the live connection alone -------------------------
 
   useEffect(() => {
-    if (sessionQuery.error && isApiError(sessionQuery.error) && sessionQuery.error.gone && sessionId) onForget(sessionId);
+    if (
+      sessionQuery.error &&
+      isApiError(sessionQuery.error) &&
+      sessionQuery.error.gone &&
+      sessionId
+    )
+      onForget(sessionId);
   }, [sessionQuery.error, sessionId, onForget]);
 
   // A message that got no acknowledgement is checked by itself once the server can be reached again.
   useEffect(() => {
     if (!sessionId || connection !== 'online') return;
-    const waiting = outgoing.filter((entry) => entry.phase === 'unconfirmed' && entry.verdict === 'unknown');
+    const waiting = outgoing.filter(
+      (entry) => entry.phase === 'unconfirmed' && entry.verdict === 'unknown',
+    );
     if (waiting.length === 0) return;
     const timer = window.setTimeout(() => {
       for (const entry of waiting) void checkDelivery(sessionId, entry.payload.requestId);
@@ -325,7 +462,15 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
     previousRun.current = activeRun?.id ?? null;
     if (before && !activeRun) {
       const run = transcript.runs[before];
-      setAnnouncement(run?.status === 'failed' ? t('workbench.run.failed') : run?.status === 'stopped' ? t('workbench.run.stopped') : run?.status === 'interrupted' ? t('workbench.run.interrupted') : t('workbench.run.completed'));
+      setAnnouncement(
+        run?.status === 'failed'
+          ? t('workbench.run.failed')
+          : run?.status === 'stopped'
+            ? t('workbench.run.stopped')
+            : run?.status === 'interrupted'
+              ? t('workbench.run.interrupted')
+              : t('workbench.run.completed'),
+      );
       setStopRequested(null);
     }
   }, [activeRun, transcript.runs, t]);
@@ -385,7 +530,12 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
       }
       const next = choiceFor(nextAgent, useDeviceMemory.getState(), nextModel);
       // Switching agent keeps the mode when the new one has it.
-      const keptMode = choice && nextAgent.capabilities.permissionModes.includes(choice.mode) && choice.mode !== 'auto' ? choice.mode : next.mode;
+      const keptMode =
+        choice &&
+        nextAgent.capabilities.permissionModes.includes(choice.mode) &&
+        choice.mode !== 'auto'
+          ? choice.mode
+          : next.mode;
       setChoice({ ...next, mode: keptMode });
       rememberAgentChoice({ agentId: nextAgentId, model: next.model, effort: next.effort });
     },
@@ -403,7 +553,12 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
 
   /** Sends into a conversation that exists. */
   const sendToSession = useCallback(
-    async (target: string, key: string, submission: ComposerSubmission, requestId = newRequestId()): Promise<boolean> => {
+    async (
+      target: string,
+      key: string,
+      submission: ComposerSubmission,
+      requestId = newRequestId(),
+    ): Promise<boolean> => {
       await uploadsSettled(key);
       const ready = readyAttachments(key);
       if (ready.failed.length > 0) {
@@ -416,7 +571,13 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
       const expected = running ? (submission.whenBusy === 'steer' ? 'steered' : 'queued') : 'run';
       const accepted = sendMessage(
         target,
-        { requestId, text, attachmentIds: ready.ids, quote: submission.quote, whenBusy: submission.whenBusy },
+        {
+          requestId,
+          text,
+          attachmentIds: ready.ids,
+          quote: submission.quote,
+          whenBusy: submission.whenBusy,
+        },
         {
           attachments: ready.refs,
           expected,
@@ -443,7 +604,17 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
       if (!choice || !agent) return false;
       const newKey = newChatDraftKey(project?.id ?? null);
       const requestId = newRequestId();
-      const row: PendingUserRow = { kind: 'pending', key: `u:${requestId}`, requestId, text: submission.text, quote: submission.quote, attachments: [], phase: 'creating', steer: false, createdAt: Date.now() };
+      const row: PendingUserRow = {
+        kind: 'pending',
+        key: `u:${requestId}`,
+        requestId,
+        text: submission.text,
+        quote: submission.quote,
+        attachments: [],
+        phase: 'creating',
+        steer: false,
+        createdAt: Date.now(),
+      };
       setStarting(row);
       let created: Session;
       try {
@@ -462,7 +633,12 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
       }
       upsertSession(queryClient, created);
       seedEmptyChannel(created.id);
-      rememberAgentChoice({ agentId: choice.agentId, model: choice.model, effort: choice.effort, mode: choice.mode });
+      rememberAgentChoice({
+        agentId: choice.agentId,
+        model: choice.model,
+        effort: choice.effort,
+        mode: choice.mode,
+      });
       const key = sessionDraftKey(created.id);
       clearDraftAfterSend(newKey);
       onSessionCreated(created);
@@ -482,7 +658,9 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
         toast.warning(t('workbench.send.offline'), { id: 'workbench-offline' });
         return false;
       }
-      const sent = sessionId ? await sendToSession(sessionId, sessionDraftKey(sessionId), submission) : await sendFirst(submission);
+      const sent = sessionId
+        ? await sendToSession(sessionId, sessionDraftKey(sessionId), submission)
+        : await sendFirst(submission);
       if (sent) list.current?.scrollToEnd();
       return sent;
     },
@@ -491,7 +669,8 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
 
   const denyCurrent = useCallback(() => {
     if (!currentApproval) return false;
-    if (currentApproval.kind !== 'tool' || !approvalChoices(currentApproval, viewer).canDeny) return false;
+    if (currentApproval.kind !== 'tool' || !approvalChoices(currentApproval, viewer).canDeny)
+      return false;
     workbenchApi.decide(currentApproval.id, { decision: 'deny' }).catch(() => resync());
     return true;
   }, [currentApproval, viewer, resync]);
@@ -499,7 +678,13 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
   // ---- keys ------------------------------------------------------------------------
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Escape' || event.defaultPrevented || event.nativeEvent.isComposing || isAnyOverlayOpen()) return;
+    if (
+      event.key !== 'Escape' ||
+      event.defaultPrevented ||
+      event.nativeEvent.isComposing ||
+      isAnyOverlayOpen()
+    )
+      return;
     // Escape answers the request that is showing; failing that it stops the run; failing that it is "back".
     if (denyCurrent()) return event.preventDefault();
     if (busy && canControl) {
@@ -512,7 +697,12 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== '.' || event.defaultPrevented || event.shiftKey || event.altKey) return;
       if (!(isApplePlatform() ? event.metaKey : event.ctrlKey)) return;
-      if (event.target instanceof Element && event.target.closest('.cm-editor, .xterm, [data-keys="own"]') && !event.metaKey) return;
+      if (
+        event.target instanceof Element &&
+        event.target.closest('.cm-editor, .xterm, [data-keys="own"]') &&
+        !event.metaKey
+      )
+        return;
       event.preventDefault();
       stop();
     };
@@ -530,7 +720,12 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
     // The very edge is the system's own "back"; a field, or anything that scrolls sideways, keeps its gesture.
     if (touch.clientX < 28) return;
     const target = event.target;
-    if (target instanceof HTMLElement && (target.closest('input, textarea, select, [contenteditable="true"]') || scrollsSideways(target, event.currentTarget))) return;
+    if (
+      target instanceof HTMLElement &&
+      (target.closest('input, textarea, select, [contenteditable="true"]') ||
+        scrollsSideways(target, event.currentTarget))
+    )
+      return;
     swipe.current = { x: touch.clientX, y: touch.clientY };
   };
   const onTouchMove = (event: ReactTouchEvent<HTMLDivElement>) => {
@@ -558,7 +753,9 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
       canRename={mine && writable}
       onRename={(next) => void updateSession({ title: next })}
       agentId={agentId}
-      agentLabel={agent ? [agent.displayName, modelLabel(agent, model)].filter(Boolean).join(' · ') : null}
+      agentLabel={
+        agent ? [agent.displayName, modelLabel(agent, model)].filter(Boolean).join(' · ') : null
+      }
       project={project}
       projectChoices={sessionId === null && scope === 'all' ? projects : null}
       onChooseProject={onChooseProject}
@@ -572,19 +769,35 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
         <>
           {project && <TitleBarSlot project={project} sessionId={sessionId} busy={busy} />}
           <ContextRing context={transcript.context} totals={transcript.totals} agent={agent} />
-          {agent && <ModeSwitcher mode={mode} effective={effectiveMode} agent={agent} project={project} disabled={!mine || !writable} onChange={chooseMode} />}
-          {project && <TitleBarSlot project={project} sessionId={sessionId} busy={busy} placement="end" />}
+          {agent && (
+            <ModeSwitcher
+              mode={mode}
+              effective={effectiveMode}
+              agent={agent}
+              project={project}
+              disabled={!mine || !writable}
+              onChange={chooseMode}
+            />
+          )}
+          {project && (
+            <TitleBarSlot project={project} sessionId={sessionId} busy={busy} placement="end" />
+          )}
         </>
       }
     />
   );
 
-  if (sessionId !== null && (sessionQuery.isError || state.status === 'gone' || state.status === 'error')) {
+  if (
+    sessionId !== null &&
+    (sessionQuery.isError || state.status === 'gone' || state.status === 'error')
+  ) {
     const error = sessionQuery.error ?? state.error;
     const gone = state.status === 'gone' || errorKind(error) === 'gone';
     return (
       <div className="wb-chat" ref={column}>
         {titleBar}
+        {session && <SessionControls session={session} agent={agent} />}
+        <BackgroundTasks transcript={transcript} />
         <div className="wb-chat__stage">
           <ErrorState
             kind={gone ? 'gone' : 'unreachable'}
@@ -607,8 +820,17 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
     );
   }
 
-  const question = currentApproval?.kind === 'question' && approvalChoices(currentApproval, viewer).canAnswer ? currentApproval : null;
-  const queued = outgoing.filter((entry) => entry.expected === 'queued' && entry.phase !== 'failed' && entry.phase !== 'unconfirmed' && entry.phase !== 'checking');
+  const question =
+    currentApproval?.kind === 'question' && approvalChoices(currentApproval, viewer).canAnswer
+      ? currentApproval
+      : null;
+  const queued = outgoing.filter(
+    (entry) =>
+      entry.expected === 'queued' &&
+      entry.phase !== 'failed' &&
+      entry.phase !== 'unconfirmed' &&
+      entry.phase !== 'checking',
+  );
   const unresolved = transcript.unresolvedRuns;
   const sheetTarget = pendingApprovals.find((approval) => approval.id === sheetApproval) ?? null;
 
@@ -616,15 +838,33 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
     <div className="wb-hero">
       {agentId ? <AgentMark agentId={agentId} size={56} /> : null}
       <p className="wb-hero__title">{project?.name ?? t('workbench.newConversation')}</p>
-      <p className="wb-hero__caption">{agent ? [agent.displayName, modelLabel(agent, model)].filter(Boolean).join(' · ') : agentsQuery.isPending ? t('common.loading') : t('workbench.readOnly.noAgent')}</p>
-      {agent && unavailable && unavailable !== 'not-offered' && <Banner tone="warning">{unavailableText(agent, unavailable, t)}</Banner>}
-      {agentsQuery.isError && !agentsQuery.data && <ErrorState compact error={agentsQuery.error} onRetry={() => void agentsQuery.refetch()} />}
+      <p className="wb-hero__caption">
+        {agent
+          ? [agent.displayName, modelLabel(agent, model)].filter(Boolean).join(' · ')
+          : agentsQuery.isPending
+            ? t('common.loading')
+            : t('workbench.readOnly.noAgent')}
+      </p>
+      {agent && unavailable && unavailable !== 'not-offered' && (
+        <Banner tone="warning">{unavailableText(agent, unavailable, t)}</Banner>
+      )}
+      {agentsQuery.isError && !agentsQuery.data && (
+        <ErrorState compact error={agentsQuery.error} onRetry={() => void agentsQuery.refetch()} />
+      )}
     </div>
   );
 
   return (
-    <div className="wb-chat" ref={column} onKeyDown={onKeyDown} onTouchStart={onTouchStart} onTouchMove={onTouchMove}>
+    <div
+      className="wb-chat"
+      ref={column}
+      onKeyDown={onKeyDown}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+    >
       {titleBar}
+      {session && <SessionControls session={session} agent={agent} />}
+      <BackgroundTasks transcript={transcript} />
       {/* Where this conversation stands among those handed from one agent to another (features/collab). */}
       {session && <ChainBar session={session} items={transcript.items} />}
       <Transcript
@@ -640,15 +880,45 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
         focusSeq={focusSeq}
         onReviewApproval={setSheetApproval}
         onQuote={readOnly === null ? setQuote : undefined}
+        onUseImage={
+          readOnly === null && agent?.capabilities.images
+            ? async ({ file, instruction }) => {
+                const result = await addFiles(draftKey, [file], {
+                  failed: t('workbench.attach.failed'),
+                });
+                if (result.rejected.length) throw new Error('image_attachment_rejected');
+                if (instruction) {
+                  const current = getDraft(draftKey);
+                  setDraft(draftKey, `${current}${current ? '\n\n' : ''}${instruction}`);
+                }
+                composer.current?.focus();
+              }
+            : undefined
+        }
         footer={
           progress ? (
-            <RunStatusRow progress={progress} agentName={agentName} showStop={canControl && (composerHasContent || readOnly !== null || question !== null)} stopping={stopping} onStop={stop} />
+            <RunStatusRow
+              progress={progress}
+              agentName={agentName}
+              showStop={
+                canControl && (composerHasContent || readOnly !== null || question !== null)
+              }
+              stopping={stopping}
+              onStop={stop}
+            />
           ) : undefined
         }
       />
       <div className="wb-dock" ref={dock}>
         {currentApproval && !question && (
-          <ApprovalDock approval={currentApproval} agentName={agentName} more={pendingApprovals.length - 1} onStale={resync} onDetails={() => setSheetApproval(currentApproval.id)} continuation={continuation} />
+          <ApprovalDock
+            approval={currentApproval}
+            agentName={agentName}
+            more={pendingApprovals.length - 1}
+            onStale={resync}
+            onDetails={() => setSheetApproval(currentApproval.id)}
+            continuation={continuation}
+          />
         )}
         {unresolved.length > 0 && (
           <RecoveryCard
@@ -659,7 +929,9 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
             canContinue={mine && writable}
             onChanged={resync}
             onView={() => {
-              const item = transcript.items.find((entry) => entry.kind === 'run-end' && entry.runId === unresolved[0]!.id);
+              const item = transcript.items.find(
+                (entry) => entry.kind === 'run-end' && entry.runId === unresolved[0]!.id,
+              );
               if (item) list.current?.scrollToKey(item.key);
             }}
           />
@@ -673,10 +945,26 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
             onDismiss={() => dismissFailed(sessionId, unsettled.payload.requestId)}
           />
         )}
-        {sessionId && <Queue sessionId={sessionId} queue={transcript.queue} arriving={queued} busy={busy} canSteer={agent?.capabilities.steering === true} editable={mine && writable} onChanged={resync} />}
+        {sessionId && (
+          <Queue
+            sessionId={sessionId}
+            queue={transcript.queue}
+            arriving={queued}
+            busy={busy}
+            canSteer={agent?.capabilities.steering === true}
+            editable={mine && writable}
+            onChanged={resync}
+          />
+        )}
         {sessionId && <DeferredList sessionId={sessionId} editable={mine && writable} />}
         {question ? (
-          <ApprovalDock approval={question} agentName={agentName} more={pendingApprovals.length - 1} onStale={resync} onDetails={() => setSheetApproval(question.id)} />
+          <ApprovalDock
+            approval={question}
+            agentName={agentName}
+            more={pendingApprovals.length - 1}
+            onStale={resync}
+            onDetails={() => setSheetApproval(question.id)}
+          />
         ) : readOnly !== null ? (
           <p className="wb-dock__note" role="note">
             {readOnly}
@@ -701,19 +989,48 @@ function Chat({ project, sessionId, scope, projects, listHidden, listMark, onSho
             autoFocus={focusComposer && (canHover || sessionId === null)}
             accessory={
               sessionId ? (
-                <SendLater sessionId={sessionId} draftKey={draftKey} project={project} options={{ model, effort, permissionMode: mode }} hasQuote={quote !== null} blocked={blocked} />
+                <SendLater
+                  sessionId={sessionId}
+                  draftKey={draftKey}
+                  project={project}
+                  options={{ model, effort, permissionMode: mode }}
+                  hasQuote={quote !== null}
+                  blocked={blocked}
+                />
               ) : undefined
             }
             controls={
               <>
-                <AgentModelChip agents={agents} project={project} agentId={agentId} model={model} locked={sessionId !== null} disabled={busy && sessionId !== null} onChoose={chooseModel} />
-                <EffortChip agent={agent} model={model} effort={effort} disabled={busy && sessionId !== null} onChoose={chooseEffort} />
+                <AgentModelChip
+                  agents={agents}
+                  project={project}
+                  agentId={agentId}
+                  model={model}
+                  locked={sessionId !== null}
+                  disabled={busy && sessionId !== null}
+                  onChoose={chooseModel}
+                />
+                <CommandPicker projectId={project?.id ?? null} draftKey={draftKey} />
+                <EffortChip
+                  agent={agent}
+                  model={model}
+                  effort={effort}
+                  disabled={busy && sessionId !== null}
+                  onChoose={chooseEffort}
+                />
               </>
             }
           />
         )}
       </div>
-      <ApprovalSheet approval={sheetTarget} agentName={agentName} open={sheetTarget !== null} onClose={() => setSheetApproval(null)} onStale={resync} continuation={continuation} />
+      <ApprovalSheet
+        approval={sheetTarget}
+        agentName={agentName}
+        open={sheetTarget !== null}
+        onClose={() => setSheetApproval(null)}
+        onStale={resync}
+        continuation={continuation}
+      />
       <p className="visually-hidden" role="status" aria-live="polite">
         {announcement}
       </p>

@@ -16,9 +16,20 @@ import {
   type PermissionDecision,
   type PromptAttachment,
 } from '../agents/adapter.js';
-import { AppServerClient, type ProcessEnded, ProtocolError, RpcError, RpcRefusal } from './client.js';
+import {
+  AppServerClient,
+  type ProcessEnded,
+  ProtocolError,
+  RpcError,
+  RpcRefusal,
+} from './client.js';
 import { isThreadNotFound, runFailure, SIGN_IN_HINT, tidy, turnFailure } from './errors.js';
-import { type CodexLauncher, type IsolationLevel, appServerArguments, savedRuleFiles } from './launch.js';
+import {
+  type CodexLauncher,
+  type IsolationLevel,
+  appServerArguments,
+  savedRuleFiles,
+} from './launch.js';
 import {
   type AccountRead,
   type CommandDecision,
@@ -37,7 +48,16 @@ import {
   userInputRequestSchema,
 } from './protocol.js';
 import { CLIENT_INFO, type CodexProbe, RULES_PROBLEM } from './status.js';
-import { type RateLimitInfo, TOOL, TurnTranslator, displayPath, patchPaths, patchPreview, patchTitle, unwrapShellCommand } from './translate.js';
+import {
+  type RateLimitInfo,
+  TOOL,
+  TurnTranslator,
+  displayPath,
+  patchPaths,
+  patchPreview,
+  patchTitle,
+  unwrapShellCommand,
+} from './translate.js';
 
 /**
  * The Codex adapter: one `codex app-server` process per run, spoken to over
@@ -99,9 +119,9 @@ const HISTORY_MESSAGE_CHARS = 20_000;
  * with `sandbox_permissions` and `justification`).
  */
 export const PERMISSIONS_GUIDE = [
-  '## Permissions in this session (Agent Studio)',
+  '## Permissions in this session (Cloud Harness)',
   '',
-  'This session runs inside Agent Studio. Your sandbox is read-only on purpose: every change is put to the person you are working for, or to the rules they have set, before it happens. That is not a reason to decline work.',
+  'This session runs inside Cloud Harness. Your sandbox is read-only on purpose: every change is put to the person you are working for, or to the rules they have set, before it happens. That is not a reason to decline work.',
   '',
   '- To create, edit or delete files, use apply_patch as usual.',
   '- To run a command that writes files, needs the network or otherwise cannot run inside the sandbox, run it with `sandbox_permissions: "require_escalated"` and a short `justification`.',
@@ -133,7 +153,8 @@ function deferred<T>(): Deferred<T> {
   return { promise, resolve, reject };
 }
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms).unref());
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms).unref());
 
 const shellQuote = (text: string): string => `'${text.replace(/'/g, `'\\''`)}'`;
 
@@ -157,7 +178,12 @@ const sameDirectory = (a: string, b: string): boolean => {
 async function stopProcess(client: AppServerClient, child: Child, atOnce = false): Promise<void> {
   if (!client.ended) {
     client.end();
-    const gone = atOnce ? false : await Promise.race([client.exited.then(() => true), sleep(EXIT_GRACE_MS).then(() => false)]);
+    const gone = atOnce
+      ? false
+      : await Promise.race([
+          client.exited.then(() => true),
+          sleep(EXIT_GRACE_MS).then(() => false),
+        ]);
     if (!gone) {
       terminate(child, KILL_GRACE_MS);
       await Promise.race([client.exited, sleep(KILL_GRACE_MS + 500)]);
@@ -175,7 +201,8 @@ async function stopProcess(client: AppServerClient, child: Child, atOnce = false
 /** An answer of the CLI in the shape this adapter was written for — or a protocol error, never a crash. */
 function answerOf<S extends z.ZodType>(schema: S, value: unknown, what: string): z.infer<S> {
   const parsed = schema.safeParse(value);
-  if (!parsed.success) throw new ProtocolError(`Codex answered ${what} in a shape this adapter does not know.`);
+  if (!parsed.success)
+    throw new ProtocolError(`Codex answered ${what} in a shape this adapter does not know.`);
   return parsed.data;
 }
 
@@ -192,7 +219,10 @@ function isInside(directory: string, file: string): boolean {
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
-const record = (value: unknown): Record<string, unknown> => (value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {});
+const record = (value: unknown): Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
 
 export interface CodexAdapterOptions {
   readonly launcher: CodexLauncher;
@@ -230,17 +260,44 @@ export class CodexAdapter implements AgentAdapter {
   }
 
   /** Removes Codex's own copy of a conversation. Codex not knowing it any more is not an error. */
-  async deleteNativeSession(input: { nativeSessionId: string }): Promise<void> {
+  async deleteNativeSession(input: {
+    nativeSessionId: string;
+    accountEnvironment?: Readonly<Record<string, string>>;
+    accountDirectory?: string;
+  }): Promise<void> {
     const { launcher, processes, log } = this.#options;
-    const command = launcher.command(appServerArguments({ bridge: null, cwd: null }));
+    const command = launcher.command(appServerArguments({ bridge: null, cwd: null }), {
+      ...(input.accountEnvironment ? { env: input.accountEnvironment } : {}),
+      ...(input.accountDirectory ? { accountDirectory: input.accountDirectory } : {}),
+    });
     const child = processes.spawn(command.file, command.args, { env: command.env, stdin: 'pipe' });
-    const client = new AppServerClient(child, { notification: () => {}, request: () => Promise.reject(new RpcRefusal('Nothing is asked on this connection.')), failed: () => {} }, log);
+    const client = new AppServerClient(
+      child,
+      {
+        notification: () => {},
+        request: () => Promise.reject(new RpcRefusal('Nothing is asked on this connection.')),
+        failed: () => {},
+      },
+      log,
+    );
     try {
-      await client.request('initialize', { clientInfo: CLIENT_INFO, capabilities: null }, { timeoutMs: 15_000 });
+      await client.request(
+        'initialize',
+        { clientInfo: CLIENT_INFO, capabilities: null },
+        { timeoutMs: 15_000 },
+      );
       client.notify('initialized');
-      await client.request('thread/delete', { threadId: input.nativeSessionId }, { timeoutMs: 15_000 });
+      await client.request(
+        'thread/delete',
+        { threadId: input.nativeSessionId },
+        { timeoutMs: 15_000 },
+      );
     } catch (error) {
-      if (!(error instanceof RpcError)) throw runFailure(error, { stderr: client.stderrTail, during: 'while removing a conversation' });
+      if (!(error instanceof RpcError))
+        throw runFailure(error, {
+          stderr: client.stderrTail,
+          during: 'while removing a conversation',
+        });
     } finally {
       await stopProcess(client, child);
     }
@@ -301,9 +358,13 @@ class CodexRun {
       .catch((error: unknown): AgentRunResult => {
         // Rule 3 of the contract: after a stop, whatever happened is not a failure.
         if (this.#cancelled || error instanceof Stopped) return { status: 'completed' };
-        const failure = runFailure(error, { stderr: this.#client?.stderrTail ?? '', during: this.#phase });
+        const failure = runFailure(error, {
+          stderr: this.#client?.stderrTail ?? '',
+          during: this.#phase,
+        });
         // What the status said may no longer be true: ask the CLI again next time.
-        if (failure.code === 'not_signed_in' || failure.code === 'codex_not_isolated') this.#options.probe.invalidate();
+        if (failure.code === 'not_signed_in' || failure.code === 'codex_not_isolated')
+          this.#options.probe.invalidate();
         throw failure;
       })
       .finally(async () => {
@@ -321,8 +382,13 @@ class CodexRun {
 
   async #main(): Promise<AgentRunResult> {
     const request = this.#request;
-    if (request.cwd === null) throw new AgentRunError('no_project', 'Codex works inside a project folder, and this session has none.');
-    if (!existsSync(request.cwd)) throw new AgentRunError('project_missing', 'The folder of this project no longer exists.');
+    if (request.cwd === null)
+      throw new AgentRunError(
+        'no_project',
+        'Codex works inside a project folder, and this session has none.',
+      );
+    if (!existsSync(request.cwd))
+      throw new AgentRunError('project_missing', 'The folder of this project no longer exists.');
     // Without the Studio's sandbox Codex only runs where the operator said so.
     const unavailable = this.#options.launcher.unavailable;
     if (unavailable !== null) throw new AgentRunError('sandbox_required', unavailable);
@@ -335,7 +401,10 @@ class CodexRun {
       const more = await this.#checkConfiguration();
       if (more.length === 0) break;
       if (attempt > 0) {
-        throw new AgentRunError('codex_not_isolated', 'Codex keeps offering tools from its own configuration that the Studio could not switch off, so the run was not started.');
+        throw new AgentRunError(
+          'codex_not_isolated',
+          'Codex keeps offering tools from its own configuration that the Studio could not switch off, so the run was not started.',
+        );
       }
       disable = more;
       await this.#disconnect();
@@ -347,6 +416,7 @@ class CodexRun {
     this.#translator.setMainThread(threadId);
     this.#host.emit({ type: 'session', nativeSessionId: threadId });
 
+    const tierSupported = (await this.#options.probe.capabilities()).fastMode?.supported === true;
     this.#phase = 'while starting the turn';
     const started = answerOf(
       turnStartResultSchema,
@@ -357,6 +427,7 @@ class CodexRun {
         sandboxPolicy: READ_ONLY_POLICY,
         ...(request.model ? { model: request.model } : {}),
         ...(request.effort ? { effort: request.effort } : {}),
+        ...(tierSupported ? { serviceTier: request.fastMode ? 'fast' : 'default' } : {}),
       }),
       'turn/start',
     );
@@ -367,7 +438,10 @@ class CodexRun {
 
     const outcome = await this.#until(this.#turnDone.promise);
     this.#turnEnded = true;
-    if (outcome.status === 'failed') throw turnFailure(outcome.error ?? this.#translator.lastError, { model: this.#translator.model });
+    if (outcome.status === 'failed')
+      throw turnFailure(outcome.error ?? this.#translator.lastError, {
+        model: this.#translator.model,
+      });
     // `interrupted` is a turn that was stopped — by the user, or by an approval that was cancelled with the run.
     return { status: 'completed' };
   }
@@ -378,16 +452,24 @@ class CodexRun {
     const request = this.#request;
     const { launcher, processes } = this.#options;
     this.#phase = 'while starting';
-    const command = launcher.command(appServerArguments({ bridge: request.bridge, cwd: request.cwd, disableMcpServers }), {
-      env: request.bridge.env,
-      // Attachments live in the Studio's data directory, which the sandbox hides.
-      expose: request.prompt.attachments.map((attachment) => attachment.path),
-      // The account's keys and sign-ins stay out of sight unless this project's owner lets agents use them.
-      credentials: this.#options.credentialsAllowed(request.projectId),
-    });
+    const command = launcher.command(
+      appServerArguments({ bridge: request.bridge, cwd: request.cwd, disableMcpServers }),
+      {
+        env: { ...request.bridge.env, ...request.accountEnvironment },
+        ...(request.accountDirectory ? { accountDirectory: request.accountDirectory } : {}),
+        // Attachments live in the Studio's data directory, which the sandbox hides.
+        expose: request.prompt.attachments.map((attachment) => attachment.path),
+        // The account's keys and sign-ins stay out of sight unless this project's owner lets agents use them.
+        credentials: this.#options.credentialsAllowed(request.projectId),
+      },
+    );
     this.#isolation = command.isolation;
     this.#codexHome = command.codexHome;
-    const child = processes.spawn(command.file, command.args, { cwd: request.cwd ?? undefined, env: command.env, stdin: 'pipe' });
+    const child = processes.spawn(command.file, command.args, {
+      cwd: request.cwd ?? undefined,
+      env: command.env,
+      stdin: 'pipe',
+    });
     const client = new AppServerClient(
       child,
       {
@@ -401,12 +483,19 @@ class CodexRun {
     this.#client = client;
     this.#broken = false;
 
-    const hello = answerOf(initializeResultSchema, await this.#ask('initialize', { clientInfo: CLIENT_INFO, capabilities: null }), 'initialize');
+    const hello = answerOf(
+      initializeResultSchema,
+      await this.#ask('initialize', { clientInfo: CLIENT_INFO, capabilities: null }),
+      'initialize',
+    );
     client.notify('initialized');
     this.#host.log.debug({ isolation: command.isolation }, 'codex: app-server started');
     // What was hidden is the home the Studio worked out; the CLI must be using that one.
     if (!sameDirectory(hello.codexHome, command.codexHome)) {
-      throw new AgentRunError('codex_not_isolated', 'Codex keeps its settings in a different folder than the Studio expected, so the Studio cannot vouch for them. The run was not started.');
+      throw new AgentRunError(
+        'codex_not_isolated',
+        'Codex keeps its settings in a different folder than the Studio expected, so the Studio cannot vouch for them. The run was not started.',
+      );
     }
   }
 
@@ -421,30 +510,52 @@ class CodexRun {
     this.#phase = 'while reading its configuration';
     let read: ConfigRead;
     try {
-      read = answerOf(configReadSchema, await this.#ask('config/read', { includeLayers: true, cwd: request.cwd }), 'config/read');
+      read = answerOf(
+        configReadSchema,
+        await this.#ask('config/read', { includeLayers: true, cwd: request.cwd }),
+        'config/read',
+      );
     } catch (error) {
       if (!(error instanceof RpcError)) throw error;
       // An app-server that cannot show its configuration: what could be hidden is hidden, and the
       // rules — the one thing that cannot be overridden — are still checked below.
-      this.#host.log.warn({ err: tidy(error.message, 200) }, 'codex: the effective configuration could not be read');
+      this.#host.log.warn(
+        { err: tidy(error.message, 200) },
+        'codex: the effective configuration could not be read',
+      );
       read = { config: {}, layers: null };
     }
     const layers = read.layers ?? [];
     const hasKeys = (value: unknown): boolean => Object.keys(record(value)).length > 0;
-    const userSettings = layers.some((layer) => layer.name.type === 'user' && hasKeys(layer.config));
+    const userSettings = layers.some(
+      (layer) => layer.name.type === 'user' && hasKeys(layer.config),
+    );
     const hidden = this.#isolation === 'hidden' && !userSettings;
 
-    if (!hidden && savedRuleFiles(this.#codexHome).length > 0) throw new AgentRunError('codex_not_isolated', RULES_PROBLEM);
-    if (layers.some((layer) => layer.name.type === 'project' && !layer.disabledReason && hasKeys(layer.config))) {
-      throw new AgentRunError('codex_not_isolated', "Codex loaded this project's own .codex settings although the Studio marked the project as untrusted, so the run was not started.");
+    if (!hidden && savedRuleFiles(this.#codexHome).length > 0)
+      throw new AgentRunError('codex_not_isolated', RULES_PROBLEM);
+    if (
+      layers.some(
+        (layer) => layer.name.type === 'project' && !layer.disabledReason && hasKeys(layer.config),
+      )
+    ) {
+      throw new AgentRunError(
+        'codex_not_isolated',
+        "Codex loaded this project's own .codex settings although the Studio marked the project as untrusted, so the run was not started.",
+      );
     }
     const features = record(read.config.features);
     if ('hooks' in features && features.hooks !== false) {
-      throw new AgentRunError('codex_not_isolated', 'Codex did not switch its hooks off when the Studio asked, so the run was not started.');
+      throw new AgentRunError(
+        'codex_not_isolated',
+        'Codex did not switch its hooks off when the Studio asked, so the run was not started.',
+      );
     }
     this.#personalSettings = userSettings;
     return Object.entries(record(read.config.mcp_servers))
-      .filter(([name, server]) => name !== request.bridge.serverName && record(server).enabled !== false)
+      .filter(
+        ([name, server]) => name !== request.bridge.serverName && record(server).enabled !== false,
+      )
       .map(([name]) => name);
   }
 
@@ -453,7 +564,9 @@ class CodexRun {
     this.#phase = 'while checking the sign-in';
     let read: AccountRead | null;
     try {
-      const parsed = accountReadSchema.safeParse(await this.#ask('account/read', { refreshToken: false }));
+      const parsed = accountReadSchema.safeParse(
+        await this.#ask('account/read', { refreshToken: false }),
+      );
       read = parsed.success ? parsed.data : null;
     } catch (error) {
       if (error instanceof RpcError) return;
@@ -481,7 +594,15 @@ class CodexRun {
     let response: ThreadResponse | null = null;
     if (request.nativeSessionId !== null) {
       try {
-        response = answerOf(threadResponseSchema, await this.#ask('thread/resume', { threadId: request.nativeSessionId, excludeTurns: true, ...settings }), 'thread/resume');
+        response = answerOf(
+          threadResponseSchema,
+          await this.#ask('thread/resume', {
+            threadId: request.nativeSessionId,
+            excludeTurns: true,
+            ...settings,
+          }),
+          'thread/resume',
+        );
       } catch (error) {
         if (!isThreadNotFound(error)) throw error;
         this.#host.emit({
@@ -493,7 +614,11 @@ class CodexRun {
       }
     }
     if (response === null) {
-      response = answerOf(threadResponseSchema, await this.#ask('thread/start', settings), 'thread/start');
+      response = answerOf(
+        threadResponseSchema,
+        await this.#ask('thread/start', settings),
+        'thread/start',
+      );
       await this.#seed(response.thread.id, request.history);
       // A conversation that starts without the Studio's sandbox says so, once, where the person will read it.
       if (this.#isolation !== 'hidden') {
@@ -502,20 +627,36 @@ class CodexRun {
           level: 'warning',
           code: 'codex_without_sandbox',
           text: `This Studio runs Codex without its sandbox. The commands Codex runs without asking can read any file the Studio's account can read — files outside the project, credentials and the Studio's own data included. Anything that changes something still needs approval.${
-            this.#personalSettings ? " That account's own Codex settings and instructions also apply here; approvals, the sandbox, MCP servers, hooks and project trust are still set by the Studio." : ''
+            this.#personalSettings
+              ? " That account's own Codex settings and instructions also apply here; approvals, the sandbox, MCP servers, hooks and project trust are still set by the Studio."
+              : ''
           }`,
         });
       }
     }
 
     // In the sandbox the account's own instruction files are hidden: Codex must not report having loaded one.
-    if (this.#isolation === 'hidden' && (response.instructionSources ?? []).some((source) => isInside(this.#codexHome, source))) {
-      throw new AgentRunError('codex_not_isolated', "Codex loaded the personal instruction file of the account the Studio runs as, which the Studio's sandbox should have hidden. The run was not started.");
+    if (
+      this.#isolation === 'hidden' &&
+      (response.instructionSources ?? []).some((source) => isInside(this.#codexHome, source))
+    ) {
+      throw new AgentRunError(
+        'codex_not_isolated',
+        "Codex loaded the personal instruction file of the account the Studio runs as, which the Studio's sandbox should have hidden. The run was not started.",
+      );
     }
 
     const sandbox = record(response.sandbox);
-    if (response.approvalPolicy !== PINNED.approvalPolicy || response.approvalsReviewer !== PINNED.approvalsReviewer || sandbox.type !== READ_ONLY_POLICY.type || sandbox.networkAccess === true) {
-      throw new AgentRunError('codex_not_isolated', 'Codex did not take the approval and sandbox settings the Studio asked for, so the run was not started.');
+    if (
+      response.approvalPolicy !== PINNED.approvalPolicy ||
+      response.approvalsReviewer !== PINNED.approvalsReviewer ||
+      sandbox.type !== READ_ONLY_POLICY.type ||
+      sandbox.networkAccess === true
+    ) {
+      throw new AgentRunError(
+        'codex_not_isolated',
+        'Codex did not take the approval and sandbox settings the Studio asked for, so the run was not started.',
+      );
     }
     if (response.model) this.#translator.model = response.model;
     return response.thread.id;
@@ -527,7 +668,10 @@ class CodexRun {
     let budget = HISTORY_CHARS;
     for (let at = history.length - 1; at >= 0 && budget > 0; at -= 1) {
       const message = history[at]!;
-      const text = message.text.length > HISTORY_MESSAGE_CHARS ? `${message.text.slice(0, HISTORY_MESSAGE_CHARS)}…` : message.text;
+      const text =
+        message.text.length > HISTORY_MESSAGE_CHARS
+          ? `${message.text.slice(0, HISTORY_MESSAGE_CHARS)}…`
+          : message.text;
       if (text.trim() === '') continue;
       budget -= text.length;
       kept.unshift({ role: message.role, text });
@@ -539,7 +683,9 @@ class CodexRun {
         items: kept.map((message) => ({
           type: 'message',
           role: message.role,
-          content: [{ type: message.role === 'user' ? 'input_text' : 'output_text', text: message.text }],
+          content: [
+            { type: message.role === 'user' ? 'input_text' : 'output_text', text: message.text },
+          ],
         })),
       });
     } catch (error) {
@@ -550,18 +696,29 @@ class CodexRun {
 
   #promptText(): string {
     const { text, quote } = this.#request.prompt;
-    const quoted = quote && quote.trim() !== '' ? `${quote.split('\n').map((line) => `> ${line}`).join('\n')}\n\n` : '';
+    const quoted =
+      quote && quote.trim() !== ''
+        ? `${quote
+            .split('\n')
+            .map((line) => `> ${line}`)
+            .join('\n')}\n\n`
+        : '';
     return `${this.#preface}${quoted}${text}`;
   }
 
   /** A message as Codex takes it: the text, images as images, other files named by path. */
   #input(text: string, attachments: readonly PromptAttachment[]): unknown[] {
     const files = attachments.filter((attachment) => !attachment.isImage);
-    const listed = files.length === 0 ? '' : `\n\nAttached files (read them at these paths):\n${files.map((file) => `- ${file.name}: ${file.path}`).join('\n')}`;
+    const listed =
+      files.length === 0
+        ? ''
+        : `\n\nAttached files (read them at these paths):\n${files.map((file) => `- ${file.name}: ${file.path}`).join('\n')}`;
     const body = `${text}${listed}`;
     return [
       ...(body.trim() === '' ? [] : [{ type: 'text', text: body, text_elements: [] }]),
-      ...attachments.filter((attachment) => attachment.isImage).map((attachment) => ({ type: 'localImage', path: attachment.path })),
+      ...attachments
+        .filter((attachment) => attachment.isImage)
+        .map((attachment) => ({ type: 'localImage', path: attachment.path })),
     ];
   }
 
@@ -589,7 +746,10 @@ class CodexRun {
       const parsed = notificationSchemas['turn/completed'].safeParse(params);
       // Only the turn this run started ends the run; a sub-agent's turns end on their own threads.
       if (parsed.success && (this.#threadId === null || parsed.data.threadId === this.#threadId)) {
-        const outcome: TurnOutcome = { status: parsed.data.turn.status, error: parsed.data.turn.error ?? null };
+        const outcome: TurnOutcome = {
+          status: parsed.data.turn.status,
+          error: parsed.data.turn.error ?? null,
+        };
         if (this.#turnId === null) this.#endedTurns.set(parsed.data.turn.id, outcome);
         else if (parsed.data.turn.id === this.#turnId) this.#turnDone.resolve(outcome);
       }
@@ -613,24 +773,47 @@ class CodexRun {
     if (this.#cancelled) return;
     this.#cancelled = true;
     const client = this.#client;
-    if (client && this.#threadId !== null && this.#turnId !== null && !this.#turnEnded && !this.#broken) {
+    if (
+      client &&
+      this.#threadId !== null &&
+      this.#turnId !== null &&
+      !this.#turnEnded &&
+      !this.#broken
+    ) {
       // Ask Codex to stop the turn, so that it records the turn as interrupted; then stop the process regardless.
-      client.request('turn/interrupt', { threadId: this.#threadId, turnId: this.#turnId }).catch(() => {});
+      client
+        .request('turn/interrupt', { threadId: this.#threadId, turnId: this.#turnId })
+        .catch(() => {});
       setTimeout(() => this.#stop.reject(new Stopped()), INTERRUPT_GRACE_MS).unref();
       return;
     }
     this.#stop.reject(new Stopped());
   }
 
-  async #steer(message: { text: string; attachments: readonly PromptAttachment[] }): Promise<boolean> {
+  async #steer(message: {
+    text: string;
+    attachments: readonly PromptAttachment[];
+  }): Promise<boolean> {
     const client = this.#client;
-    if (!client || this.#cancelled || this.#broken || this.#turnEnded || this.#threadId === null || this.#turnId === null) return false;
+    if (
+      !client ||
+      this.#cancelled ||
+      this.#broken ||
+      this.#turnEnded ||
+      this.#threadId === null ||
+      this.#turnId === null
+    )
+      return false;
     // Files that arrive now were not made visible to this process when it started; they go with the next turn.
     if (message.attachments.length > 0) return false;
     const input = this.#input(message.text, []);
     if (input.length === 0) return false;
     try {
-      await client.request('turn/steer', { threadId: this.#threadId, expectedTurnId: this.#turnId, input }, { timeoutMs: STEER_TIMEOUT_MS });
+      await client.request(
+        'turn/steer',
+        { threadId: this.#threadId, expectedTurnId: this.#turnId, input },
+        { timeoutMs: STEER_TIMEOUT_MS },
+      );
       return true;
     } catch {
       // "no active turn to steer", a turn that cannot take input, or a process that has gone.
@@ -656,13 +839,21 @@ class CodexRun {
         return Promise.resolve({ permissions: {}, scope: 'turn' });
       default:
         // Token refresh, attestation, client-side tools, the old approval calls: not something this client does.
-        this.#host.log.debug({ method }, 'codex: a request this adapter does not serve was refused');
+        this.#host.log.debug(
+          { method },
+          'codex: a request this adapter does not serve was refused',
+        );
         return Promise.reject(new RpcRefusal(`This client does not handle ${method}.`));
     }
   }
 
   /** The answer for Codex, and what to remember and say when it is a refusal. */
-  #verdict(decision: PermissionDecision, itemId: string | null, what: string, threadId: string | undefined): CommandDecision {
+  #verdict(
+    decision: PermissionDecision,
+    itemId: string | null,
+    what: string,
+    threadId: string | undefined,
+  ): CommandDecision {
     if (decision.behavior === 'allow') return 'accept';
     // The run is being stopped: end the turn rather than let the agent try something else.
     if (decision.source === 'cancelled') return 'cancel';
@@ -678,12 +869,29 @@ class CodexRun {
    */
   #explain(what: string, reason: string, threadId: string | undefined): void {
     const client = this.#client;
-    if (!client || this.#cancelled || this.#threadId === null || this.#turnId === null || this.#turnEnded) return;
+    if (
+      !client ||
+      this.#cancelled ||
+      this.#threadId === null ||
+      this.#turnId === null ||
+      this.#turnEnded
+    )
+      return;
     if (threadId !== undefined && threadId !== this.#threadId) return;
     if (this.#explained.has(reason)) return;
     this.#explained.add(reason);
-    const text = `[Agent Studio] ${what} was not allowed. ${reason}`;
-    client.request('turn/steer', { threadId: this.#threadId, expectedTurnId: this.#turnId, input: [{ type: 'text', text, text_elements: [] }] }, { timeoutMs: STEER_TIMEOUT_MS }).catch(() => {});
+    const text = `[Cloud Harness] ${what} was not allowed. ${reason}`;
+    client
+      .request(
+        'turn/steer',
+        {
+          threadId: this.#threadId,
+          expectedTurnId: this.#turnId,
+          input: [{ type: 'text', text, text_elements: [] }],
+        },
+        { timeoutMs: STEER_TIMEOUT_MS },
+      )
+      .catch(() => {});
   }
 
   async #commandApproval(raw: unknown): Promise<{ decision: CommandDecision }> {
@@ -703,15 +911,29 @@ class CodexRun {
         url: `${network.protocol}://${network.host}`,
         input: { host: network.host, protocol: network.protocol, ...(reason ? { reason } : {}) },
       });
-      return { decision: this.#verdict(decision, ask.itemId, `The connection to ${network.host}`, ask.threadId) };
+      return {
+        decision: this.#verdict(
+          decision,
+          ask.itemId,
+          `The connection to ${network.host}`,
+          ask.threadId,
+        ),
+      };
     }
 
     const reported = ask.command ?? null;
-    const script = reported !== null ? unwrapShellCommand(reported) : (this.#translator.commandOf(ask.itemId) ?? null);
+    const script =
+      reported !== null
+        ? unwrapShellCommand(reported)
+        : (this.#translator.commandOf(ask.itemId) ?? null);
     const cwd = ask.cwd ?? null;
     // A command that runs somewhere else is judged as running there.
-    const elsewhere = cwd !== null && this.#request.cwd !== null && path.resolve(cwd) !== path.resolve(this.#request.cwd);
-    const command = script === null ? undefined : elsewhere ? `cd ${shellQuote(cwd)} && ${script}` : script;
+    const elsewhere =
+      cwd !== null &&
+      this.#request.cwd !== null &&
+      path.resolve(cwd) !== path.resolve(this.#request.cwd);
+    const command =
+      script === null ? undefined : elsewhere ? `cd ${shellQuote(cwd)} && ${script}` : script;
     const stdin = ask.kind === 'writeStdin';
     const decision = await this.#host.requestPermission({
       toolCallId: ask.itemId,
@@ -719,9 +941,23 @@ class CodexRun {
       kind: 'execute',
       title: script === null ? 'Run a command' : stdin ? `Send input to: ${script}` : script,
       ...(command === undefined ? {} : { command }),
-      input: { ...(script === null ? {} : { command: script }), ...(cwd ? { cwd } : {}), ...(reason ? { reason } : {}), ...(stdin ? { stdin: true } : {}) },
+      input: {
+        ...(script === null ? {} : { command: script }),
+        ...(cwd ? { cwd } : {}),
+        ...(reason ? { reason } : {}),
+        ...(stdin ? { stdin: true } : {}),
+      },
     });
-    return { decision: this.#verdict(decision, ask.itemId, script === null ? 'That command' : `The command \`${script.length > 200 ? `${script.slice(0, 199)}…` : script}\``, ask.threadId) };
+    return {
+      decision: this.#verdict(
+        decision,
+        ask.itemId,
+        script === null
+          ? 'That command'
+          : `The command \`${script.length > 200 ? `${script.slice(0, 199)}…` : script}\``,
+        ask.threadId,
+      ),
+    };
   }
 
   async #fileChangeApproval(raw: unknown): Promise<{ decision: CommandDecision }> {
@@ -740,7 +976,10 @@ class CodexRun {
       paths: patchPaths(changes),
       ...(changes.length > 0 ? { diff: patchPreview(changes, cwd) } : {}),
       input: {
-        changes: changes.map((change) => ({ path: displayPath(change.path, cwd), kind: change.kind.type })),
+        changes: changes.map((change) => ({
+          path: displayPath(change.path, cwd),
+          kind: change.kind.type,
+        })),
         ...(ask.reason ? { reason: ask.reason } : {}),
         ...(ask.grantRoot ? { grantRoot: ask.grantRoot } : {}),
       },
@@ -749,8 +988,14 @@ class CodexRun {
     return { decision: this.#verdict(decision, ask.itemId, 'That file change', ask.threadId) };
   }
 
-  async #elicitation(raw: unknown): Promise<{ action: 'accept' | 'decline' | 'cancel'; content: null; _meta: null }> {
-    const answer = (action: 'accept' | 'decline' | 'cancel') => ({ action, content: null, _meta: null });
+  async #elicitation(
+    raw: unknown,
+  ): Promise<{ action: 'accept' | 'decline' | 'cancel'; content: null; _meta: null }> {
+    const answer = (action: 'accept' | 'decline' | 'cancel') => ({
+      action,
+      content: null,
+      _meta: null,
+    });
     const parsed = elicitationSchema.safeParse(raw);
     if (!parsed.success) return answer('decline');
     const ask = parsed.data;
@@ -768,7 +1013,12 @@ class CodexRun {
       title: ask.message.trim() !== '' ? ask.message : `Use ${tool} of ${ask.serverName}`,
       input: ask._meta.tool_params ?? {},
     });
-    const verdict = this.#verdict(decision, call?.itemId ?? null, `The tool ${tool} of ${ask.serverName}`, ask.threadId);
+    const verdict = this.#verdict(
+      decision,
+      call?.itemId ?? null,
+      `The tool ${tool} of ${ask.serverName}`,
+      ask.threadId,
+    );
     return answer(verdict);
   }
 
@@ -788,10 +1038,16 @@ class CodexRun {
       })),
       multiSelect: false,
     }));
-    const reply = await this.#host.askUser({ ...(parsed.data.itemId ? { toolCallId: parsed.data.itemId } : {}), questions });
+    const reply = await this.#host.askUser({
+      ...(parsed.data.itemId ? { toolCallId: parsed.data.itemId } : {}),
+      questions,
+    });
     const answers: Record<string, { answers: string[] }> = {};
     for (const answer of reply.answers) {
-      const chosen = [...answer.selected, ...(answer.other && answer.other.trim() !== '' ? [answer.other] : [])];
+      const chosen = [
+        ...answer.selected,
+        ...(answer.other && answer.other.trim() !== '' ? [answer.other] : []),
+      ];
       if (chosen.length > 0) answers[answer.questionId] = { answers: chosen };
     }
     return { answers };

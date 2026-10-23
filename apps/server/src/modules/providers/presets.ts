@@ -23,7 +23,8 @@ const model = (id: string, name: string, extra: Partial<ProviderModel> = {}): Pr
   ...extra,
 });
 
-const UNVERIFIED = 'Defaults from public documentation, not checked against the provider. Edit them, or use "discover models" once a key is saved.';
+const UNVERIFIED =
+  'Defaults from public documentation, not checked against the provider. Edit them, or use "discover models" once a key is saved.';
 
 export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
   {
@@ -38,8 +39,16 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
       model('deepseek-v4-flash', 'DeepSeek V4 Flash', { contextWindow: 1_000_000, tools: true }),
       model('deepseek-v4-pro', 'DeepSeek V4 Pro', { contextWindow: 1_000_000, tools: true }),
       // The names DeepSeek used before; kept out of the picker in case the provider has retired them.
-      model('deepseek-chat', 'DeepSeek Chat (earlier name)', { contextWindow: 128_000, tools: true, hidden: true }),
-      model('deepseek-reasoner', 'DeepSeek Reasoner (earlier name)', { contextWindow: 128_000, tools: true, hidden: true }),
+      model('deepseek-chat', 'DeepSeek Chat (earlier name)', {
+        contextWindow: 128_000,
+        tools: true,
+        hidden: true,
+      }),
+      model('deepseek-reasoner', 'DeepSeek Reasoner (earlier name)', {
+        contextWindow: 128_000,
+        tools: true,
+        hidden: true,
+      }),
     ],
     defaultModel: 'deepseek-v4-flash',
     verified: false,
@@ -62,6 +71,20 @@ export const PROVIDER_PRESETS: readonly ProviderPreset[] = [
     verified: false,
     note: UNVERIFIED,
     docsUrl: 'https://platform.openai.com/docs/api-reference/chat',
+  },
+  {
+    id: 'anthropic',
+    name: 'Anthropic',
+    kind: 'anthropic',
+    baseUrl: 'https://api.anthropic.com/v1',
+    allowPrivateNetwork: false,
+    keyRequired: true,
+    balance: 'none',
+    models: [],
+    defaultModel: null,
+    verified: false,
+    note: 'Uses the native Messages API. Save your key, discover available models, then enable their image and tool capabilities.',
+    docsUrl: 'https://platform.claude.com/docs/en/api/messages',
   },
   {
     id: 'custom',

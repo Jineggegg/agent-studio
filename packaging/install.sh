@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Installs Agent Cloud Studio for the current user — no root needed except,
+# Installs Cloud Harness for the current user — no root needed except,
 # if you agree, to install the bubblewrap sandbox.
 #
-#   curl -fsSL https://raw.githubusercontent.com/Jineggegg/agent-studio/main/packaging/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Jineggegg/cloud-harness/main/packaging/install.sh | bash
 #
 # Options (after `| bash -s --`):
 #   --version <x.y.z>   install this release instead of the newest one
@@ -25,7 +25,7 @@ set -euo pipefail
 # part-way, bash has read no complete command and runs nothing.
 main() {
 
-REPO=Jineggegg/agent-studio
+REPO=Jineggegg/cloud-harness
 NODE_VERSION=24.21.0
 NODE_MIRROR=${AGENT_STUDIO_NODE_MIRROR:-https://nodejs.org/dist}
 INSTALL_DIR=${AGENT_STUDIO_INSTALL_DIR:-$HOME/.local/share/agent-studio}
@@ -62,9 +62,9 @@ ask() {
 
 usage() {
   cat <<'USAGE'
-Installs Agent Cloud Studio for the current user.
+Installs Cloud Harness for the current user.
 
-  curl -fsSL https://raw.githubusercontent.com/Jineggegg/agent-studio/main/packaging/install.sh | bash -s -- [options]
+  curl -fsSL https://raw.githubusercontent.com/Jineggegg/cloud-harness/main/packaging/install.sh | bash -s -- [options]
 
   --version <x.y.z>   install this release instead of the newest one
   --port <n>          listen on this port (default 7420)
@@ -170,7 +170,7 @@ fi
 [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || fail "\"$VERSION\" is not a release version (x.y.z)."
 ARCHIVE=agent-studio-$VERSION.tar.gz
 
-step "Downloading Agent Cloud Studio $VERSION"
+step "Downloading Cloud Harness $VERSION"
 fetch "$BASE/SHA256SUMS" "$WORK/SHA256SUMS"
 fetch "$BASE/$ARCHIVE" "$WORK/$ARCHIVE"
 verify "$WORK/$ARCHIVE" "$WORK/SHA256SUMS"
@@ -218,7 +218,7 @@ fi
 
 step "Installing into $INSTALL_DIR"
 tar -xzf "$WORK/$ARCHIVE" -C "$WORK"
-[ -f "$WORK/agent-studio-$VERSION/bin/agent-studio" ] || fail "The package does not look like an Agent Cloud Studio release."
+[ -f "$WORK/agent-studio-$VERSION/bin/agent-studio" ] || fail "The package does not look like a Cloud Harness release."
 rm -rf "$INSTALL_DIR/releases/$VERSION"
 mv "$WORK/agent-studio-$VERSION" "$INSTALL_DIR/releases/$VERSION"
 ln -sfn "releases/$VERSION" "$INSTALL_DIR/current"
@@ -226,11 +226,13 @@ ln -sfn "releases/$VERSION" "$INSTALL_DIR/current"
 mkdir -p "$BIN_DIR"
 cat >"$BIN_DIR/agent-studio" <<EOF
 #!/bin/sh
-# Written by the Agent Cloud Studio installer. Runs the release that is current.
+# Written by the Cloud Harness installer. Runs the release that is current.
 AGENT_STUDIO_INSTALL_DIR='$INSTALL_DIR' exec '$INSTALL_DIR/current/bin/agent-studio' "\$@"
 EOF
 chmod 755 "$BIN_DIR/agent-studio"
-STUDIO=$BIN_DIR/agent-studio
+# Keep the existing command and data paths so an upgrade does not lose accounts.
+ln -sfn agent-studio "$BIN_DIR/cloud-harness"
+STUDIO=$BIN_DIR/cloud-harness
 [ -z "${AGENT_STUDIO_NODE:-}" ] || export AGENT_STUDIO_NODE
 
 # Settings: created once, never overwritten. The port given now is written in.
@@ -238,7 +240,7 @@ mkdir -p "$CONFIG_DIR"
 chmod 700 "$CONFIG_DIR"
 if [ ! -f "$CONFIG_DIR/env" ]; then
   cat >"$CONFIG_DIR/env" <<'EOF'
-# Agent Cloud Studio settings: one AGENT_STUDIO_NAME=value per line.
+# Cloud Harness settings: one AGENT_STUDIO_NAME=value per line.
 # Every setting is described in docs/configuration.md. After a change, run
 #   agent-studio service restart
 #
@@ -339,7 +341,7 @@ fi
 
 # ---- done ---------------------------------------------------------------------
 
-printf '\n%sAgent Cloud Studio %s is installed.%s\n\n' "$BOLD" "$VERSION" "$RESET"
+printf '\n%sCloud Harness %s is installed.%s\n\n' "$BOLD" "$VERSION" "$RESET"
 if [ "$STARTED" = 1 ]; then
   TOKEN=$("$STUDIO" setup-token 2>/dev/null) || TOKEN=
   printf '  Open      http://127.0.0.1:%s   (on this machine)\n' "$LISTEN_PORT"

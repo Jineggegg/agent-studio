@@ -9,7 +9,14 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import { ZodError, type ZodType } from 'zod';
 import { isLoopbackHostname, type StudioConfig } from './config.js';
 import { safeEqual } from './crypto.js';
-import { StudioError, badRequest, describeError, forbidden, isStudioError, unauthorized } from './errors.js';
+import {
+  StudioError,
+  badRequest,
+  describeError,
+  forbidden,
+  isStudioError,
+  unauthorized,
+} from './errors.js';
 import type { Authenticator, Principal, TokenScope } from './principal.js';
 import { maskAddress, redactLogFields, redactSecrets } from './redact.js';
 
@@ -35,7 +42,12 @@ declare module 'fastify' {
   interface FastifyRequest {
     principal: Principal | null;
     /** Set by the identifying hook for API requests; read by the enforcing hook. */
-    studioGate: { declared: RouteConfig | undefined; isApiRoute: boolean; staleSession: boolean; invalidBearer: boolean } | null;
+    studioGate: {
+      declared: RouteConfig | undefined;
+      isApiRoute: boolean;
+      staleSession: boolean;
+      invalidBearer: boolean;
+    } | null;
   }
   interface FastifyContextConfig {
     studio?: RouteConfig;
@@ -109,7 +121,11 @@ function hostnameOf(hostHeader: string): string {
  * throws unless the caller is a person in a signed-in browser.
  */
 export function requireBrowser(principal: Pick<Principal, 'via'>): void {
-  if (principal.via !== 'session') throw forbidden('This can only be done from a signed-in browser, not with an API token.', 'session_required');
+  if (principal.via !== 'session')
+    throw forbidden(
+      'This can only be done from a signed-in browser, not with an API token.',
+      'session_required',
+    );
 }
 
 /** The server log's settings. Every entry passes through {@link redactLogFields}. */
@@ -127,7 +143,10 @@ export function loggerOptions(level: string, stream?: { write(line: string): voi
     hooks: {
       // The message itself: Fastify logs an unhandled error with its message as the text.
       logMethod(this: unknown, args: unknown[], method: (...args: unknown[]) => void) {
-        method.apply(this, args.map((arg) => (typeof arg === 'string' ? redactSecrets(arg) : arg)));
+        method.apply(
+          this,
+          args.map((arg) => (typeof arg === 'string' ? redactSecrets(arg) : arg)),
+        );
       },
     },
     serializers: {
@@ -135,7 +154,10 @@ export function loggerOptions(level: string, stream?: { write(line: string): voi
         method: request.method,
         // Query strings are dropped: they are the likeliest place for something sensitive.
         // Path segments that are themselves capabilities are masked.
-        path: (request.url.split('?')[0] ?? '').replace(/(\/api\/plugins\/panel\/)[^/]+/, '$1[grant]'),
+        path: (request.url.split('?')[0] ?? '').replace(
+          /(\/api\/(?:plugins\/panel|mini-apps\/preview)\/)[^/]+/,
+          '$1[grant]',
+        ),
         // Enough to tell networks apart, not enough to identify a person.
         ip: maskAddress(request.ip),
       }),
@@ -151,7 +173,9 @@ export class HttpKernel {
 
   constructor(config: StudioConfig) {
     this.#config = config;
-    this.#publicHosts = new Map(config.publicOrigins.map((origin) => [new URL(origin).host.toLowerCase(), origin]));
+    this.#publicHosts = new Map(
+      config.publicOrigins.map((origin) => [new URL(origin).host.toLowerCase(), origin]),
+    );
     this.app = Fastify({
       logger: config.logLevel === 'silent' ? false : loggerOptions(config.logLevel),
       trustProxy: config.trustProxy ? 'loopback' : false,
@@ -162,7 +186,12 @@ export class HttpKernel {
       keepAliveTimeout: 65_000,
       maxRequestsPerSocket: 1000,
       ...(config.tls
-        ? { https: { cert: readFileSync(config.tls.certFile), key: readFileSync(config.tls.keyFile) } }
+        ? {
+            https: {
+              cert: readFileSync(config.tls.certFile),
+              key: readFileSync(config.tls.keyFile),
+            },
+          }
         : {}),
     }) as unknown as FastifyInstance;
     this.app.decorateRequest('principal', null);
@@ -203,7 +232,11 @@ export class HttpKernel {
     const hostname = hostnameOf(host);
     if (isLoopbackHostname(hostname)) return true;
     // Bound to one specific non-loopback address: that literal address is acceptable.
-    return this.#config.host !== '0.0.0.0' && this.#config.host !== '::' && hostname === this.#config.host;
+    return (
+      this.#config.host !== '0.0.0.0' &&
+      this.#config.host !== '::' &&
+      hostname === this.#config.host
+    );
   }
 
   /**
@@ -220,7 +253,11 @@ export class HttpKernel {
     if (!hostHeader || url.host.toLowerCase() !== hostHeader.toLowerCase()) return false;
     if (this.#config.publicOrigins.includes(url.origin)) return true;
     if (isLoopbackHostname(url.hostname)) return true;
-    return this.#config.host !== '0.0.0.0' && this.#config.host !== '::' && url.hostname === this.#config.host;
+    return (
+      this.#config.host !== '0.0.0.0' &&
+      this.#config.host !== '::' &&
+      url.hostname === this.#config.host
+    );
   }
 
   async init(): Promise<void> {
@@ -261,12 +298,17 @@ export class HttpKernel {
     // A route without an explicit access level is a bug, not a public endpoint.
     app.addHook('onRoute', (route) => {
       if (route.url.startsWith('/api/') && !route.config?.studio) {
-        throw new Error(`Route ${String(route.method)} ${route.url} does not declare who may call it.`);
+        throw new Error(
+          `Route ${String(route.method)} ${route.url} does not declare who may call it.`,
+        );
       }
     });
 
     app.addHook('onRequest', async (request, reply) => {
-      reply.header('permissions-policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+      reply.header(
+        'permissions-policy',
+        'camera=(), microphone=(self), geolocation=(), payment=(), usb=()',
+      );
       if (!this.#hostAllowed(request.headers.host)) {
         throw forbidden(
           'This address is not one this server answers to. Add it to AGENT_STUDIO_PUBLIC_ORIGINS.',
@@ -319,7 +361,11 @@ export class HttpKernel {
       keyGenerator: (request) => request.principal?.userId ?? request.ip,
       errorResponseBuilder: (_request, context) => ({
         statusCode: 429,
-        error: { code: 'rate_limited', message: 'Too many requests. Slow down.', details: { retryAfterSeconds: Math.ceil(context.ttl / 1000) } },
+        error: {
+          code: 'rate_limited',
+          message: 'Too many requests. Slow down.',
+          details: { retryAfterSeconds: Math.ceil(context.ttl / 1000) },
+        },
       }),
     });
     // The enforcing half: cross-site defences, then the route's access rules.
@@ -347,10 +393,15 @@ export class HttpKernel {
           throw forbidden('Cross-site requests are not accepted.', 'origin_not_allowed');
         }
         if (principal?.via === 'session') {
-          if (origin === undefined) throw forbidden('This request is missing its Origin.', 'origin_required');
+          if (origin === undefined)
+            throw forbidden('This request is missing its Origin.', 'origin_required');
           if (unsafe) {
             const sent = request.headers[CSRF_HEADER];
-            if (typeof sent !== 'string' || !principal.csrfToken || !safeEqual(sent, principal.csrfToken)) {
+            if (
+              typeof sent !== 'string' ||
+              !principal.csrfToken ||
+              !safeEqual(sent, principal.csrfToken)
+            ) {
               throw forbidden('This request is missing its anti-forgery token.', 'csrf_failed');
             }
           }
@@ -360,18 +411,27 @@ export class HttpKernel {
       if (!isApiRoute) return; // nothing matched under /api: the not-found handler answers
       // An API route with no declaration cannot be registered (see onRoute); should one
       // ever slip through, it is treated as the most restricted kind rather than as open.
-      const route: RouteConfig = declared ?? { access: 'owner', scope: 'admin', sessionOnly: true, recentAuth: true };
+      const route: RouteConfig = declared ?? {
+        access: 'owner',
+        scope: 'admin',
+        sessionOnly: true,
+        recentAuth: true,
+      };
       if (route.access === 'public' || route.access === 'self') return;
       if (!principal) {
         // "Your session ended" and "you never signed in" are different things to tell a person.
-        if (staleSession) throw unauthorized('Your session has ended. Sign in again.', 'session_expired');
+        if (staleSession)
+          throw unauthorized('Your session has ended. Sign in again.', 'session_expired');
         throw unauthorized();
       }
       if (route.access === 'owner' && principal.role !== 'owner') {
         throw forbidden('Only the owner of this Studio can do that.', 'owner_required');
       }
       if (route.sessionOnly && principal.via !== 'session') {
-        throw forbidden('This can only be done from a signed-in browser, not with an API token.', 'session_required');
+        throw forbidden(
+          'This can only be done from a signed-in browser, not with an API token.',
+          'session_required',
+        );
       }
       if (!principal.scopes.includes(route.scope)) {
         throw forbidden(`This API token lacks the "${route.scope}" scope.`, 'insufficient_scope');
@@ -383,41 +443,82 @@ export class HttpKernel {
 
     app.setErrorHandler((error, request, reply) => {
       if (isStudioError(error)) {
-        if (error.status === 429 && typeof (error.details as { retryAfterSeconds?: number })?.retryAfterSeconds === 'number') {
-          void reply.header('retry-after', String((error.details as { retryAfterSeconds: number }).retryAfterSeconds));
+        if (
+          error.status === 429 &&
+          typeof (error.details as { retryAfterSeconds?: number })?.retryAfterSeconds === 'number'
+        ) {
+          void reply.header(
+            'retry-after',
+            String((error.details as { retryAfterSeconds: number }).retryAfterSeconds),
+          );
         }
-        return reply.status(error.status).send({ error: { code: error.code, message: error.message, details: error.details } });
+        return reply
+          .status(error.status)
+          .send({ error: { code: error.code, message: error.message, details: error.details } });
       }
       if (error instanceof ZodError) {
         return reply.status(400).send({
           error: {
             code: 'invalid_request',
             message: 'The request is not valid.',
-            details: error.issues.map((issue) => ({ path: issue.path.join('.'), message: issue.message })),
+            details: error.issues.map((issue) => ({
+              path: issue.path.join('.'),
+              message: issue.message,
+            })),
           },
         });
       }
-      const fastifyError = error as { statusCode?: number; code?: string; message?: string; error?: unknown };
+      const fastifyError = error as {
+        statusCode?: number;
+        code?: string;
+        message?: string;
+        error?: unknown;
+      };
       if (fastifyError.statusCode === 429 && fastifyError.error) {
         return reply.status(429).send({ error: fastifyError.error });
       }
-      if (typeof fastifyError.statusCode === 'number' && fastifyError.statusCode >= 400 && fastifyError.statusCode < 500) {
+      if (
+        typeof fastifyError.statusCode === 'number' &&
+        fastifyError.statusCode >= 400 &&
+        fastifyError.statusCode < 500
+      ) {
         const code =
-          fastifyError.statusCode === 413 ? 'too_large' : fastifyError.statusCode === 415 ? 'unsupported_media_type' : 'bad_request';
+          fastifyError.statusCode === 413
+            ? 'too_large'
+            : fastifyError.statusCode === 415
+              ? 'unsupported_media_type'
+              : 'bad_request';
         return reply.status(fastifyError.statusCode).send({
-          error: { code, message: fastifyError.statusCode === 413 ? 'That is too large.' : 'The request could not be read.' },
+          error: {
+            code,
+            message:
+              fastifyError.statusCode === 413
+                ? 'That is too large.'
+                : 'The request could not be read.',
+          },
         });
       }
       request.log.error(
-        { err: { message: redactSecrets(describeError(error)), stack: error instanceof Error && error.stack ? redactSecrets(error.stack) : undefined } },
+        {
+          err: {
+            message: redactSecrets(describeError(error)),
+            stack: error instanceof Error && error.stack ? redactSecrets(error.stack) : undefined,
+          },
+        },
         'request failed',
       );
-      return reply.status(500).send({ error: { code: 'internal_error', message: 'Something went wrong on the server.' } });
+      return reply
+        .status(500)
+        .send({
+          error: { code: 'internal_error', message: 'Something went wrong on the server.' },
+        });
     });
 
     app.setNotFoundHandler((request, reply) => {
       const wantsPage =
-        request.method === 'GET' && !looksLikeApiPath(request.url) && !path.extname(request.url.split('?')[0] ?? '');
+        request.method === 'GET' &&
+        !looksLikeApiPath(request.url) &&
+        !path.extname(request.url.split('?')[0] ?? '');
       if (wantsPage && config.webDir) {
         return reply.header('cache-control', 'no-cache').type('text/html').sendFile('index.html');
       }
@@ -446,7 +547,9 @@ export class HttpKernel {
   route<B = unknown, Q = unknown, P = unknown>(spec: RouteSpec<B, Q, P>): void {
     const studio: RouteConfig = {
       access: spec.access,
-      scope: spec.scope ?? (spec.access === 'owner' ? 'admin' : spec.method === 'GET' ? 'read' : 'write'),
+      scope:
+        spec.scope ??
+        (spec.access === 'owner' ? 'admin' : spec.method === 'GET' ? 'read' : 'write'),
       sessionOnly: spec.sessionOnly ?? false,
       recentAuth: spec.recentAuth ?? false,
     };
@@ -456,13 +559,17 @@ export class HttpKernel {
       ...(spec.bodyLimit === undefined ? {} : { bodyLimit: spec.bodyLimit }),
       config: {
         studio,
-        ...(spec.rateLimit ? { rateLimit: { max: spec.rateLimit.max, timeWindow: spec.rateLimit.windowMs } } : {}),
+        ...(spec.rateLimit
+          ? { rateLimit: { max: spec.rateLimit.max, timeWindow: spec.rateLimit.windowMs } }
+          : {}),
       },
       handler: async (request, reply) => {
         const context: RouteContext<B, Q, P> = {
           body: (spec.body ? spec.body.parse(request.body ?? {}) : (request.body as B)) as B,
           query: (spec.query ? spec.query.parse(request.query ?? {}) : (request.query as Q)) as Q,
-          params: (spec.params ? spec.params.parse(request.params ?? {}) : (request.params as P)) as P,
+          params: (spec.params
+            ? spec.params.parse(request.params ?? {})
+            : (request.params as P)) as P,
           principal: request.principal,
           get user(): Principal {
             if (!request.principal) throw unauthorized();

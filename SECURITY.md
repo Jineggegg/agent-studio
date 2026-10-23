@@ -1,6 +1,6 @@
 # Security
 
-Agent Cloud Studio lets AI agents run commands on your machine and lets you
+Cloud Harness lets AI agents run commands on your machine and lets you
 reach that from a phone. That is a serious thing to put on a network, and this
 document says plainly what protects you, what does not, and how to tell us when
 we got something wrong.
@@ -41,6 +41,7 @@ Security fixes go into the latest release only.
 ## What protects you
 
 **The front door**
+
 - Loopback by default; remote access is expected to go through a tunnel, mesh
   VPN or reverse proxy that terminates TLS (`docs/deployment/remote-access.md`).
 - The `Host` header must be loopback or a configured origin (defeats DNS
@@ -63,6 +64,7 @@ Security fixes go into the latest release only.
   rendering in the client, and frames are refused.
 
 **Agents**
+
 - One permission engine for every agent: modes (plan, ask, accept-edits,
   auto), allow/deny/ask rules, and a risk classifier. Destructive commands,
   privilege escalation, writes outside the project, credential locations and
@@ -80,6 +82,7 @@ Security fixes go into the latest release only.
   credentials and uses only their documented interfaces.
 
 **Your data**
+
 - The data directory is owner-only. Stored credentials (model API keys, push
   keys) are encrypted with AES-256-GCM and are never returned by the API.
 - File, Git and download APIs are confined to the project directory after
@@ -100,6 +103,7 @@ Security fixes go into the latest release only.
   addresses.
 
 **The supply chain**
+
 - Dependency install scripts are disabled; the lockfile may only reference the
   public registry with integrity hashes; CI audits dependencies and licences
   and scans every commit for secrets.
@@ -122,7 +126,7 @@ Security fixes go into the latest release only.
   loose in anyway.
 - **Prompt injection is real.** A web page, a file in a repository or a memory
   note can contain text that tries to steer an agent. Approvals and the sandbox
-  limit what a steered agent can do; nothing can stop it from *asking*.
+  limit what a steered agent can do; nothing can stop it from _asking_.
 - **The terminal is your shell.** Anyone who gets an owner session that
   authenticated recently has the machine. Use a passkey, keep the service off
   the open internet where you can (a mesh VPN is ideal), and put an

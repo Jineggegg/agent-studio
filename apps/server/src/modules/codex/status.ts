@@ -4,7 +4,13 @@ import { type ProcessSupervisor, terminate } from '../../kernel/process.js';
 import { AppServerClient, RpcRefusal } from './client.js';
 import { SIGN_IN_HINT, stderrSummary, tidy } from './errors.js';
 import { type CodexLauncher, appServerArguments, savedRuleFiles } from './launch.js';
-import { type AccountRead, type CodexModel, accountReadSchema, modelListSchema, modelSchema } from './protocol.js';
+import {
+  type AccountRead,
+  type CodexModel,
+  accountReadSchema,
+  modelListSchema,
+  modelSchema,
+} from './protocol.js';
 
 /**
  * What the Studio knows about the installed Codex CLI without running a turn:
@@ -28,10 +34,19 @@ const CATALOGUE_TTL_MS = 10 * 60_000;
 /** After the account and model list could not be read, how long before the CLI is asked again. */
 const CATALOGUE_RETRY_MS = 30_000;
 
-export const CLIENT_INFO = { name: 'agent-studio', title: 'Agent Cloud Studio', version: '2.0.0' } as const;
+export const CLIENT_INFO = {
+  name: 'agent-studio',
+  title: 'Cloud Harness',
+  version: '2.0.0',
+} as const;
 
 /** The modes the adapter supports: all of them, because every one is decided by the Studio's engine. */
-const PERMISSION_MODES: AgentCapabilities['permissionModes'] = ['plan', 'ask', 'accept-edits', 'auto'];
+const PERMISSION_MODES: AgentCapabilities['permissionModes'] = [
+  'plan',
+  'ask',
+  'accept-edits',
+  'auto',
+];
 
 export interface Catalogue {
   readonly models: AgentModelOption[];
@@ -54,14 +69,21 @@ export function accountLabel(read: AccountRead): string | null {
 }
 
 export function modelOption(model: CodexModel): AgentModelOption {
-  const efforts = (model.supportedReasoningEfforts ?? []).map((option) => option.reasoningEffort).filter((effort) => effort !== '');
+  const efforts = (model.supportedReasoningEfforts ?? [])
+    .map((option) => option.reasoningEffort)
+    .filter((effort) => effort !== '');
   return {
     id: model.model,
+    ...(model.serviceTiers
+      ? { fastMode: model.serviceTiers.some((tier) => tier.id === 'fast') }
+      : {}),
     label: model.displayName && model.displayName.trim() !== '' ? model.displayName : model.model,
     ...(model.description ? { description: model.description } : {}),
     ...(model.isDefault ? { recommended: true } : {}),
     ...(efforts.length > 0 ? { efforts } : {}),
-    ...(model.defaultReasoningEffort && efforts.includes(model.defaultReasoningEffort) ? { defaultEffort: model.defaultReasoningEffort } : {}),
+    ...(model.defaultReasoningEffort && efforts.includes(model.defaultReasoningEffort)
+      ? { defaultEffort: model.defaultReasoningEffort }
+      : {}),
   };
 }
 
@@ -76,7 +98,11 @@ export class CodexProbe {
   #catalogueRetryAt = 0;
   #account: string | null = null;
 
-  constructor(input: { launcher: CodexLauncher; processes: ProcessSupervisor; log: FastifyBaseLogger }) {
+  constructor(input: {
+    launcher: CodexLauncher;
+    processes: ProcessSupervisor;
+    log: FastifyBaseLogger;
+  }) {
     this.#launcher = input.launcher;
     this.#processes = input.processes;
     this.#log = input.log;
@@ -95,7 +121,10 @@ export class CodexProbe {
     if (this.#status && this.#status.until > Date.now()) return Promise.resolve(this.#status.value);
     this.#statusInFlight ??= this.#readStatus()
       .then((value) => {
-        this.#status = { value, until: Date.now() + (value.problem === null ? STATUS_TTL_MS : STATUS_PROBLEM_TTL_MS) };
+        this.#status = {
+          value,
+          until: Date.now() + (value.problem === null ? STATUS_TTL_MS : STATUS_PROBLEM_TTL_MS),
+        };
         return value;
       })
       .finally(() => {
@@ -125,6 +154,19 @@ export class CodexProbe {
       resume: true,
       planMode: true,
       usage: true,
+      fastMode: {
+        supported: catalogue?.models.some((model) => model.fastMode) ?? false,
+        reason:
+          'Availability is reported by the installed CLI model catalogue; account access is checked when running.',
+      },
+      mcp: [
+        {
+          name: 'Cloud Harness tools',
+          status: 'configured',
+          detail:
+            'Only the managed tool bridge is enabled. Connection is established when a run starts.',
+        },
+      ],
     };
   }
 
@@ -138,7 +180,8 @@ export class CodexProbe {
         version: null,
         signedIn: false,
         account: null,
-        problem: 'The Codex command-line tool is not installed for the account this Studio runs as. Install it (`npm install -g @openai/codex`), then sign in.',
+        problem:
+          'The Codex command-line tool is not installed for the account this Studio runs as. Install it (`npm install -g @openai/codex`), then sign in.',
       };
     }
     const login = await this.#login();
@@ -156,13 +199,26 @@ export class CodexProbe {
     }
     // An agent that may not run here needs no account label and no model list.
     if (this.#launcher.unavailable !== null) {
-      return { installed: true, version: version.version, signedIn: true, account: null, problem: this.#launcher.unavailable };
+      return {
+        installed: true,
+        version: version.version,
+        signedIn: true,
+        account: null,
+        problem: this.#launcher.unavailable,
+      };
     }
     // Who is signed in comes with the model list; neither is needed to call the agent usable, and
     // neither is asked for again while what is known is fresh.
     const stale = !this.#catalogue || this.#catalogue.until <= Date.now();
-    if ((stale || this.#account === null) && Date.now() >= this.#catalogueRetryAt) await this.#refreshCatalogue();
-    return { installed: true, version: version.version, signedIn: true, account: this.#account, problem: this.#isolationProblem() };
+    if ((stale || this.#account === null) && Date.now() >= this.#catalogueRetryAt)
+      await this.#refreshCatalogue();
+    return {
+      installed: true,
+      version: version.version,
+      signedIn: true,
+      account: this.#account,
+      problem: this.#isolationProblem(),
+    };
   }
 
   /**
@@ -180,18 +236,30 @@ export class CodexProbe {
   async #version(): Promise<{ installed: boolean; version: string | null }> {
     const command = this.#launcher.command(['--version']);
     try {
-      const result = await this.#processes.run(command.file, command.args, { env: command.env, timeoutMs: VERSION_TIMEOUT_MS, maxOutputBytes: 16 * 1024 });
+      const result = await this.#processes.run(command.file, command.args, {
+        env: command.env,
+        timeoutMs: VERSION_TIMEOUT_MS,
+        maxOutputBytes: 16 * 1024,
+      });
       // Under the sandbox it is bubblewrap that fails to find the program.
-      if (result.code !== 0 && /execvp|no such file or directory|not found/i.test(result.stderr)) return { installed: false, version: null };
+      if (result.code !== 0 && /execvp|no such file or directory|not found/i.test(result.stderr))
+        return { installed: false, version: null };
       const text = `${result.stdout}\n${result.stderr}`;
       const match = /codex(?:-cli)?\s+v?(\d[\w.+-]*)/i.exec(text);
       if (!match && result.code !== 0) {
-        this.#log.warn({ code: result.code, err: stderrSummary(result.stderr, 200) }, 'codex: --version failed');
+        this.#log.warn(
+          { code: result.code, err: stderrSummary(result.stderr, 200) },
+          'codex: --version failed',
+        );
         return { installed: false, version: null };
       }
       return { installed: true, version: match ? match[1]! : null };
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') this.#log.warn({ err: (error as NodeJS.ErrnoException).code ?? 'error' }, 'codex: could not be started');
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
+        this.#log.warn(
+          { err: (error as NodeJS.ErrnoException).code ?? 'error' },
+          'codex: could not be started',
+        );
       return { installed: false, version: null };
     }
   }
@@ -200,11 +268,17 @@ export class CodexProbe {
   async #login(): Promise<{ signedIn: boolean | null; detail: string }> {
     const command = this.#launcher.command(['login', 'status']);
     try {
-      const result = await this.#processes.run(command.file, command.args, { env: command.env, timeoutMs: LOGIN_TIMEOUT_MS, maxOutputBytes: 16 * 1024 });
+      const result = await this.#processes.run(command.file, command.args, {
+        env: command.env,
+        timeoutMs: LOGIN_TIMEOUT_MS,
+        maxOutputBytes: 16 * 1024,
+      });
       const text = `${result.stdout}\n${result.stderr}`;
       if (result.timedOut) return { signedIn: null, detail: 'the status command did not answer' };
-      if (/not logged in|not signed in|logged out/i.test(text)) return { signedIn: false, detail: '' };
-      if (result.code === 0 && /logged in|signed in/i.test(text)) return { signedIn: true, detail: '' };
+      if (/not logged in|not signed in|logged out/i.test(text))
+        return { signedIn: false, detail: '' };
+      if (result.code === 0 && /logged in|signed in/i.test(text))
+        return { signedIn: true, detail: '' };
       return { signedIn: null, detail: stderrSummary(text, 160) };
     } catch {
       return { signedIn: null, detail: 'the status command could not be run' };
@@ -216,10 +290,12 @@ export class CodexProbe {
   #refreshCatalogue(): Promise<Catalogue | null> {
     this.#catalogueInFlight ??= this.#askAppServer()
       .then((answer) => {
-        if (!answer?.catalogue || answer.account === null) this.#catalogueRetryAt = Date.now() + CATALOGUE_RETRY_MS;
+        if (!answer?.catalogue || answer.account === null)
+          this.#catalogueRetryAt = Date.now() + CATALOGUE_RETRY_MS;
         if (!answer) return this.#catalogue?.value ?? null;
         this.#account = answer.account;
-        if (answer.catalogue) this.#catalogue = { value: answer.catalogue, until: Date.now() + CATALOGUE_TTL_MS };
+        if (answer.catalogue)
+          this.#catalogue = { value: answer.catalogue, until: Date.now() + CATALOGUE_TTL_MS };
         return this.#catalogue?.value ?? null;
       })
       .finally(() => {
@@ -233,7 +309,10 @@ export class CodexProbe {
     const command = this.#launcher.command(appServerArguments({ bridge: null, cwd: null }));
     let child: ReturnType<ProcessSupervisor['spawn']>;
     try {
-      child = this.#processes.spawn(command.file, command.args, { env: command.env, stdin: 'pipe' });
+      child = this.#processes.spawn(command.file, command.args, {
+        env: command.env,
+        stdin: 'pipe',
+      });
     } catch {
       return null;
     }
@@ -241,7 +320,8 @@ export class CodexProbe {
       child,
       {
         notification: () => {},
-        request: () => Promise.reject(new RpcRefusal('This connection only asks about the account.')),
+        request: () =>
+          Promise.reject(new RpcRefusal('This connection only asks about the account.')),
         failed: () => {},
       },
       this.#log,
@@ -250,11 +330,15 @@ export class CodexProbe {
     try {
       await client.request('initialize', { clientInfo: CLIENT_INFO, capabilities: null }, timeout);
       client.notify('initialized');
-      const account = accountReadSchema.safeParse(await client.request('account/read', { refreshToken: false }, timeout));
+      const account = accountReadSchema.safeParse(
+        await client.request('account/read', { refreshToken: false }, timeout),
+      );
       const models: CodexModel[] = [];
       let cursor: string | null = null;
       for (let page = 0; page < 5; page += 1) {
-        const list = modelListSchema.safeParse(await client.request('model/list', cursor === null ? {} : { cursor }, timeout));
+        const list = modelListSchema.safeParse(
+          await client.request('model/list', cursor === null ? {} : { cursor }, timeout),
+        );
         if (!list.success) break;
         for (const entry of list.data.data) {
           const model = modelSchema.safeParse(entry);
@@ -269,15 +353,23 @@ export class CodexProbe {
           : {
               models: models.map(modelOption),
               defaultModel: models.find((model) => model.isDefault)?.model ?? null,
-              images: models.some((model) => (model.inputModalities ?? ['text', 'image']).includes('image')),
+              images: models.some((model) =>
+                (model.inputModalities ?? ['text', 'image']).includes('image'),
+              ),
             };
       return { account: account.success ? accountLabel(account.data) : null, catalogue };
     } catch (error) {
-      this.#log.debug({ err: error instanceof Error ? tidy(error.message, 200) : 'error' }, 'codex: the account and model list could not be read');
+      this.#log.debug(
+        { err: error instanceof Error ? tidy(error.message, 200) : 'error' },
+        'codex: the account and model list could not be read',
+      );
       return null;
     } finally {
       client.end();
-      const gone = await Promise.race([client.exited.then(() => true), new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1500).unref())]);
+      const gone = await Promise.race([
+        client.exited.then(() => true),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1500).unref()),
+      ]);
       if (!gone) terminate(child, 1000);
     }
   }

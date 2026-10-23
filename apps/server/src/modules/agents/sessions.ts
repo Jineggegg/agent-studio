@@ -26,6 +26,7 @@ import type { ModuleContext } from '../../kernel/module.js';
 import type { Principal } from '../../kernel/principal.js';
 import type { ProjectRecord } from '../projects/projects.service.js';
 import type { AgentAdapter } from './adapter.js';
+import { requireFastMode } from './fast-mode.js';
 import { effectiveMode } from './permissions.js';
 import { DEFAULT_TITLE, presentEvent } from './present.js';
 import type { AgentStore, SessionPatch, SessionRow, Visibility } from './store.js';
@@ -130,13 +131,23 @@ export class SessionService {
   }
 
   /** Appends a durable event to a session's log and sends it to whoever is watching. Returns its sequence number. */
-  append<T extends SessionEventType>(sessionId: string, runId: string | null, type: T, data: SessionEventData<T>): number {
+  append<T extends SessionEventType>(
+    sessionId: string,
+    runId: string | null,
+    type: T,
+    data: SessionEventData<T>,
+  ): number {
     return this.atomic(() => {
       const at = Date.now();
       const seq = this.#store.appendEvent(sessionId, runId, type, data, at);
       if (type === SESSION_EVENT.messageUser || type === SESSION_EVENT.messageAssistant) {
         const text = (data as { text: string }).text;
-        this.#store.indexMessage(sessionId, seq, type === SESSION_EVENT.messageUser ? 'user' : 'assistant', text);
+        this.#store.indexMessage(
+          sessionId,
+          seq,
+          type === SESSION_EVENT.messageUser ? 'user' : 'assistant',
+          text,
+        );
       }
       this.#announce(() => this.#bus.publish(sessionTopic(sessionId), type, data, seq));
       return seq;
@@ -159,7 +170,11 @@ export class SessionService {
    * user or to the other modules names its session in one of three places.
    */
   #aboutHidden(data: unknown): boolean {
-    const value = (data ?? {}) as { sessionId?: unknown; session?: { id?: unknown } | null; approval?: { sessionId?: unknown } | null };
+    const value = (data ?? {}) as {
+      sessionId?: unknown;
+      session?: { id?: unknown } | null;
+      approval?: { sessionId?: unknown } | null;
+    };
     const sessionId = value.sessionId ?? value.session?.id ?? value.approval?.sessionId;
     return typeof sessionId === 'string' && this.isHidden(sessionId);
   }
@@ -191,10 +206,14 @@ export class SessionService {
       const access = projects.accessOf(principal, row.project_id);
       project = access === null ? null : projects.find(row.project_id);
       if (!project) throw sessionNotFound();
-      if (need === 'write' && access !== 'write') throw forbidden('You can view this project but not change it.', 'project_read_only');
+      if (need === 'write' && access !== 'write')
+        throw forbidden('You can view this project but not change it.', 'project_read_only');
     }
     if (need === 'write' && row.user_id !== principal.userId) {
-      throw forbidden('Only the person who started this session can write in it.', 'not_your_session');
+      throw forbidden(
+        'Only the person who started this session can write in it.',
+        'not_your_session',
+      );
     }
     return { row, project };
   }
@@ -203,7 +222,10 @@ export class SessionService {
   canWatch(principal: Principal, sessionId: string): boolean {
     const row = this.#store.sessionFor(sessionId, principal.userId, principal.role === 'owner');
     if (!row) return false;
-    return row.project_id === null || this.#context.services.projects.accessOf(principal, row.project_id) !== null;
+    return (
+      row.project_id === null ||
+      this.#context.services.projects.accessOf(principal, row.project_id) !== null
+    );
   }
 
   /** The sessions a caller's lists cover: their own (or everyone's, for the owner who asks) in projects they can reach now. */
@@ -224,7 +246,12 @@ export class SessionService {
   }
 
   present(row: SessionRow, project?: ProjectRecord | null): Session {
-    const record = project === undefined ? (row.project_id === null ? null : this.#context.services.projects.find(row.project_id)) : project;
+    const record =
+      project === undefined
+        ? row.project_id === null
+          ? null
+          : this.#context.services.projects.find(row.project_id)
+        : project;
     return {
       id: row.id,
       projectId: row.project_id,
@@ -240,6 +267,10 @@ export class SessionService {
       archived: row.archived_at !== null,
       chainId: row.chain_id,
       parentSessionId: row.parent_session_id,
+      groupId: row.group_id,
+      accountProfileId: row.account_profile_id,
+      fastMode: row.fast_mode === 1,
+      forkedAtSeq: row.forked_at_seq,
       attention: row.attention,
       activeRunId: this.#store.activeRun(row.id)?.id ?? null,
       hasDraft: row.draft.trim() !== '',
@@ -262,6 +293,16 @@ export class SessionService {
     return session;
   }
 
+  requireGroup(principal: Principal, id: string): { id: string; name: string; created_at: number } {
+    const group = this.#context.db.get<{ id: string; name: string; created_at: number }>(
+      'SELECT id, name, created_at FROM agent_conversation_groups WHERE id = ? AND user_id = ?',
+      id,
+      principal.userId,
+    );
+    if (!group) throw notFound('No such conversation group.', 'group_not_found');
+    return group;
+  }
+
   // ---- attention -----------------------------------------------------------
 
   /**
@@ -273,7 +314,8 @@ export class SessionService {
     if (!row) return;
     const active = this.#store.activeRun(sessionId);
     let attention: SessionRow['attention'] = 'none';
-    if (active) attention = this.#store.pendingApprovalsOfRun(active.id).length > 0 ? 'needs-you' : 'running';
+    if (active)
+      attention = this.#store.pendingApprovalsOfRun(active.id).length > 0 ? 'needs-you' : 'running';
     else if (this.#store.unresolvedRuns(sessionId).length > 0) attention = 'needs-you';
     else if (this.#store.hasUnseenResult(sessionId)) attention = 'unseen';
     const changed = attention !== row.attention;
@@ -319,12 +361,24 @@ export class SessionService {
   }
 
   activity(principal: Principal): ActivitySummary {
-    const visible = new Set(this.#context.services.projects.list(principal).map((project) => project.id));
+    const visible = new Set(
+      this.#context.services.projects.list(principal).map((project) => project.id),
+    );
     const byProject = new Map<string | null, ProjectActivity>();
     for (const row of this.#store.activeSessions(principal.userId)) {
       if (row.project_id !== null && !visible.has(row.project_id)) continue;
       let entry = byProject.get(row.project_id);
-      if (!entry) byProject.set(row.project_id, (entry = { projectId: row.project_id, running: 0, runningAgents: [], attention: [], unseen: [] }));
+      if (!entry)
+        byProject.set(
+          row.project_id,
+          (entry = {
+            projectId: row.project_id,
+            running: 0,
+            runningAgents: [],
+            attention: [],
+            unseen: [],
+          }),
+        );
       if (this.#store.activeRun(row.id)) {
         entry.running += 1;
         if (!entry.runningAgents.includes(row.agent_id)) entry.runningAgents.push(row.agent_id);
@@ -337,13 +391,25 @@ export class SessionService {
 
   // ---- create, read, change, remove ----------------------------------------
 
-  async create(principal: Principal, input: CreateSessionRequest, adapter: AgentAdapter | undefined, options: SessionOptions = {}): Promise<Session> {
-    if (!adapter) throw unprocessable('That agent is not available on this Studio.', 'agent_unavailable');
-    if (options.seed !== undefined && options.seed.length > SESSION_SEED_CHARS) throw new Error('The background for a new session is too long.');
+  async create(
+    principal: Principal,
+    input: CreateSessionRequest,
+    adapter: AgentAdapter | undefined,
+    options: SessionOptions = {},
+  ): Promise<Session> {
+    if (!adapter)
+      throw unprocessable('That agent is not available on this Studio.', 'agent_unavailable');
+    if (options.seed !== undefined && options.seed.length > SESSION_SEED_CHARS)
+      throw new Error('The background for a new session is too long.');
     let project: ProjectRecord | null = null;
     if (input.projectId === null) {
       // Only a plain chat model may work outside a project: it has no working directory to be confined to.
-      if (adapter.kind !== 'api') throw badRequest('Choose the project this session works in.', undefined, 'project_required');
+      if (adapter.kind !== 'api')
+        throw badRequest(
+          'Choose the project this session works in.',
+          undefined,
+          'project_required',
+        );
     } else {
       project = this.#context.services.projects.requireAccess(principal, input.projectId, 'write');
       if (!this.#context.services.projects.isAgentEnabled(project, adapter.id)) {
@@ -351,15 +417,30 @@ export class SessionService {
       }
     }
     const capabilities = await adapter.capabilities();
-    const permissionMode = input.permissionMode ?? (capabilities.permissionModes.includes('ask') ? 'ask' : capabilities.permissionModes[0] ?? 'ask');
+    if (input.fastMode)
+      requireFastMode(adapter.id, input.model ?? capabilities.defaultModel, capabilities);
+    if (input.groupId) this.requireGroup(principal, input.groupId);
+    const permissionMode =
+      input.permissionMode ??
+      (capabilities.permissionModes.includes('ask')
+        ? 'ask'
+        : (capabilities.permissionModes[0] ?? 'ask'));
     if (!capabilities.permissionModes.includes(permissionMode)) {
-      throw unprocessable(`${adapter.displayName} does not have that permission mode.`, 'unsupported_permission_mode');
+      throw unprocessable(
+        `${adapter.displayName} does not have that permission mode.`,
+        'unsupported_permission_mode',
+      );
     }
 
     let chainId: string | null = null;
     if (input.parentSessionId !== undefined) {
       const parent = this.requireSession(principal, input.parentSessionId, 'write').row;
-      if (parent.project_id !== input.projectId) throw badRequest('A handoff stays inside its project.', undefined, 'parent_in_other_project');
+      if (parent.project_id !== input.projectId)
+        throw badRequest(
+          'A handoff stays inside its project.',
+          undefined,
+          'parent_in_other_project',
+        );
       chainId = parent.chain_id ?? parent.id;
     }
 
@@ -375,6 +456,14 @@ export class SessionService {
       title: input.title ?? DEFAULT_TITLE,
       title_source: input.title === undefined ? 'default' : 'manual',
       native_session_id: null,
+      group_id: input.groupId ?? null,
+      account_profile_id: this.#context.services.agents.accounts.resolve(
+        principal.userId,
+        adapter.id,
+        input.accountProfileId,
+      ),
+      fast_mode: input.fastMode ? 1 : 0,
+      forked_at_seq: null,
       pinned: 0,
       archived_at: null,
       chain_id: chainId,
@@ -411,20 +500,34 @@ export class SessionService {
     const projects = new Map<string, ProjectRecord | null>();
     const projectOf = (member: SessionRow): ProjectRecord | null => {
       if (member.project_id === null) return null;
-      if (!projects.has(member.project_id)) projects.set(member.project_id, this.#context.services.projects.find(member.project_id));
+      if (!projects.has(member.project_id))
+        projects.set(member.project_id, this.#context.services.projects.find(member.project_id));
       return projects.get(member.project_id) ?? null;
     };
     const members = this.#store
       .chain(rootId, principal.userId, principal.role === 'owner')
-      .filter((member) => member.project_id === null || this.#context.services.projects.accessOf(principal, member.project_id) !== null);
+      .filter(
+        (member) =>
+          member.project_id === null ||
+          this.#context.services.projects.accessOf(principal, member.project_id) !== null,
+      );
     // A session comes after the one it continues. Creation times alone would do, were they not
     // milliseconds: two sessions made in the same one have no order of their own.
     const known = new Set(members.map((member) => member.id));
     const placed = new Set<string>();
     const ordered: SessionRow[] = [];
-    let waiting = [...members.filter((member) => member.id === rootId), ...members.filter((member) => member.id !== rootId)];
+    let waiting = [
+      ...members.filter((member) => member.id === rootId),
+      ...members.filter((member) => member.id !== rootId),
+    ];
     while (waiting.length > 0) {
-      const next = waiting.find((member) => member.parent_session_id === null || !known.has(member.parent_session_id) || placed.has(member.parent_session_id)) ?? waiting[0]!;
+      const next =
+        waiting.find(
+          (member) =>
+            member.parent_session_id === null ||
+            !known.has(member.parent_session_id) ||
+            placed.has(member.parent_session_id),
+        ) ?? waiting[0]!;
       ordered.push(next);
       placed.add(next.id);
       waiting = waiting.filter((member) => member !== next);
@@ -434,8 +537,12 @@ export class SessionService {
 
   /** Accepts the Studio's id or — for links copied from a terminal — the agent's own id. */
   find(principal: Principal, idOrNativeId: string): Session {
-    const direct = /^[0-9a-z]{26}$/.test(idOrNativeId) ? this.#store.sessionFor(idOrNativeId, principal.userId, principal.role === 'owner') : undefined;
-    const row = direct ?? this.#store.sessionByNativeId(idOrNativeId, principal.userId, principal.role === 'owner');
+    const direct = /^[0-9a-z]{26}$/.test(idOrNativeId)
+      ? this.#store.sessionFor(idOrNativeId, principal.userId, principal.role === 'owner')
+      : undefined;
+    const row =
+      direct ??
+      this.#store.sessionByNativeId(idOrNativeId, principal.userId, principal.role === 'owner');
     if (!row) throw sessionNotFound();
     const access = this.requireSession(principal, row.id, 'view');
     return this.present(access.row, access.project);
@@ -452,6 +559,7 @@ export class SessionService {
     const rows = this.#store.listSessions({
       visibility,
       ...(query.projectId === undefined ? {} : { projectId: query.projectId }),
+      ...(query.groupId === undefined ? {} : { groupId: query.groupId }),
       archived: query.archived,
       words,
       limit: query.limit + 1,
@@ -460,7 +568,8 @@ export class SessionService {
     const projects = new Map<string, ProjectRecord | null>();
     const projectOf = (row: SessionRow): ProjectRecord | null => {
       if (row.project_id === null) return null;
-      if (!projects.has(row.project_id)) projects.set(row.project_id, this.#context.services.projects.find(row.project_id));
+      if (!projects.has(row.project_id))
+        projects.set(row.project_id, this.#context.services.projects.find(row.project_id));
       return projects.get(row.project_id) ?? null;
     };
     return {
@@ -469,19 +578,40 @@ export class SessionService {
     };
   }
 
-  async update(principal: Principal, sessionId: string, changes: UpdateSessionRequest, adapter: AgentAdapter | undefined): Promise<Session> {
+  async update(
+    principal: Principal,
+    sessionId: string,
+    changes: UpdateSessionRequest,
+    adapter: AgentAdapter | undefined,
+  ): Promise<Session> {
     const { row } = this.requireSession(principal, sessionId, 'write');
     const patch: SessionPatch = {};
+    if (changes.groupId !== undefined) {
+      if (changes.groupId !== null) this.requireGroup(principal, changes.groupId);
+      patch.groupId = changes.groupId;
+    }
+    if (changes.fastMode !== undefined) {
+      if (this.#store.activeRun(sessionId))
+        throw conflict('Wait for the run to finish before changing fast mode.', 'session_busy');
+      const capabilities = await adapter?.capabilities();
+      if (changes.fastMode) requireFastMode(row.agent_id, changes.model ?? row.model, capabilities);
+      patch.fastMode = changes.fastMode ? 1 : 0;
+    }
     if (changes.title !== undefined) {
       patch.title = changes.title;
       patch.titleSource = 'manual';
     }
     if (changes.pinned !== undefined) patch.pinned = changes.pinned ? 1 : 0;
     if (changes.archived !== undefined) {
-      if (changes.archived && this.#store.activeRun(sessionId)) throw conflict('Stop the run before archiving this session.', 'session_busy');
+      if (changes.archived && this.#store.activeRun(sessionId))
+        throw conflict('Stop the run before archiving this session.', 'session_busy');
       patch.archivedAt = changes.archived ? (row.archived_at ?? Date.now()) : null;
     }
-    if (changes.model !== undefined) patch.model = changes.model;
+    if (changes.model !== undefined) {
+      if (row.fast_mode === 1 && changes.fastMode !== false)
+        requireFastMode(row.agent_id, changes.model, await adapter?.capabilities());
+      patch.model = changes.model;
+    }
     if (changes.effort !== undefined) patch.effort = changes.effort;
     if (changes.permissionMode !== undefined) {
       await this.assertModeSupported(adapter, changes.permissionMode);
@@ -491,11 +621,18 @@ export class SessionService {
     return this.announceUpdate(sessionId)!;
   }
 
-  async assertModeSupported(adapter: AgentAdapter | undefined, mode: PermissionMode): Promise<void> {
-    if (!adapter) throw unprocessable('That agent is not available on this Studio.', 'agent_unavailable');
+  async assertModeSupported(
+    adapter: AgentAdapter | undefined,
+    mode: PermissionMode,
+  ): Promise<void> {
+    if (!adapter)
+      throw unprocessable('That agent is not available on this Studio.', 'agent_unavailable');
     const capabilities = await adapter.capabilities();
     if (!capabilities.permissionModes.includes(mode)) {
-      throw unprocessable(`${adapter.displayName} does not have that permission mode.`, 'unsupported_permission_mode');
+      throw unprocessable(
+        `${adapter.displayName} does not have that permission mode.`,
+        'unsupported_permission_mode',
+      );
     }
   }
 
@@ -527,27 +664,50 @@ export class SessionService {
 
   nativeId(principal: Principal, sessionId: string): string {
     const { row } = this.requireSession(principal, sessionId, 'write');
-    if (row.native_session_id === null) throw conflict('The agent has not started a conversation of its own yet.', 'native_id_not_assigned');
+    if (row.native_session_id === null)
+      throw conflict(
+        'The agent has not started a conversation of its own yet.',
+        'native_id_not_assigned',
+      );
     return row.native_session_id;
   }
 
-  events(principal: Principal, sessionId: string, query: { after?: number | undefined; before?: number | undefined; limit: number }): EventPage {
+  events(
+    principal: Principal,
+    sessionId: string,
+    query: { after?: number | undefined; before?: number | undefined; limit: number },
+  ): EventPage {
     const { row } = this.requireSession(principal, sessionId, 'view');
     if (query.after !== undefined) {
       const rows = this.#store.eventsAfter(sessionId, query.after, query.limit + 1);
-      return { events: rows.slice(0, query.limit).map(presentEvent), hasMore: rows.length > query.limit, lastSeq: row.last_seq };
+      return {
+        events: rows.slice(0, query.limit).map(presentEvent),
+        hasMore: rows.length > query.limit,
+        lastSeq: row.last_seq,
+      };
     }
     const rows = this.#store.eventsBefore(sessionId, query.before ?? null, query.limit + 1);
     // One extra row was read from the old end to learn whether more exist.
     const page = rows.length > query.limit ? rows.slice(1) : rows;
-    return { events: page.map(presentEvent), hasMore: rows.length > query.limit, lastSeq: row.last_seq };
+    return {
+      events: page.map(presentEvent),
+      hasMore: rows.length > query.limit,
+      lastSeq: row.last_seq,
+    };
   }
 
   usage(principal: Principal, sessionId: string): SessionUsage {
     this.requireSession(principal, sessionId, 'view');
     const latest = this.#store.latestContext(sessionId);
     return {
-      context: latest ? { tokens: latest.context_tokens!, window: latest.context_window, model: latest.model, at: latest.at } : null,
+      context: latest
+        ? {
+            tokens: latest.context_tokens!,
+            window: latest.context_window,
+            model: latest.model,
+            at: latest.at,
+          }
+        : null,
       totals: this.#store.usageTotals(sessionId).map((row) => ({
         model: row.model,
         inputTokens: row.input_tokens,
@@ -559,7 +719,10 @@ export class SessionService {
     };
   }
 
-  search(principal: Principal, query: { q: string; projectId?: string | undefined; limit: number }): MessageSearchHit[] {
+  search(
+    principal: Principal,
+    query: { q: string; projectId?: string | undefined; limit: number },
+  ): MessageSearchHit[] {
     let visibility = this.visibility(principal);
     if (query.projectId !== undefined) {
       this.#context.services.projects.requireAccess(principal, query.projectId);
@@ -593,7 +756,10 @@ export class SessionService {
   /** Removes the row and everything that hangs off it. Files on disk are the caller's to remove. */
   deleteRow(row: SessionRow): void {
     this.#store.deleteSession(row.id);
-    this.toUser(row.user_id, USER_AGENT_EVENT.sessionRemoved, { sessionId: row.id, projectId: row.project_id });
+    this.toUser(row.user_id, USER_AGENT_EVENT.sessionRemoved, {
+      sessionId: row.id,
+      projectId: row.project_id,
+    });
     this.#hidden?.delete(row.id);
   }
 }

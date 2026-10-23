@@ -76,7 +76,12 @@ class ChallengeIssuer {
   }
 
   #mac(purpose: string, nonce: Buffer, expiry: Buffer): Buffer {
-    return createHmac('sha256', this.#key).update(purpose).update('\0').update(nonce).update(expiry).digest();
+    return createHmac('sha256', this.#key)
+      .update(purpose)
+      .update('\0')
+      .update(nonce)
+      .update(expiry)
+      .digest();
   }
 
   issue(purpose: string, now = Date.now()): Uint8Array<ArrayBuffer> {
@@ -134,7 +139,15 @@ function describeDevice(userAgent: string | undefined): string {
             : /Linux/.test(agent)
               ? 'Linux'
               : 'Device';
-  const browser = /Edg\//.test(agent) ? 'Edge' : /Chrome\//.test(agent) ? 'Chrome' : /Firefox\//.test(agent) ? 'Firefox' : /Safari\//.test(agent) ? 'Safari' : '';
+  const browser = /Edg\//.test(agent)
+    ? 'Edge'
+    : /Chrome\//.test(agent)
+      ? 'Chrome'
+      : /Firefox\//.test(agent)
+        ? 'Firefox'
+        : /Safari\//.test(agent)
+          ? 'Safari'
+          : '';
   return browser ? `${device} · ${browser}` : device;
 }
 
@@ -167,14 +180,18 @@ export function setupPasskeys(
     }
     const hostname = url.hostname;
     if (net.isIP(hostname.replace(/^\[|\]$/g, '')) !== 0) return null; // WebAuthn does not allow IP addresses
-    const secure = url.protocol === 'https:' || (isLoopbackHostname(hostname) && hostname.endsWith('localhost'));
+    const secure =
+      url.protocol === 'https:' || (isLoopbackHostname(hostname) && hostname.endsWith('localhost'));
     return secure ? { rpId: hostname, origin } : null;
   };
 
   const requireRelyingParty = (request: FastifyRequest) => {
     const party = relyingParty(request);
     if (!party) {
-      throw unavailable('Passkeys need an https address with a host name (or localhost).', 'passkeys_unavailable');
+      throw unavailable(
+        'Passkeys need an https address with a host name (or localhost).',
+        'passkeys_unavailable',
+      );
     }
     return party;
   };
@@ -189,7 +206,10 @@ export function setupPasskeys(
       return {
         available: party !== null,
         passkeys: db
-          .all<PasskeyRow>('SELECT * FROM passkeys WHERE user_id = ? ORDER BY created_at DESC', user.userId)
+          .all<PasskeyRow>(
+            'SELECT * FROM passkeys WHERE user_id = ? ORDER BY created_at DESC',
+            user.userId,
+          )
           .map((row) => toPasskey(row, party?.rpId ?? null)),
       };
     },
@@ -203,9 +223,13 @@ export function setupPasskeys(
     recentAuth: true,
     handler: async ({ user, request }) => {
       const party = requireRelyingParty(request);
-      const existing = db.all<PasskeyRow>('SELECT * FROM passkeys WHERE user_id = ? AND rp_id = ?', user.userId, party.rpId);
+      const existing = db.all<PasskeyRow>(
+        'SELECT * FROM passkeys WHERE user_id = ? AND rp_id = ?',
+        user.userId,
+        party.rpId,
+      );
       return generateRegistrationOptions({
-        rpName: 'Agent Cloud Studio',
+        rpName: 'Cloud Harness',
         rpID: party.rpId,
         userName: user.username,
         userDisplayName: user.displayName,
@@ -213,7 +237,10 @@ export function setupPasskeys(
         challenge: challenges.issue(`register:${user.credentialId}:${party.rpId}`),
         timeout: CHALLENGE_TTL_MS,
         attestationType: 'none',
-        excludeCredentials: existing.map((row) => ({ id: row.credential_id, transports: JSON.parse(row.transports) as string[] })),
+        excludeCredentials: existing.map((row) => ({
+          id: row.credential_id,
+          transports: JSON.parse(row.transports) as string[],
+        })),
         authenticatorSelection: { residentKey: 'required', userVerification: 'required' },
       });
     },
@@ -228,19 +255,34 @@ export function setupPasskeys(
     body: passkeyRegistrationRequestSchema,
     handler: async ({ user, body, request, reply }) => {
       const party = requireRelyingParty(request);
-      const count = db.get<{ n: number }>('SELECT COUNT(*) AS n FROM passkeys WHERE user_id = ?', user.userId)!.n;
-      if (count >= MAX_PASSKEYS_PER_USER) throw conflict('This account already has the maximum number of passkeys.', 'too_many_passkeys');
+      const count = db.get<{ n: number }>(
+        'SELECT COUNT(*) AS n FROM passkeys WHERE user_id = ?',
+        user.userId,
+      )!.n;
+      if (count >= MAX_PASSKEYS_PER_USER)
+        throw conflict(
+          'This account already has the maximum number of passkeys.',
+          'too_many_passkeys',
+        );
 
       let consume: (() => void) | null = null;
       const result = await verifyRegistrationResponse({
-        response: body.response as unknown as Parameters<typeof verifyRegistrationResponse>[0]['response'],
-        expectedChallenge: (challenge) => (consume = challenges.check(`register:${user.credentialId}:${party.rpId}`, challenge)) !== null,
+        response: body.response as unknown as Parameters<
+          typeof verifyRegistrationResponse
+        >[0]['response'],
+        expectedChallenge: (challenge) =>
+          (consume = challenges.check(`register:${user.credentialId}:${party.rpId}`, challenge)) !==
+          null,
         expectedOrigin: party.origin,
         expectedRPID: party.rpId,
         requireUserVerification: true,
       }).catch(() => null);
       if (!result?.verified || !consume) {
-        throw badRequest('That passkey could not be verified. Try again.', undefined, 'passkey_rejected');
+        throw badRequest(
+          'That passkey could not be verified. Try again.',
+          undefined,
+          'passkey_rejected',
+        );
       }
       (consume as () => void)();
 
@@ -262,10 +304,17 @@ export function setupPasskeys(
           Date.now(),
         );
       } catch (error) {
-        if (String((error as Error).message).includes('UNIQUE')) throw conflict('That passkey is already registered.', 'passkey_exists');
+        if (String((error as Error).message).includes('UNIQUE'))
+          throw conflict('That passkey is already registered.', 'passkey_exists');
         throw error;
       }
-      audit.record({ category: 'change', action: 'passkey.added', userId: user.userId, subject: party.rpId, address: request.ip });
+      audit.record({
+        category: 'change',
+        action: 'passkey.added',
+        userId: user.userId,
+        subject: party.rpId,
+        address: request.ip,
+      });
       void reply.status(201);
       return toPasskey(db.get<PasskeyRow>('SELECT * FROM passkeys WHERE id = ?', id)!, party.rpId);
     },
@@ -279,9 +328,16 @@ export function setupPasskeys(
     recentAuth: true,
     params: z.object({ id: idSchema }),
     handler: ({ user, params, request }) => {
-      const removed = db.run('DELETE FROM passkeys WHERE id = ? AND user_id = ?', params.id, user.userId).changes > 0;
+      const removed =
+        db.run('DELETE FROM passkeys WHERE id = ? AND user_id = ?', params.id, user.userId)
+          .changes > 0;
       if (!removed) throw notFound('No such passkey.');
-      audit.record({ category: 'change', action: 'passkey.removed', userId: user.userId, address: request.ip });
+      audit.record({
+        category: 'change',
+        action: 'passkey.removed',
+        userId: user.userId,
+        address: request.ip,
+      });
     },
   });
 
@@ -315,7 +371,11 @@ export function setupPasskeys(
     handler: async ({ body, request }) => {
       const party = requireRelyingParty(request);
       const refuse = () => {
-        audit.record({ category: 'failure', action: 'sign-in.passkey-refused', address: request.ip });
+        audit.record({
+          category: 'failure',
+          action: 'sign-in.passkey-refused',
+          address: request.ip,
+        });
         return unauthorized('That passkey was not accepted.', 'invalid_credentials');
       };
       const credentialId = (body.response as { id?: unknown }).id;
@@ -331,21 +391,43 @@ export function setupPasskeys(
       const publicKey = new Uint8Array(new ArrayBuffer(row.public_key.length));
       publicKey.set(row.public_key);
       const result = await verifyAuthenticationResponse({
-        response: body.response as unknown as Parameters<typeof verifyAuthenticationResponse>[0]['response'],
-        expectedChallenge: (challenge) => (consume = challenges.check(`login:${party.rpId}`, challenge)) !== null,
+        response: body.response as unknown as Parameters<
+          typeof verifyAuthenticationResponse
+        >[0]['response'],
+        expectedChallenge: (challenge) =>
+          (consume = challenges.check(`login:${party.rpId}`, challenge)) !== null,
         expectedOrigin: party.origin,
         expectedRPID: party.rpId,
-        credential: { id: row.credential_id, publicKey, counter: row.counter, transports: JSON.parse(row.transports) as string[] },
+        credential: {
+          id: row.credential_id,
+          publicKey,
+          counter: row.counter,
+          transports: JSON.parse(row.transports) as string[],
+        },
         requireUserVerification: true,
       }).catch(() => null);
       if (!result?.verified || !consume) throw refuse();
       (consume as () => void)();
 
-      db.run('UPDATE passkeys SET counter = ?, last_used_at = ?, backed_up = ? WHERE id = ?', result.authenticationInfo.newCounter, Date.now(), result.authenticationInfo.credentialBackedUp ? 1 : 0, row.id);
+      db.run(
+        'UPDATE passkeys SET counter = ?, last_used_at = ?, backed_up = ? WHERE id = ?',
+        result.authenticationInfo.newCounter,
+        Date.now(),
+        result.authenticationInfo.credentialBackedUp ? 1 : 0,
+        row.id,
+      );
       // A passkey works while password sign-in is locked, and lifts that lock.
       hooks.clearSignInLock(row.username);
-      audit.record({ category: 'sign-in', action: 'sign-in.passkey', userId: row.user_id, address: request.ip });
-      const session = auth.startSession(row.user_id, 'passkey', { ip: request.ip, userAgent: request.headers['user-agent'] ?? null });
+      audit.record({
+        category: 'sign-in',
+        action: 'sign-in.passkey',
+        userId: row.user_id,
+        address: request.ip,
+      });
+      const session = auth.startSession(row.user_id, 'passkey', {
+        ip: request.ip,
+        userAgent: request.headers['user-agent'] ?? null,
+      });
       return hooks.signedIn(request, row.user_id, session);
     },
   });

@@ -1,7 +1,17 @@
 import type { Session } from '@agent-studio/protocol';
 import { type InfiniteData, QueryClient } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
-import { type SessionListParams, type SessionPage, flattenSessions, listAccepts, removeFromPages, removeSession, upsertInPages, upsertSession, workbenchKeys } from './queries';
+import {
+  type SessionListParams,
+  type SessionPage,
+  flattenSessions,
+  listAccepts,
+  removeFromPages,
+  removeSession,
+  upsertInPages,
+  upsertSession,
+  workbenchKeys,
+} from './queries';
 
 vi.mock('../api', () => ({ workbenchApi: {}, SEND_TIMEOUT_MS: 20_000 }));
 
@@ -46,13 +56,27 @@ const archived: SessionListParams = { projectId: P, archived: 'only', q: '' };
 describe('which list a session belongs in', () => {
   it.each([
     ['its own project', project, {}, true],
+    ['its own group', { ...project, groupId: 'g' }, { groupId: 'g' }, true],
+    ['another group', { ...project, groupId: 'g' }, { groupId: 'h' }, false],
+    ['ungrouped excludes assigned', { ...project, groupId: 'ungrouped' }, { groupId: 'g' }, false],
+    [
+      'ungrouped includes unassigned',
+      { ...project, groupId: 'ungrouped' },
+      { groupId: null },
+      true,
+    ],
     ['another project', project, { projectId: Q }, false],
     ['every project', everything, { projectId: Q }, true],
     ['the archive, when it is not archived', archived, {}, false],
     ['the archive, when it is', archived, { archived: true }, true],
     ['the live list, when it is archived', project, { archived: true }, false],
     ['a search its title matches', { ...project, q: 'api fix' }, { title: 'Fix API tests' }, true],
-    ['a search its title does not match', { ...project, q: 'api fix' }, { title: 'Deploy API' }, false],
+    [
+      'a search its title does not match',
+      { ...project, q: 'api fix' },
+      { title: 'Deploy API' },
+      false,
+    ],
   ] as const)('%s → %s', (_name, params, overrides, expected) => {
     expect(listAccepts(params, session(overrides))).toBe(expected);
   });
@@ -76,11 +100,18 @@ describe('keeping cached pages in step with one changed session', () => {
 
   it('adds one that is new to the list, and takes out one that no longer belongs', () => {
     const created = session();
-    expect(upsertInPages(pages, project, created)[0]!.sessions.map((entry) => entry.id)).toEqual([created.id, a.id, b.id]);
+    expect(upsertInPages(pages, project, created)[0]!.sessions.map((entry) => entry.id)).toEqual([
+      created.id,
+      a.id,
+      b.id,
+    ]);
     const gone = upsertInPages(pages, project, { ...b, archived: true });
     expect(gone[0]!.sessions).toEqual([a]);
     // …and into the archive it goes, if that list is loaded.
-    expect(upsertInPages([{ sessions: [], hasMore: false }], archived, { ...b, archived: true })[0]!.sessions).toHaveLength(1);
+    expect(
+      upsertInPages([{ sessions: [], hasMore: false }], archived, { ...b, archived: true })[0]!
+        .sessions,
+    ).toHaveLength(1);
   });
 
   it('changes nothing — the very same array — when there is nothing to change', () => {
@@ -96,7 +127,13 @@ describe('keeping cached pages in step with one changed session', () => {
   });
 
   it('lists each session once even when two pages carry it', () => {
-    const data: InfiniteData<SessionPage, number> = { pages: [{ sessions: [a, b], hasMore: true }, { sessions: [b, c], hasMore: false }], pageParams: [0, 50] };
+    const data: InfiniteData<SessionPage, number> = {
+      pages: [
+        { sessions: [a, b], hasMore: true },
+        { sessions: [b, c], hasMore: false },
+      ],
+      pageParams: [0, 50],
+    };
     expect(flattenSessions(data).map((entry) => entry.id)).toEqual([a.id, b.id, c.id]);
     expect(flattenSessions(undefined)).toEqual([]);
   });
@@ -104,8 +141,12 @@ describe('keeping cached pages in step with one changed session', () => {
 
 describe('live changes in the query cache', () => {
   const seed = (client: QueryClient, params: SessionListParams, sessions: Session[]) =>
-    client.setQueryData<InfiniteData<SessionPage, number>>(workbenchKeys.list(params), { pages: [{ sessions, hasMore: false }], pageParams: [0] });
-  const read = (client: QueryClient, params: SessionListParams) => flattenSessions(client.getQueryData(workbenchKeys.list(params)));
+    client.setQueryData<InfiniteData<SessionPage, number>>(workbenchKeys.list(params), {
+      pages: [{ sessions, hasMore: false }],
+      pageParams: [0],
+    });
+  const read = (client: QueryClient, params: SessionListParams) =>
+    flattenSessions(client.getQueryData(workbenchKeys.list(params)));
 
   it('moves a session between every list that holds it: pinned here, archived there', () => {
     const client = new QueryClient();

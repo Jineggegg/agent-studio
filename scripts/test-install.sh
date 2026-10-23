@@ -101,6 +101,8 @@ check "the settings file is readable by its owner only"
 grep -q 'Finding the newest release' "$WORK/install.log" || die "the installer did not look up the newest release"
 [ "$(run_studio version)" = "$VERSION" ] || die "agent-studio version does not say $VERSION"
 check "agent-studio version: $VERSION"
+[ "$(env HOME="$TEST_HOME" "$TEST_HOME/.local/bin/cloud-harness" version)" = "$VERSION" ] || die "cloud-harness alias does not say $VERSION"
+check "cloud-harness compatibility command"
 
 # A release whose archive does not match its sum is refused, and nothing is replaced.
 cp -R "$RELEASE_DIR" "$WORK/tampered"

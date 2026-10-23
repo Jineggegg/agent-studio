@@ -5,12 +5,43 @@ import { describeError } from '../../kernel/errors.js';
 import type { ModuleContext } from '../../kernel/module.js';
 import { OutputTail } from '../../kernel/output-tail.js';
 import { type ProcessSupervisor, credentialPaths, terminate } from '../../kernel/process.js';
-import { AgentRunError, type AgentRunHost, type AgentRunRequest, type AgentRunResult, type PromptAttachment } from '../agents/adapter.js';
+import {
+  AgentRunError,
+  type AgentRunHost,
+  type AgentRunRequest,
+  type AgentRunResult,
+  type PromptAttachment,
+} from '../agents/adapter.js';
 import type { ClaudeCli, CliInstallation } from './cli.js';
-import { type ExitFacts, NOT_INSTALLED_MESSAGE, errorFromExit, errorFromResult, isResumeNotFound, presentable } from './errors.js';
-import { PROJECT_INSTRUCTIONS_BYTES, PROJECT_INSTRUCTIONS_FILE, type ProjectInstructions } from './instructions.js';
-import { INLINE_IMAGE_BYTES, attachmentDirs, buildArgs, buildMcpConfig, buildSystemPrompt, buildUserMessage, historyPreamble, isValidModel } from './invocation.js';
-import { type CliResult, type LineSignal, StreamTranslator, type UsageLedger } from './translate.js';
+import {
+  type ExitFacts,
+  NOT_INSTALLED_MESSAGE,
+  errorFromExit,
+  errorFromResult,
+  isResumeNotFound,
+  presentable,
+} from './errors.js';
+import {
+  PROJECT_INSTRUCTIONS_BYTES,
+  PROJECT_INSTRUCTIONS_FILE,
+  type ProjectInstructions,
+} from './instructions.js';
+import {
+  INLINE_IMAGE_BYTES,
+  attachmentDirs,
+  buildArgs,
+  buildMcpConfig,
+  buildSystemPrompt,
+  buildUserMessage,
+  historyPreamble,
+  isValidModel,
+} from './invocation.js';
+import {
+  type CliResult,
+  type LineSignal,
+  StreamTranslator,
+  type UsageLedger,
+} from './translate.js';
 
 /**
  * One turn of Claude Code: the process, what is written to it, and when it is
@@ -38,7 +69,11 @@ import { type CliResult, type LineSignal, StreamTranslator, type UsageLedger } f
 type Child = ReturnType<ProcessSupervisor['spawn']>;
 
 /** For tests and the manual smoke test: sees what goes to and comes from the CLI. Never set in production. */
-export type Tap = (entry: { readonly runId: string; readonly stream: 'argv' | 'stdin' | 'stdout' | 'stderr'; readonly text: string }) => void;
+export type Tap = (entry: {
+  readonly runId: string;
+  readonly stream: 'argv' | 'stdin' | 'stdout' | 'stderr';
+  readonly text: string;
+}) => void;
 
 export interface ClaudeRunDeps {
   readonly context: ModuleContext;
@@ -60,7 +95,9 @@ export interface ClaudeRunDeps {
   readonly tap?: Tap | undefined;
 }
 
-type AttemptOutcome = { readonly kind: 'finished'; readonly result: AgentRunResult } | { readonly kind: 'resume-not-found' };
+type AttemptOutcome =
+  | { readonly kind: 'finished'; readonly result: AgentRunResult }
+  | { readonly kind: 'resume-not-found' };
 
 /** How long the CLI gets to answer an interrupt before its process group is signalled. */
 const INTERRUPT_GRACE_MS = 1500;
@@ -112,7 +149,11 @@ export class ClaudeRun {
     const child = this.#child;
     if (!child || child.exitCode !== null || child.signalCode !== null) return;
     if (this.#inputOpen) {
-      this.#write({ type: 'control_request', request_id: `stop-${this.#deps.request.runId}`, request: { subtype: 'interrupt' } });
+      this.#write({
+        type: 'control_request',
+        request_id: `stop-${this.#deps.request.runId}`,
+        request: { subtype: 'interrupt' },
+      });
       this.#armKill(INTERRUPT_GRACE_MS);
     } else {
       this.#kill();
@@ -120,7 +161,10 @@ export class ClaudeRun {
   }
 
   /** Writes a further message to the running CLI. True only when it was written to an input the CLI still reads. */
-  async steer(message: { text: string; attachments: readonly PromptAttachment[] }): Promise<boolean> {
+  async steer(message: {
+    text: string;
+    attachments: readonly PromptAttachment[];
+  }): Promise<boolean> {
     if (!this.#canSteer()) return false;
     // A file the CLI was not told about when it started cannot be read by it: such a message waits its turn.
     for (const attachment of message.attachments) {
@@ -151,32 +195,61 @@ export class ClaudeRun {
 
   #canSteer(): boolean {
     const child = this.#child;
-    return this.#installation?.features.replayUserMessages === true && this.#inputOpen && !this.#stopping && child !== null && child.exitCode === null && child.signalCode === null;
+    return (
+      this.#installation?.features.replayUserMessages === true &&
+      this.#inputOpen &&
+      !this.#stopping &&
+      child !== null &&
+      child.exitCode === null &&
+      child.signalCode === null
+    );
   }
 
   async #main(): Promise<AgentRunResult> {
     const { request, host, cli } = this.#deps;
     if (this.#stopping) return { status: 'completed' };
-    if (request.cwd === null) throw new AgentRunError('no_project', 'Claude Code works inside a project folder, and this conversation has none.');
+    if (request.cwd === null)
+      throw new AgentRunError(
+        'no_project',
+        'Claude Code works inside a project folder, and this conversation has none.',
+      );
     if (request.model !== null && !isValidModel(request.model)) {
-      throw new AgentRunError('model_unavailable', `"${presentable(request.model, 80)}" is not a model name Claude Code can be given. Choose another model.`);
+      throw new AgentRunError(
+        'model_unavailable',
+        `"${presentable(request.model, 80)}" is not a model name Claude Code can be given. Choose another model.`,
+      );
     }
     const pending = cli.installation();
     if (!pending) throw new AgentRunError('not_installed', NOT_INSTALLED_MESSAGE);
     const installation = await pending;
     this.#installation = installation;
     if (installation.features.missing.length > 0) {
-      throw new AgentRunError('cli_incompatible', `The installed Claude Code${installation.version ? ` (${installation.version})` : ''} is too old for the Studio. Update Claude Code and try again.`);
+      throw new AgentRunError(
+        'cli_incompatible',
+        `The installed Claude Code${installation.version ? ` (${installation.version})` : ''} is too old for the Studio. Update Claude Code and try again.`,
+      );
     }
     if (request.effort !== null && !installation.features.efforts.includes(request.effort)) {
-      host.emit({ type: 'notice', level: 'info', code: 'effort_ignored', text: `This Claude Code does not have an effort level "${presentable(request.effort, 40)}", so its default was used.` });
+      host.emit({
+        type: 'notice',
+        level: 'info',
+        code: 'effort_ignored',
+        text: `This Claude Code does not have an effort level "${presentable(request.effort, 40)}", so its default was used.`,
+      });
     }
 
     this.#systemPrompt = await this.#standingInstructions();
     if (this.#stopping) return { status: 'completed' };
 
-    const resume = request.nativeSessionId !== null && NATIVE_ID_PATTERN.test(request.nativeSessionId) ? request.nativeSessionId : null;
-    let outcome = await this.#attempt(installation, resume, '');
+    const resume =
+      request.nativeSessionId !== null && NATIVE_ID_PATTERN.test(request.nativeSessionId)
+        ? request.nativeSessionId
+        : null;
+    let outcome = await this.#attempt(
+      installation,
+      resume,
+      resume === null ? historyPreamble(request.history) : '',
+    );
     if (outcome.kind === 'resume-not-found') {
       host.emit({
         type: 'notice',
@@ -186,7 +259,11 @@ export class ClaudeRun {
       });
       outcome = await this.#attempt(installation, null, historyPreamble(request.history));
     }
-    if (outcome.kind === 'resume-not-found') throw new AgentRunError('agent_error', 'Claude Code could not open a conversation for this session.');
+    if (outcome.kind === 'resume-not-found')
+      throw new AgentRunError(
+        'agent_error',
+        'Claude Code could not open a conversation for this session.',
+      );
     return outcome.result;
   }
 
@@ -197,26 +274,47 @@ export class ClaudeRun {
     try {
       instructions = await this.#deps.projectInstructions();
     } catch (error) {
-      host.log.warn({ err: presentable(describeError(error), 200) }, "reading the project's instruction file failed");
+      host.log.warn(
+        { err: presentable(describeError(error), 200) },
+        "reading the project's instruction file failed",
+      );
       instructions = { kind: 'unreadable', reason: 'it could not be read' };
     }
     const kib = Math.round(PROJECT_INSTRUCTIONS_BYTES / 1024);
     const problem =
       instructions.kind === 'unreadable'
-        ? { code: 'project_instructions_unreadable', text: `${PROJECT_INSTRUCTIONS_FILE} in the project folder was not given to Claude Code: ${instructions.reason}.` }
+        ? {
+            code: 'project_instructions_unreadable',
+            text: `${PROJECT_INSTRUCTIONS_FILE} in the project folder was not given to Claude Code: ${instructions.reason}.`,
+          }
         : instructions.kind === 'loaded' && instructions.truncated
-          ? { code: 'project_instructions_truncated', text: `${PROJECT_INSTRUCTIONS_FILE} in the project folder is larger than ${kib} KiB, so Claude Code was given only its first ${kib} KiB.` }
+          ? {
+              code: 'project_instructions_truncated',
+              text: `${PROJECT_INSTRUCTIONS_FILE} in the project folder is larger than ${kib} KiB, so Claude Code was given only its first ${kib} KiB.`,
+            }
           : null;
-    if (this.#deps.instructionsProblemIsNews(problem === null ? null : `${problem.code}:${problem.text}`) && problem !== null) {
+    if (
+      this.#deps.instructionsProblemIsNews(
+        problem === null ? null : `${problem.code}:${problem.text}`,
+      ) &&
+      problem !== null
+    ) {
       host.emit({ type: 'notice', level: 'warning', code: problem.code, text: problem.text });
     }
     return buildSystemPrompt({
       memoryGuide: this.#deps.memoryGuide(),
-      projectInstructions: instructions.kind === 'loaded' ? { text: instructions.text, truncated: instructions.truncated } : null,
+      projectInstructions:
+        instructions.kind === 'loaded'
+          ? { text: instructions.text, truncated: instructions.truncated }
+          : null,
     });
   }
 
-  async #attempt(installation: CliInstallation, resume: string | null, preamble: string): Promise<AttemptOutcome> {
+  async #attempt(
+    installation: CliInstallation,
+    resume: string | null,
+    preamble: string,
+  ): Promise<AttemptOutcome> {
     const { context, request, host, cli } = this.#deps;
     if (this.#stopping) return { kind: 'finished', result: { status: 'completed' } };
     const cwd = request.cwd!;
@@ -231,7 +329,12 @@ export class ClaudeRun {
     this.#translator = translator;
     this.#replays = 0;
 
-    const first = await buildUserMessage({ text: request.prompt.text, quote: request.prompt.quote, attachments: request.prompt.attachments, preamble });
+    const first = await buildUserMessage({
+      text: request.prompt.text,
+      quote: request.prompt.quote,
+      attachments: request.prompt.attachments,
+      preamble,
+    });
     // The bridge's configuration holds this run's token: it goes into a file only this account can
     // read, never onto the command line, and the file is gone when the CLI is.
     const directory = await mkdtemp(path.join(os.tmpdir(), 'agent-studio-claude-'));
@@ -247,6 +350,7 @@ export class ClaudeRun {
         permissionMode: request.permissionMode,
         model: request.model,
         effort: request.effort,
+        fastMode: request.fastMode ?? false,
         resume,
         appendSystemPrompt: this.#systemPrompt,
         addDirs: folders,
@@ -257,31 +361,57 @@ export class ClaudeRun {
       // outside any project never sees them.
       const projects = context.services.projects;
       const project = request.projectId === null ? null : projects.find(request.projectId);
-      const credentialsVisible = project !== null && projects.isFeatureEnabled(project, 'agentCredentials');
+      const credentialsVisible =
+        project !== null && projects.isFeatureEnabled(project, 'agentCredentials');
       const home = os.homedir();
-      const ownConfiguration = new Set([path.join(home, '.claude'), path.join(home, '.claude.json')]);
+      const ownConfiguration = new Set(
+        request.accountDirectory
+          ? []
+          : [path.join(home, '.claude'), path.join(home, '.claude.json')],
+      );
       // Attachments live in the Studio's data directory, which the sandbox hides: let exactly these back in.
       const wrapped = context.sandbox.wrap(installation.executable, args, {
         kind: 'mask',
-        hide: credentialsVisible ? [] : credentialPaths(home).filter((location) => !ownConfiguration.has(location)),
+        hide: credentialsVisible
+          ? []
+          : credentialPaths(home).filter((location) => !ownConfiguration.has(location)),
         expose: [...folders, ...request.prompt.attachments.map((attachment) => attachment.path)],
+        ...(request.accountDirectory ? { writableExpose: [request.accountDirectory] } : {}),
       });
-      this.#deps.tap?.({ runId: request.runId, stream: 'argv', text: JSON.stringify({ file: wrapped.file, args: wrapped.args }) });
+      this.#deps.tap?.({
+        runId: request.runId,
+        stream: 'argv',
+        text: JSON.stringify({ file: wrapped.file, args: wrapped.args }),
+      });
       if (this.#stopping) return { kind: 'finished', result: { status: 'completed' } };
 
-      const exit = await this.#drive(wrapped.file, wrapped.args, cwd, translator, [first, ...this.#pendingSteers]);
+      const exit = await this.#drive(wrapped.file, wrapped.args, cwd, translator, [
+        first,
+        ...this.#pendingSteers,
+      ]);
       if (this.#stopping) return { kind: 'finished', result: { status: 'completed' } };
 
       const result = translator.lastResult;
-      if (resume !== null && !translator.producedOutput && isResumeNotFound(result, exit.stderr)) return { kind: 'resume-not-found' };
+      if (resume !== null && !translator.producedOutput && isResumeNotFound(result, exit.stderr))
+        return { kind: 'resume-not-found' };
       if (result && !result.isError) {
-        cli.noteSignIn(true);
+        if (!request.accountDirectory) cli.noteSignIn(true);
         return { kind: 'finished', result: { status: 'completed' } };
       }
-      const error = result ? errorFromResult(result, translator.apiError, { model: request.model }) : errorFromExit(exit);
-      if (error.code === 'not_signed_in') cli.noteSignIn(false);
+      const error = result
+        ? errorFromResult(result, translator.apiError, { model: request.model })
+        : errorFromExit(exit);
+      if (error.code === 'not_signed_in' && !request.accountDirectory) cli.noteSignIn(false);
       // exit.stderr was redacted as a whole before it was cut, so cutting it again leaves no fragment of a secret.
-      host.log.warn({ code: error.code, exitCode: exit.code, signal: exit.signal, stderr: presentable(exit.stderr.slice(-2000), 800) }, 'Claude Code did not finish the turn');
+      host.log.warn(
+        {
+          code: error.code,
+          exitCode: exit.code,
+          signal: exit.signal,
+          stderr: presentable(exit.stderr.slice(-2000), 800),
+        },
+        'Claude Code did not finish the turn',
+      );
       throw error;
     } finally {
       this.#child = null;
@@ -291,14 +421,30 @@ export class ClaudeRun {
   }
 
   /** Runs the process to its end. Resolves — never rejects — with how it ended. */
-  #drive(file: string, args: readonly string[], cwd: string, translator: StreamTranslator, messages: ReadonlyArray<Record<string, unknown>>): Promise<ExitFacts> {
+  #drive(
+    file: string,
+    args: readonly string[],
+    cwd: string,
+    translator: StreamTranslator,
+    messages: ReadonlyArray<Record<string, unknown>>,
+  ): Promise<ExitFacts> {
     const { context, request, host, cli, tap } = this.#deps;
     return new Promise<ExitFacts>((resolve) => {
       let child: Child;
       try {
-        child = context.processes.spawn(file, args, { cwd, env: cli.env(), stdin: 'pipe' });
+        child = context.processes.spawn(file, args, {
+          cwd,
+          env: { ...cli.env(), ...request.accountEnvironment },
+          stdin: 'pipe',
+        });
       } catch (error) {
-        resolve({ code: null, signal: null, stderr: '', strayLine: null, spawnError: describeError(error) });
+        resolve({
+          code: null,
+          signal: null,
+          stderr: '',
+          strayLine: null,
+          spawnError: describeError(error),
+        });
         return;
       }
       this.#child = child;
@@ -330,7 +476,10 @@ export class ClaudeRun {
         try {
           this.#react(translator.handle(parsed));
         } catch (error) {
-          host.log.warn({ err: presentable(describeError(error), 300) }, 'an event from Claude Code could not be translated');
+          host.log.warn(
+            { err: presentable(describeError(error), 300) },
+            'an event from Claude Code could not be translated',
+          );
         }
       };
 
@@ -358,7 +507,9 @@ export class ClaudeRun {
         // The CLI closed its input (it exited, or is about to): nothing more can be written.
         this.#inputOpen = false;
       });
-      child.once('error', (error) => finish({ code: null, signal: null, spawnError: describeError(error) }));
+      child.once('error', (error) =>
+        finish({ code: null, signal: null, spawnError: describeError(error) }),
+      );
       child.once('close', (code, signal) => {
         if (buffer.trim() !== '') onLine(buffer);
         finish({ code, signal, spawnError: null });
@@ -387,10 +538,24 @@ export class ClaudeRun {
         if (signal.subtype === 'can_use_tool') {
           this.#write({
             type: 'control_response',
-            response: { subtype: 'success', request_id: signal.requestId, response: { behavior: 'deny', message: 'The Studio could not be asked for permission, so this was refused.' } },
+            response: {
+              subtype: 'success',
+              request_id: signal.requestId,
+              response: {
+                behavior: 'deny',
+                message: 'The Studio could not be asked for permission, so this was refused.',
+              },
+            },
           });
         } else {
-          this.#write({ type: 'control_response', response: { subtype: 'error', request_id: signal.requestId, error: 'The Studio does not answer this kind of request.' } });
+          this.#write({
+            type: 'control_response',
+            response: {
+              subtype: 'error',
+              request_id: signal.requestId,
+              error: 'The Studio does not answer this kind of request.',
+            },
+          });
         }
         return;
       default:

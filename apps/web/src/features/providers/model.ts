@@ -1,10 +1,19 @@
-import type { CreateProviderInput, Provider, ProviderCheck, ProviderModel, ProviderPreset, UpdateProviderInput } from '@agent-studio/protocol';
+import type {
+  CreateProviderInput,
+  Provider,
+  ProviderCheck,
+  ProviderKind,
+  ProviderModel,
+  ProviderPreset,
+  UpdateProviderInput,
+} from '@agent-studio/protocol';
 import { type Translator, hasMessage } from '@/i18n';
 import { keyPatch, sameBaseUrl } from './keyField';
 
 /** What the provider form holds. The key is only what was typed here: it never comes from the server. */
 export interface ProviderDraft {
   name: string;
+  kind: ProviderKind;
   /** Chosen once, at creation; derived from the name when left empty. */
   id: string;
   baseUrl: string;
@@ -22,6 +31,7 @@ export function draftFromPreset(preset: ProviderPreset | null): ProviderDraft {
   return {
     name: preset && preset.id !== 'custom' ? preset.name : '',
     id: '',
+    kind: preset?.kind ?? 'openai-compatible',
     baseUrl: preset?.baseUrl ?? '',
     allowPrivateNetwork: preset?.allowPrivateNetwork ?? false,
     keyRequired: preset?.keyRequired ?? true,
@@ -39,6 +49,7 @@ export function draftFromProvider(provider: Provider): ProviderDraft {
   return {
     name: provider.name,
     id: provider.id,
+    kind: provider.kind,
     baseUrl: settings?.baseUrl ?? '',
     allowPrivateNetwork: settings?.allowPrivateNetwork ?? false,
     keyRequired: settings?.keyRequired ?? true,
@@ -51,19 +62,23 @@ export function draftFromProvider(provider: Provider): ProviderDraft {
   };
 }
 
-const sameModels = (a: readonly ProviderModel[], b: readonly ProviderModel[]): boolean => JSON.stringify(a) === JSON.stringify(b);
+const sameModels = (a: readonly ProviderModel[], b: readonly ProviderModel[]): boolean =>
+  JSON.stringify(a) === JSON.stringify(b);
 
 /** A new provider, as the server takes it. */
 export function createRequest(draft: ProviderDraft): CreateProviderInput {
   return {
     ...(draft.id.trim() !== '' ? { id: draft.id.trim() } : {}),
     name: draft.name.trim(),
+    kind: draft.kind,
     baseUrl: draft.baseUrl.trim(),
     allowPrivateNetwork: draft.allowPrivateNetwork,
     keyRequired: draft.keyRequired,
     balance: draft.balance,
     models: draft.models,
-    defaultModel: draft.models.some((model) => model.id === draft.defaultModel) ? draft.defaultModel : null,
+    defaultModel: draft.models.some((model) => model.id === draft.defaultModel)
+      ? draft.defaultModel
+      : null,
     enabled: draft.enabled,
     ...keyPatch(draft.key),
     ...(draft.preset ? { preset: draft.preset } : {}),
@@ -71,17 +86,23 @@ export function createRequest(draft: ProviderDraft): CreateProviderInput {
 }
 
 /** An edit: only what changed, the key only when one was typed. Null when nothing did. */
-export function updateRequest(original: Provider, draft: ProviderDraft): UpdateProviderInput | null {
+export function updateRequest(
+  original: Provider,
+  draft: ProviderDraft,
+): UpdateProviderInput | null {
   const before = draftFromProvider(original);
   const changes: UpdateProviderInput = {};
   if (draft.name.trim() !== before.name) changes.name = draft.name.trim();
   if (!sameBaseUrl(draft.baseUrl, before.baseUrl)) changes.baseUrl = draft.baseUrl.trim();
-  if (draft.allowPrivateNetwork !== before.allowPrivateNetwork) changes.allowPrivateNetwork = draft.allowPrivateNetwork;
+  if (draft.allowPrivateNetwork !== before.allowPrivateNetwork)
+    changes.allowPrivateNetwork = draft.allowPrivateNetwork;
   if (draft.keyRequired !== before.keyRequired) changes.keyRequired = draft.keyRequired;
   if (draft.balance !== before.balance) changes.balance = draft.balance;
   if (draft.enabled !== before.enabled) changes.enabled = draft.enabled;
   if (!sameModels(draft.models, before.models)) changes.models = draft.models;
-  const defaultModel = draft.models.some((model) => model.id === draft.defaultModel) ? draft.defaultModel : null;
+  const defaultModel = draft.models.some((model) => model.id === draft.defaultModel)
+    ? draft.defaultModel
+    : null;
   if (defaultModel !== before.defaultModel) changes.defaultModel = defaultModel;
   Object.assign(changes, keyPatch(draft.key));
   return Object.keys(changes).length > 0 ? changes : null;
@@ -106,5 +127,7 @@ export function hostOf(url: string): string {
 /** A short line about a model's window: "128K tokens". */
 export function windowText(tokens: number | null, t: Translator): string | null {
   if (tokens === null) return null;
-  return t('providers.model.window', { tokens: t.number(tokens, { notation: 'compact', maximumFractionDigits: 1 }) });
+  return t('providers.model.window', {
+    tokens: t.number(tokens, { notation: 'compact', maximumFractionDigits: 1 }),
+  });
 }

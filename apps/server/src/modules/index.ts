@@ -19,6 +19,12 @@ import { remotesModule } from './remotes/remotes.module.js';
 import { systemModule } from './system/system.module.js';
 import { terminalModule } from './terminal/terminal.module.js';
 import { usageModule } from './usage/usage.module.js';
+import { voiceModule } from './voice/voice.module.js';
+import { computerModule } from './computer/computer.module.js';
+import { browserModule } from './browser/browser.module.js';
+import { miniAppsModule } from './mini-apps/mini-apps.module.js';
+import { toolLibraryModule } from './tool-library/tool-library.module.js';
+import { mailboxModule } from './mailbox/mailbox.module.js';
 
 /**
  * Every module of the server, in set-up order. A module may rely on the
@@ -48,6 +54,12 @@ export const modules: readonly StudioModule[] = [
   inboxModule,
   automationModule,
   usageModule,
+  voiceModule,
+  mailboxModule,
+  toolLibraryModule,
+  miniAppsModule,
+  browserModule,
+  computerModule,
   collabModule,
   // extensions
   pluginsModule,

@@ -5,6 +5,7 @@ import type { Principal } from '../../kernel/principal.js';
 import { NotificationCenter, type NotifyResult } from './center.js';
 import { type CustomNotification, customContent } from './content.js';
 import { RunEventNotifier } from './events.js';
+import { ExternalChannels, type ExternalChannelOptions } from './external-channels.js';
 import { NotificationSwitches } from './preferences.js';
 import { PushChannel, type PushOptions } from './push.js';
 import { registerInboxRoutes } from './routes.js';
@@ -34,7 +35,7 @@ import type { Language } from './texts.js';
  * ## Channels
  *
  * `inApp` (the stored list, on by default) and `webPush` (on once a device
- * subscribes). Other channels are not part of this release; see
+ * subscribes). SMTP and Bark are configured per account through encrypted settings; see
  * `DeliveryChannel` in center.ts for where one would attach.
  *
  * ## For other modules
@@ -65,11 +66,21 @@ export interface InboxModuleOptions {
   readonly now?: () => number;
   readonly dedupeWindowMs?: number;
   readonly push?: PushOptions;
+  readonly external?: ExternalChannelOptions;
 }
 
 export function createInboxModule(options: InboxModuleOptions = {}): StudioModule {
   // One module object may serve several Studios in one process (tests do this), so nothing is kept per module.
-  const instances = new WeakMap<ModuleContext, { push: PushChannel; center: NotificationCenter; stopListening: () => void; stopped: boolean }>();
+  const instances = new WeakMap<
+    ModuleContext,
+    {
+      push: PushChannel;
+      external: ExternalChannels;
+      center: NotificationCenter;
+      stopListening: () => void;
+      stopped: boolean;
+    }
+  >();
 
   const shutDown = async (context: ModuleContext): Promise<void> => {
     const instance = instances.get(context);
@@ -77,6 +88,7 @@ export function createInboxModule(options: InboxModuleOptions = {}): StudioModul
     instance.stopped = true;
     instance.stopListening();
     await instance.push.stop();
+    await instance.external.idle();
   };
 
   return {
@@ -87,7 +99,9 @@ export function createInboxModule(options: InboxModuleOptions = {}): StudioModul
       const now = options.now ?? Date.now;
       const switches = new NotificationSwitches(context.services.preferences);
       const push = new PushChannel({ context, switches, options: options.push ?? {}, now });
-      const center = new NotificationCenter({ context, switches, push, now });
+      const external = new ExternalChannels(context, options.external);
+      external.register();
+      const center = new NotificationCenter({ context, switches, push, now, external });
       const tasks = new TaskInbox({ context, center, switches, now });
       const notifier = new RunEventNotifier({
         context,
@@ -101,7 +115,10 @@ export function createInboxModule(options: InboxModuleOptions = {}): StudioModul
         notify: (userId, notification) => center.notify(userId, customContent(notification)),
         languageOf: (userId) => switches.language(userId),
         summary: (principal) => tasks.summary(principal),
-        idle: () => push.idle(),
+        idle: async () => {
+          await push.idle();
+          await external.idle();
+        },
       };
 
       const stopListening = notifier.listen();
@@ -112,6 +129,7 @@ export function createInboxModule(options: InboxModuleOptions = {}): StudioModul
       });
       instances.set(context, {
         push,
+        external,
         center,
         stopped: false,
         stopListening: () => {

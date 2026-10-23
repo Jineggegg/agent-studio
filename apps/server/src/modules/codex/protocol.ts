@@ -27,10 +27,16 @@ export type RpcId = string | number;
 export type RpcMessage =
   | { readonly kind: 'response'; readonly id: RpcId; readonly result: unknown }
   | { readonly kind: 'error'; readonly id: RpcId; readonly code: number; readonly message: string }
-  | { readonly kind: 'request'; readonly id: RpcId; readonly method: string; readonly params: unknown }
+  | {
+      readonly kind: 'request';
+      readonly id: RpcId;
+      readonly method: string;
+      readonly params: unknown;
+    }
   | { readonly kind: 'notification'; readonly method: string; readonly params: unknown };
 
-const isId = (value: unknown): value is RpcId => typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value));
+const isId = (value: unknown): value is RpcId =>
+  typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value));
 
 /** Sorts one decoded line into what it is. Null: valid JSON, but not a message. */
 export function classifyMessage(value: unknown): RpcMessage | null {
@@ -38,7 +44,9 @@ export function classifyMessage(value: unknown): RpcMessage | null {
   const message = value as Record<string, unknown>;
   const method = typeof message.method === 'string' ? message.method : null;
   if (method !== null) {
-    return isId(message.id) ? { kind: 'request', id: message.id, method, params: message.params } : { kind: 'notification', method, params: message.params };
+    return isId(message.id)
+      ? { kind: 'request', id: message.id, method, params: message.params }
+      : { kind: 'notification', method, params: message.params };
   }
   if (!isId(message.id)) return null;
   if (message.error !== undefined && message.error !== null) {
@@ -85,6 +93,9 @@ export const modelSchema = z.looseObject({
   supportedReasoningEfforts: z.array(z.looseObject({ reasoningEffort: z.string() })).optional(),
   defaultReasoningEffort: z.string().optional(),
   inputModalities: z.array(z.string()).optional(),
+  serviceTiers: z
+    .array(z.object({ id: z.string(), name: z.string(), description: z.string() }))
+    .optional(),
 });
 export type CodexModel = z.infer<typeof modelSchema>;
 
@@ -120,7 +131,9 @@ export const threadResponseSchema = z.looseObject({
 });
 export type ThreadResponse = z.infer<typeof threadResponseSchema>;
 
-export const turnStartResultSchema = z.looseObject({ turn: z.looseObject({ id: z.string().min(1) }) });
+export const turnStartResultSchema = z.looseObject({
+  turn: z.looseObject({ id: z.string().min(1) }),
+});
 
 // ---------------------------------------------------------------------------
 // Items
@@ -169,8 +182,14 @@ const itemSchema = z.discriminatedUnion('type', [
     tool: z.string(),
     status: z.string().catch('inProgress'),
     arguments: z.unknown(),
-    result: z.looseObject({ content: z.array(z.unknown()).catch([]) }).nullable().optional(),
-    error: z.looseObject({ message: z.string().catch('') }).nullable().optional(),
+    result: z
+      .looseObject({ content: z.array(z.unknown()).catch([]) })
+      .nullable()
+      .optional(),
+    error: z
+      .looseObject({ message: z.string().catch('') })
+      .nullable()
+      .optional(),
   }),
   z.looseObject({
     type: z.literal('dynamicToolCall'),
@@ -194,7 +213,15 @@ const itemSchema = z.discriminatedUnion('type', [
     type: z.literal('webSearch'),
     id: z.string(),
     query: z.string().catch(''),
-    action: z.looseObject({ type: z.string(), url: optionalText, query: optionalText, pattern: optionalText }).nullable().optional(),
+    action: z
+      .looseObject({
+        type: z.string(),
+        url: optionalText,
+        query: optionalText,
+        pattern: optionalText,
+      })
+      .nullable()
+      .optional(),
   }),
   z.looseObject({ type: z.literal('imageView'), id: z.string(), path: z.string().catch('') }),
   z.looseObject({ type: z.literal('contextCompaction'), id: z.string() }),
@@ -253,7 +280,11 @@ export const rateLimitSnapshotSchema = z.looseObject({
   primary: rateLimitWindowSchema,
   secondary: rateLimitWindowSchema,
   credits: z
-    .looseObject({ hasCredits: z.boolean().catch(false), unlimited: z.boolean().catch(false), balance: optionalText })
+    .looseObject({
+      hasCredits: z.boolean().catch(false),
+      unlimited: z.boolean().catch(false),
+      balance: optionalText,
+    })
     .nullable()
     .optional(),
   planType: optionalText,
@@ -279,7 +310,11 @@ export const notificationSchemas = {
   'turn/started': z.looseObject({ threadId: z.string(), turn: z.looseObject({ id: z.string() }) }),
   'turn/completed': z.looseObject({
     threadId: z.string(),
-    turn: z.looseObject({ id: z.string(), status: z.string(), error: turnErrorSchema.nullable().optional() }),
+    turn: z.looseObject({
+      id: z.string(),
+      status: z.string(),
+      error: turnErrorSchema.nullable().optional(),
+    }),
   }),
   'turn/plan/updated': z.looseObject({
     ...scoped,
@@ -289,24 +324,57 @@ export const notificationSchemas = {
   'item/started': z.looseObject({ ...scoped, item: z.unknown() }),
   'item/completed': z.looseObject({ ...scoped, item: z.unknown() }),
   'item/agentMessage/delta': z.looseObject({ ...scoped, itemId: z.string(), delta: z.string() }),
-  'item/reasoning/summaryTextDelta': z.looseObject({ ...scoped, itemId: z.string(), delta: z.string(), summaryIndex: z.number().catch(0) }),
-  'item/reasoning/summaryPartAdded': z.looseObject({ ...scoped, itemId: z.string(), summaryIndex: z.number().catch(0) }),
+  'item/reasoning/summaryTextDelta': z.looseObject({
+    ...scoped,
+    itemId: z.string(),
+    delta: z.string(),
+    summaryIndex: z.number().catch(0),
+  }),
+  'item/reasoning/summaryPartAdded': z.looseObject({
+    ...scoped,
+    itemId: z.string(),
+    summaryIndex: z.number().catch(0),
+  }),
   'item/reasoning/textDelta': z.looseObject({ ...scoped, itemId: z.string(), delta: z.string() }),
-  'item/commandExecution/outputDelta': z.looseObject({ ...scoped, itemId: z.string(), delta: z.string() }),
-  'item/mcpToolCall/progress': z.looseObject({ ...scoped, itemId: z.string(), message: z.string() }),
-  'item/fileChange/patchUpdated': z.looseObject({ ...scoped, itemId: z.string(), changes: z.array(fileUpdateChangeSchema).catch([]) }),
+  'item/commandExecution/outputDelta': z.looseObject({
+    ...scoped,
+    itemId: z.string(),
+    delta: z.string(),
+  }),
+  'item/mcpToolCall/progress': z.looseObject({
+    ...scoped,
+    itemId: z.string(),
+    message: z.string(),
+  }),
+  'item/fileChange/patchUpdated': z.looseObject({
+    ...scoped,
+    itemId: z.string(),
+    changes: z.array(fileUpdateChangeSchema).catch([]),
+  }),
   'account/rateLimits/updated': z.looseObject({ rateLimits: rateLimitSnapshotSchema }),
-  'mcpServer/startupStatus/updated': z.looseObject({ name: z.string(), status: z.string(), error: optionalText }),
+  'mcpServer/startupStatus/updated': z.looseObject({
+    name: z.string(),
+    status: z.string(),
+    error: optionalText,
+  }),
   'model/rerouted': z.looseObject({ ...scoped, fromModel: z.string(), toModel: z.string() }),
-  error: z.looseObject({ error: turnErrorSchema, willRetry: z.boolean().catch(false), threadId: z.string().optional(), turnId: z.string().optional() }),
+  error: z.looseObject({
+    error: turnErrorSchema,
+    willRetry: z.boolean().catch(false),
+    threadId: z.string().optional(),
+    turnId: z.string().optional(),
+  }),
   warning: z.looseObject({ threadId: z.string().nullable().optional(), message: z.string() }),
   configWarning: z.looseObject({ summary: z.string(), details: optionalText }),
 } as const;
 
 export type NotificationMethod = keyof typeof notificationSchemas;
-export type NotificationParams<M extends NotificationMethod> = z.infer<(typeof notificationSchemas)[M]>;
+export type NotificationParams<M extends NotificationMethod> = z.infer<
+  (typeof notificationSchemas)[M]
+>;
 
-export const isKnownNotification = (method: string): method is NotificationMethod => Object.hasOwn(notificationSchemas, method);
+export const isKnownNotification = (method: string): method is NotificationMethod =>
+  Object.hasOwn(notificationSchemas, method);
 
 // ---------------------------------------------------------------------------
 // Requests the server sends to the client
@@ -324,7 +392,10 @@ export const commandApprovalSchema = z.looseObject({
   cwd: optionalText,
   commandActions: z.array(commandActionSchema).nullable().optional(),
   /** Set when the request is for a network connection rather than a command. */
-  networkApprovalContext: z.looseObject({ host: z.string(), protocol: z.string().catch('https') }).nullable().optional(),
+  networkApprovalContext: z
+    .looseObject({ host: z.string(), protocol: z.string().catch('https') })
+    .nullable()
+    .optional(),
 });
 export type CommandApproval = z.infer<typeof commandApprovalSchema>;
 

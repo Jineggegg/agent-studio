@@ -3,8 +3,8 @@ import { BUDGET_THRESHOLDS, type BudgetState, type BudgetThreshold } from '@agen
 /**
  * The arithmetic of a budget's thresholds. Pure functions.
  *
- * A budget never blocks anything. All it does is say, once per month and
- * threshold, that usage has reached 80 % or 100 % of the amount.
+ * These helpers calculate announcements at 80 % and 100 %. The optional
+ * request gate is checked separately by UsageService against recorded usage.
  */
 
 export type AnnouncedThreshold = 0 | BudgetThreshold;
@@ -34,8 +34,14 @@ export function budgetState(fraction: number): BudgetState {
  * nothing. When both thresholds are passed in one step only the higher is
  * announced — one message says it all.
  */
-export function thresholdToAnnounce(input: { fraction: number; month: string; announcedMonth: string | null; announcedThreshold: AnnouncedThreshold }): BudgetThreshold | null {
-  const already: AnnouncedThreshold = input.announcedMonth === input.month ? input.announcedThreshold : 0;
+export function thresholdToAnnounce(input: {
+  fraction: number;
+  month: string;
+  announcedMonth: string | null;
+  announcedThreshold: AnnouncedThreshold;
+}): BudgetThreshold | null {
+  const already: AnnouncedThreshold =
+    input.announcedMonth === input.month ? input.announcedThreshold : 0;
   const reached = reachedThreshold(input.fraction);
   return reached > already ? (reached as BudgetThreshold) : null;
 }

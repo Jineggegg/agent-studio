@@ -4,27 +4,71 @@ A running record of what is done, what is in flight and what comes next, kept
 so that work can resume after an interruption. It is updated at every
 integration point; nothing is listed as done unless its tests pass.
 
-Last updated: 2026-10-15 (2.0.0-beta.3: security review and fixes).
+Last updated: 2026-10-23 (Cloud Harness 2.0.0-beta.4).
 
-## Phases
+## Cloud Harness expansion
 
-| Phase | State | Evidence |
-|---|---|---|
-| 1 Requirements | **Done** | `docs/requirements/01–04` (708 acceptance tests), scanned for code and personal data; security observations about the predecessor restated as requirements before publication |
-| 2 Architecture | **Done** | `docs/architecture/ARCHITECTURE.md`, ADRs 0001–0010 |
-| 3 New project | **Done** | Workspace, tooling, CI definitions, licence and lockfile checks |
-| 4 Backend foundation, auth, database | **Done** | Kernel; accounts with passkeys, API tokens, lockout, audit log, operator commands; projects; preferences |
-| 5 Agent runtime (Claude Code, Codex) | **Done** | Runtime; Claude Code adapter verified against Claude Code 2.1.283 and Codex adapter against codex-cli 0.160.0 (`docs/guides/agent-smoke-test.md` says exactly what was seen) |
-| 6 Workbench, sessions, tasks | **Done** | Workbench UI; handoff, multi-agent tasks, running work |
-| 7 Projects, GitHub, terminal, files | **Done** | GitHub read paths checked against a real account; merge and other write actions never run against the real service |
-| 8 Memory, API models, automation | **Done** | API-model providers never run against a real provider; Web Push never sent to a real push service |
-| 9 Mobile UI, PWA, remote access | **Done** | Verified in headless Chromium at phone, tablet and desktop sizes and in WebKit at phone size (in CI); **not on a physical iPhone or iPad** |
-| 10 Hardening, integration tests, docs | **Done** | AI-assisted security review: no critical/high/medium findings, two lows fixed; guides in `docs/guides/` |
-| 11 Compliance and similarity review | **Done** | `docs/licenses/THIRD_PARTY_LICENSES.md`, `docs/clean-room/SIMILARITY.md` |
-| 12 GitHub release | **Done** | Public repository; every CI job green on GitHub-hosted runners at the release commit, plus CodeQL; release `v2.0.0-beta.1` |
+The accepted scope is recorded in `docs/requirements/05-cloud-harness.md`.
+Implementation includes conversation groups and branches, account profiles,
+external transcript import, file checkpoints, image annotation, voice,
+native Anthropic, mail, reminder proposals, optional notifications, a tool
+library, static project apps, an isolated browser, a Windows companion and a
+desktop wrapper. Each starts without personal accounts or deployment data.
+
+Local verification for this expansion:
+
+- Typecheck, lint, production build and the built-server smoke test pass.
+- Full unit regression: 3,272 passed, one skipped. Subsequent targeted tool-schema
+  and bridge regressions also pass after the MCP object-union compatibility fix.
+- Integration regression: 1,334 passed, 13 skipped (opt-in external/runtime checks).
+- Black-box acceptance: 434 passed.
+- Chromium browser coverage: 66 application scenarios pass across phone, tablet
+  and desktop; six phone-only cases are intentionally skipped at other sizes.
+  Nine additional hit-area measurement regressions pass in a separate final run.
+  Real phone button sizing defects were corrected; the measurement tests also
+  distinguish normal scroll clipping from undersized and covered controls.
+- A real sandboxed Chromium smoke test passes, including click/type interaction,
+  denied private-network access and restricted inherited environment.
+- Linux Electron directory packaging passes. Nine desktop policy and release
+  download-security tests pass. The release archive installs, serves the UI and
+  terminal on loopback, supports the new command alias, and refuses tampering,
+  invalid versions and failed provenance verification.
+- Dependency audit reports zero known vulnerabilities. The lockfile check passes
+  for 881 registry entries; all 776 dependency licences are on the allow-list.
+- Independent AI-assisted security and privacy reviews were completed before
+  commit. Fixed findings and residual limits are listed in
+  [the publication review](clean-room/RELEASE-REVIEW-2026-10-23.md).
+- Secret scans cover the candidate tree, existing public history, desktop archive
+  and extracted release material. No leaks were reported. The release contains
+  9,250 files including dependencies, with 474 application files and no application
+  source maps, compiled tests or runtime databases. Realistic planted-key canaries
+  still fail the scanner as expected. Source comparisons are recorded in
+  [SIMILARITY.md](clean-room/SIMILARITY.md).
+
+GitHub CI additionally runs Node 22/24, WebKit, Windows companion parsing and C#
+compilation, CodeQL, and installation across Ubuntu x64/ARM64, Debian, Fedora and
+macOS. Its check results are the authority for those environments; local checks
+do not claim physical Windows/macOS or mobile-device validation.
+
+## Earlier release phases
+
+| Phase                                           | State         | Evidence                                                                                                                                                                                                                                                                                                                                                       |
+| ----------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 Requirements                                  | **Done**      | `docs/requirements/01–04` (708 acceptance tests), scanned for code and personal data; security observations about the predecessor restated as requirements before publication                                                                                                                                                                                  |
+| 2 Architecture                                  | **Done**      | `docs/architecture/ARCHITECTURE.md`, ADRs 0001–0010                                                                                                                                                                                                                                                                                                            |
+| 3 New project                                   | **Done**      | Workspace, tooling, CI definitions, licence and lockfile checks                                                                                                                                                                                                                                                                                                |
+| 4 Backend foundation, auth, database            | **Done**      | Kernel; accounts with passkeys, API tokens, lockout, audit log, operator commands; projects; preferences                                                                                                                                                                                                                                                       |
+| 5 Agent runtime (Claude Code, Codex)            | **Done**      | Runtime; Claude Code adapter verified against Claude Code 2.1.283 and Codex adapter against codex-cli 0.160.0 (`docs/guides/agent-smoke-test.md` says exactly what was seen)                                                                                                                                                                                   |
+| 6 Workbench, sessions, tasks                    | **Done**      | Workbench UI; handoff, multi-agent tasks, running work                                                                                                                                                                                                                                                                                                         |
+| 7 Projects, GitHub, terminal, files             | **Done**      | GitHub read paths checked against a real account; merge and other write actions never run against the real service                                                                                                                                                                                                                                             |
+| 8 Memory, API models, automation                | **Done**      | API-model providers never run against a real provider; Web Push never sent to a real push service                                                                                                                                                                                                                                                              |
+| 9 Mobile UI, PWA, remote access                 | **Done**      | Verified in headless Chromium at phone, tablet and desktop sizes and in WebKit at phone size (in CI); **not on a physical iPhone or iPad**                                                                                                                                                                                                                     |
+| 10 Hardening, integration tests, docs           | **Done**      | AI-assisted security review: no critical/high/medium findings, two lows fixed; guides in `docs/guides/`                                                                                                                                                                                                                                                        |
+| 11 Compliance and similarity review             | **Done**      | `docs/licenses/THIRD_PARTY_LICENSES.md`, `docs/clean-room/SIMILARITY.md`                                                                                                                                                                                                                                                                                       |
+| 12 GitHub release                               | **Done**      | Public repository; every CI job green on GitHub-hosted runners at the release commit, plus CodeQL; release `v2.0.0-beta.1`                                                                                                                                                                                                                                     |
 | 13 One-line install (part 1 of one-click setup) | **In review** | `packaging/install.sh`, `packaging/bin/agent-studio`, `scripts/package-release.mjs`; CI installs the package on Ubuntu x64/ARM64, Debian, Fedora and macOS (with the service); release workflow attaches the package with build provenance. Next: remote access set-up (Tailscale, then Cloudflare Tunnel, then a VPS with Caddy), then update/backup/rollback |
 
-## Verified at the release commit
+## Verified at the earlier release commit
 
 Locally, on Linux with bubblewrap available: `npm run typecheck`,
 `npm run lint`, 3,172 unit tests, 1,271 integration tests (12 skipped:
@@ -80,16 +124,17 @@ against the predecessor and its upstream with the same result as at release.
   can be lost.
 - Plugin panels log one console message in Chromium for a protective
   content-security-policy directive it does not recognise.
-- Not built: AI-built apps with a per-app gateway, an agent-driven browser,
-  MCP server and skills management screens, slash commands, voice input and
-  read-aloud, discovery of agent sessions started outside the product, image
-  markup, notification channels other than Web Push, natural-language
-  automation planning, multiple chains per session list group.
+- Static app previews do not run arbitrary server backends. Mail uses delegated
+  Gmail/Outlook APIs; MCP management supports handshake Streamable HTTP.
+  Physical Windows/macOS desktop and companion checks remain manual. The optional
+  isolated browser has no hard CPU, memory or temporary-disk quota; usage gates
+  cannot precisely limit in-flight or concurrent spending. See the publication
+  review for the full scope of these limits.
 
 ## Rules that outlive any one session
 
-- The predecessor system and its repository are read-only and are never read
-  by anyone writing code here (`docs/clean-room/PROCESS.md`).
+- Implementation workers use public requirements and this repository only;
+  coordinating-audit exceptions are disclosed in `docs/clean-room/PROCESS.md`.
 - New code enters through `docs/development/CONVENTIONS.md`.
 - The repository goes public only after the security review, the secret scan,
   the licence check and the similarity audit are clean.

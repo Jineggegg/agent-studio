@@ -307,15 +307,15 @@ Notifications are set up per device and browser:
 
 What the page may tell you instead, and what to do:
 
-| State | Meaning |
-|---|---|
-| Add to Home Screen first | iPhone or iPad outside the installed app. |
-| Blocked in this browser | You refused the permission. Allow notifications in the site's settings (on iPhone: Settings → Notifications → Agent Studio). The page updates by itself. |
-| Not set up on this device | Permission given, but this browser is not registered with your account. **Enable on this device**. |
-| Set up, but switched off | Sending to devices is switched off for your account. **Switch sending on**. |
-| Needs a secure address | The page was opened over plain http. |
-| Background worker not running | Reload the page. A development build has none. |
-| Not available in this browser | The browser has no Web Push. The inbox still works. |
+| State                         | Meaning                                                                                                                                                   |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Add to Home Screen first      | iPhone or iPad outside the installed app.                                                                                                                 |
+| Blocked in this browser       | You refused the permission. Allow notifications in the site's settings (on iPhone: Settings → Notifications → Cloud Harness). The page updates by itself. |
+| Not set up on this device     | Permission given, but this browser is not registered with your account. **Enable on this device**.                                                        |
+| Set up, but switched off      | Sending to devices is switched off for your account. **Switch sending on**.                                                                               |
+| Needs a secure address        | The page was opened over plain http.                                                                                                                      |
+| Background worker not running | Reload the page. A development build has none.                                                                                                            |
+| Not available in this browser | The browser has no Web Push. The inbox still works.                                                                                                       |
 
 An account can have up to 10 devices. They are listed with when they were last
 delivered to, and can be removed; removing this browser also gives up its
@@ -404,8 +404,8 @@ output and cache tokens and the cost — a percentage only when the window size
 is known, a cost only when the agent reports one or the Studio can estimate it.
 The ring turns to a warning at 80 % and says the window is nearly full at 95 %.
 
-A usage screen with reports, plan windows, provider balances and budgets was
-still being built when this guide was written. The server side exists.
+The Usage screen includes reports, plan windows, provider balances and your
+own monthly budgets.
 
 ### Where the numbers come from
 
@@ -433,8 +433,28 @@ you in a terminal, another machine — uses them up too.
 For API providers there are no plan windows. There is a balance where the
 provider documents a way to read it (DeepSeek does; read by the owner), and an
 estimate: an amount you noted on a date minus what the Studio's records say was
-spent since. **Budgets** are your own monthly marks; crossing 80 % and 100 % is
-announced once a month in the app, and nothing is ever blocked by one.
+spent since. **Budgets** are your own monthly amounts; crossing 80 % and 100 %
+is announced once a month in the app.
+
+### Optional limits on new requests
+
+Each budget starts with **Stop new requests at this amount** switched off.
+Choose your own positive token or dollar amount; none is prefilled. Switch
+the option on to refuse new runs and API model requests once your recorded
+usage reaches that amount. A budget can cover all your agents or one agent.
+Only its owner can change it, including on a shared instance. The month
+resets in the budget's selected IANA time zone. Raising the amount, disabling
+the option or removing the budget also permits new requests again.
+
+This is a gate based on observed usage, not an exact monetary cap. Unknown
+model prices and costs an agent has not reported are excluded; the screen
+shows the number of unpriced runs. Usage from other applications or outside
+this instance is not counted. Requests already running are not cancelled,
+and concurrent requests may pass the check before either reports its usage.
+Both can exceed the amount. CLI agents are checked before starting a run;
+their internal model requests cannot be checked or interrupted individually.
+API agents are checked before each model request, including tool follow-ups.
+No money is refunded or rolled back by this setting.
 
 Routes ("user"): `GET /api/usage/report` (by day, week or month, by agent,
 model and project; the owner may ask for everyone's), `GET /api/usage/summary`,

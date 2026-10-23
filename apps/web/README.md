@@ -1,4 +1,4 @@
-# Agent Studio — web client
+# Cloud Harness — web client
 
 A touch-first PWA for phone, tablet and desktop. React 19, react-router 8,
 TanStack Query, zustand, zod; hand-written CSS on design tokens; no UI framework.
@@ -108,7 +108,7 @@ Variants and states are data attributes (`data-variant`, `data-tone`,
 ## Adding a feature
 
 A feature is a directory under `src/features/<name>/` with an `index.ts` that
-only *registers* things, plus one line in `src/features/index.ts`:
+only _registers_ things, plus one line in `src/features/index.ts`:
 
 ```ts
 // src/features/index.ts
@@ -122,8 +122,23 @@ import { registerFeatureRoutes, registerSettingsPage, registerSystemTile } from 
 import { useInboxTileStatus } from './status';
 
 registerFeatureRoutes({ path: 'inbox', name: 'inbox.title', load: () => import('./InboxScreen') });
-registerSystemTile({ id: 'inbox', title: 'inbox.title', icon: Inbox, tint: 'red', to: '/inbox', order: 20, useStatus: useInboxTileStatus });
-registerSettingsPage({ id: 'notifications', title: 'settings.notifications.title', group: 'general', icon: Bell, tint: 'red', load: () => import('./NotificationSettings') });
+registerSystemTile({
+  id: 'inbox',
+  title: 'inbox.title',
+  icon: Inbox,
+  tint: 'red',
+  to: '/inbox',
+  order: 20,
+  useStatus: useInboxTileStatus,
+});
+registerSettingsPage({
+  id: 'notifications',
+  title: 'settings.notifications.title',
+  group: 'general',
+  icon: Bell,
+  tint: 'red',
+  load: () => import('./NotificationSettings'),
+});
 ```
 
 ### A route
@@ -157,7 +172,12 @@ import { Screen } from '@/shell/Screen';
 export default function InboxScreen() {
   const t = useT();
   return (
-    <Screen title={t('inbox.title')} actions={<IconButton label={t('common.retry')} icon={<RefreshCw size={21} />} onClick={refresh} />}>
+    <Screen
+      title={t('inbox.title')}
+      actions={
+        <IconButton label={t('common.retry')} icon={<RefreshCw size={21} />} onClick={refresh} />
+      }
+    >
       <List>…</List>
     </Screen>
   );
@@ -186,7 +206,10 @@ own keys (an editor, a terminal) sets `data-keys="own"`.
 does. Tabs that are routes change with `navigate(to, { replace: true })`.
 
 ```tsx
-<ScreenStack screenKey={sessionId ?? ':list'} kind={useRouteTransition(sessionId ?? ':list', useNavigationType(), isSystemGesturePop)}>
+<ScreenStack
+  screenKey={sessionId ?? ':list'}
+  kind={useRouteTransition(sessionId ?? ':list', useNavigationType(), isSystemGesturePop)}
+>
   {sessionId ? <SessionScreen id={sessionId} /> : <SessionList />}
 </ScreenStack>
 ```
@@ -249,11 +272,11 @@ The workbench (`features/workbench/`) owns the chat and an area beside it for
 a project's tools — files, a terminal, Git, a preview. A tool is a **panel**
 registered from its own feature; the workbench supplies the container:
 
-| Layout | The inspector is… |
-| --- | --- |
-| wide | a docked column right of the chat, resized by dragging its edge (or ←/→ on the handle); the chat keeps at least 380 px |
-| tablet | a panel floating over the chat's trailing side |
-| phone | a full-screen layer over the chat, closed with its own control or Escape |
+| Layout | The inspector is…                                                                                                      |
+| ------ | ---------------------------------------------------------------------------------------------------------------------- |
+| wide   | a docked column right of the chat, resized by dragging its edge (or ←/→ on the handle); the chat keeps at least 380 px |
+| tablet | a panel floating over the chat's trailing side                                                                         |
+| phone  | a full-screen layer over the chat, closed with its own control or Escape                                               |
 
 Which panel is on show, whether the inspector is open and how wide it is are
 remembered per device. The conversation list at the leading edge is resized the same
@@ -324,8 +347,10 @@ transcript is ever a dead button:
 ```tsx
 import { useInspectorAction } from '@/features/workbench/inspector/scope';
 
-const openFile = useInspectorAction('open-file');   // null when no panel handles it
-{openFile && <button onClick={() => openFile({ type: 'open-file', path })}>…</button>}
+const openFile = useInspectorAction('open-file'); // null when no panel handles it
+{
+  openFile && <button onClick={() => openFile({ type: 'open-file', path })}>…</button>;
+}
 ```
 
 Today the transcript asks for `open-file` (a read or an edit's file, each file
@@ -351,9 +376,19 @@ build contains neither.
 // src/features/github/index.ts
 import { registerTitleBarItem } from '@/features/workbench/chat/slots';
 
-registerTitleBarItem({ id: 'branch', order: 10, available: ({ role }) => role === 'owner', load: () => import('./BranchChip') });
+registerTitleBarItem({
+  id: 'branch',
+  order: 10,
+  available: ({ role }) => role === 'owner',
+  load: () => import('./BranchChip'),
+});
 
-interface TitleBarItemProps { project: Project; sessionId: string | null; busy: boolean; compact: boolean }   // compact on a phone
+interface TitleBarItemProps {
+  project: Project;
+  sessionId: string | null;
+  busy: boolean;
+  compact: boolean;
+} // compact on a phone
 ```
 
 Each item downloads on first use and sits in its own error boundary: one that
@@ -422,9 +457,9 @@ visible, no polling while hidden, two retries only where retrying can help.
 const sessions = useQuery({
   queryKey: ['sessions', projectId],
   queryFn: ({ signal }) => api.get(`/api/projects/${projectId}/sessions`, { schema, signal }),
-  meta: { live: true },      // mirrors live status: re-read the moment the live connection returns
+  meta: { live: true }, // mirrors live status: re-read the moment the live connection returns
 });
-const { stale, since } = useStaleness(sessions);     // '@/data/connection'
+const { stale, since } = useStaleness(sessions); // '@/data/connection'
 ```
 
 - First load: skeletons, held back 140 ms (`DelayedSkeleton`, `useDelayedFlag`). Never the progress line.
@@ -466,11 +501,11 @@ on screen, not to everything.
 
 ```ts
 import { useSession, useUser, useIsOwner } from '@/data/session';
-import { onSessionEnd } from '@/data/auth';                 // erase what your feature keeps on the device
+import { onSessionEnd } from '@/data/auth'; // erase what your feature keeps on the device
 import { usePreference, setPreference } from '@/data/preferences';
 
 const mode = usePreference('usage.display', (v) => (v === 'used' ? 'used' : 'remaining'));
-setPreference('usage.display', 'used');   // applied now, saved after 400 ms, synced to other devices live
+setPreference('usage.display', 'used'); // applied now, saved after 400 ms, synced to other devices live
 ```
 
 Preferences are account-wide (`<feature>.<name>` keys, JSON values, 64 kB per
@@ -489,19 +524,19 @@ focused field holding text and any open sheet already block it.
 
 ## Platform hooks
 
-| Hook | From | For |
-| --- | --- | --- |
-| `useLayoutClass()` → `'phone' \| 'tablet' \| 'wide'` | `@/platform/layout` | every size-dependent layout decision |
-| `useKeyboard()` → `{ open, inset }` | `@/platform/viewport` | knowing the soft keyboard is up |
-| `useKeyboardDock(ref)` | `@/platform/viewport` | a composer or toolbar docked to the bottom: keeps its focused field in view and reports the keyboard |
-| `useScreenActive()` | `@/shell/ScreenStack` | pausing polling and animation while covered or leaving |
-| `useReducedMotion()`, `useCanHover()`, `usePageVisible()`, `useBrowserOnline()`, `useMediaQuery(q)` | `@/platform/media` | |
-| `useConnectionState()` → `'online' \| 'reconnecting' \| 'offline'`, `useStaleness(query)` | `@/data/connection` | labelling stale data |
-| `useLongPress(handler, { delay, tolerance })` | `@/platform/long-press` | long press that swallows its click; pair with class `u-no-callout` |
-| `useTheme()`, `useThemePreference()` | `@/platform/theme` | reading the theme (set it with `chooseTheme` from `@/shell/appearance`) |
-| `copyText(text)` | `@/platform/clipboard` | copying; works on plain-http LAN addresses too |
-| `useDocumentTitle(title)`, `useScrollRestoration(ref, id)`, `useBack(parent)` | `@/shell/*` | what `Screen` does, for custom scaffolds |
-| `useUnsavedWork(dirty)`, `checkForUpdate()` | `@/pwa/update` | |
+| Hook                                                                                                | From                    | For                                                                                                  |
+| --------------------------------------------------------------------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `useLayoutClass()` → `'phone' \| 'tablet' \| 'wide'`                                                | `@/platform/layout`     | every size-dependent layout decision                                                                 |
+| `useKeyboard()` → `{ open, inset }`                                                                 | `@/platform/viewport`   | knowing the soft keyboard is up                                                                      |
+| `useKeyboardDock(ref)`                                                                              | `@/platform/viewport`   | a composer or toolbar docked to the bottom: keeps its focused field in view and reports the keyboard |
+| `useScreenActive()`                                                                                 | `@/shell/ScreenStack`   | pausing polling and animation while covered or leaving                                               |
+| `useReducedMotion()`, `useCanHover()`, `usePageVisible()`, `useBrowserOnline()`, `useMediaQuery(q)` | `@/platform/media`      |                                                                                                      |
+| `useConnectionState()` → `'online' \| 'reconnecting' \| 'offline'`, `useStaleness(query)`           | `@/data/connection`     | labelling stale data                                                                                 |
+| `useLongPress(handler, { delay, tolerance })`                                                       | `@/platform/long-press` | long press that swallows its click; pair with class `u-no-callout`                                   |
+| `useTheme()`, `useThemePreference()`                                                                | `@/platform/theme`      | reading the theme (set it with `chooseTheme` from `@/shell/appearance`)                              |
+| `copyText(text)`                                                                                    | `@/platform/clipboard`  | copying; works on plain-http LAN addresses too                                                       |
+| `useDocumentTitle(title)`, `useScrollRestoration(ref, id)`, `useBack(parent)`                       | `@/shell/*`             | what `Screen` does, for custom scaffolds                                                             |
+| `useUnsavedWork(dirty)`, `checkForUpdate()`                                                         | `@/pwa/update`          |                                                                                                      |
 
 **The keyboard.** The app frame is exactly as tall as the visual viewport, so
 anything docked to the bottom of its column sits directly above the soft
@@ -529,37 +564,37 @@ codes: `errors.<code>`; audit actions: `audit.<action>`.
 
 ## Components (`@/ui`)
 
-| Component | One-line usage |
-| --- | --- |
-| `Button` | `<Button variant="primary" loading={saving} loadingLabel={t('…')} onClick={save}>{t('common.save')}</Button>` — variants `primary · tinted · neutral · plain · danger · plain-danger`; sizes `sm · md · lg`; `block`, `icon` |
-| `IconButton` | `<IconButton label={t('home.refresh')} icon={<RefreshCw size={21} />} busy={refreshing} onClick={refresh} />` — `label` is required (name + tooltip); `variant="filled"`, `tone` |
-| `TextField` | `<TextField label={t('…')} value={v} onChange={setV} hint="…" error={problem} onEnter={submit} />` — `type="password"` adds show/hide; `secret`, `mono`, `optional`, `leading`, `trailing` |
-| `TextArea` | `<TextArea label="…" value={v} onChange={setV} autoGrow maxRows={8} onSubmit={send} />` — Enter submits, Shift+Enter breaks the line |
-| `Form` | `<Form onSubmit={submit}>…</Form>` — input-method-safe Enter, no page reload |
-| `Switch` | `<Switch checked={on} onChange={setOn} label="…" />` — inside a `ListRow` use `control={<Switch … />}` and drop `label` |
-| `Checkbox` | `<Checkbox checked={c} onChange={setC} label="Read" hint="…" />` — several of a short list |
-| `SegmentedControl` | `<SegmentedControl label="…" value={v} onChange={setV} options={[{ value, label, icon? }]} />` — two to four modes |
-| `Select` | `<Select label="…" value={v} onChange={setV} options={[{ value, label, hint? }]} block />` — a menu; a bottom sheet on phone |
-| `Menu`, `MenuButton` | `<MenuButton label={t('common.moreActions')} items={[{ id, label, icon, tone?: 'danger', onSelect }]} />` |
-| `List`, `ListRow` | `<List header="…" footer="…"><ListRow leading={<Glyph … />} title="…" subtitle="…" value="…" to="/x" /></List>` — also `onPress`, `control`, `trailing`, `selected`, `tone`, `actions` (swipe-to-reveal, plus the same actions under a "…" button) |
-| `NavigationBar`, `LargeTitle` | normally through `Screen`; standalone: `<NavigationBar title="…" back={{ label, onPress }} trailing={…} />` |
-| `Sheet` | `<Sheet open={open} onClose={close} title="…" footer={<Button …/>}>…</Sheet>` — bottom sheet with drag-to-dismiss on phone, dialog otherwise; `size`, `fill`, `flush`, `dismissible`, `leading`, `trailing`; focus an element first with `data-autofocus` |
-| `ConfirmDialog`, `confirm()` | `if (await confirm({ title: 'Remove “x”?', message: '…', confirmLabel: t('common.remove'), tone: 'danger' })) …` |
-| `toast` | `toast.success(t('…'))` · `toast.error(describeError(e, t))` · `toast.show({ title, detail, action: { label: t('common.undo'), onSelect }, duration: 'persistent', id })` |
-| `Skeleton`, `SkeletonText`, `DelayedSkeleton`, `useDelayedFlag` | `<DelayedSkeleton label={t('common.loading')}><Skeleton width={56} height={56} radius={16} /></DelayedSkeleton>` |
-| `ProgressLine`, `progress`, `useProgress` | `await progress.track(refetch())` · inline: `<ProgressLine inline active value={0.4} />` |
-| `EmptyState` | `<EmptyState icon={<Inbox size={28} />} title="…" description="…" action={<Button …/>} />` |
-| `ErrorState` | `<ErrorState error={query.error} onRetry={() => query.refetch()} actions={…} />` — picks gone / unreachable / forbidden from the error |
-| `Banner` | `<Banner tone="danger">{message}</Banner>` — tones `neutral · info · success · warning · danger`; `title`, `action` |
-| `StaleNotice` | `<StaleNotice since={query.dataUpdatedAt} reason="…" />` |
-| `Badge`, `CountBadge` | `<Badge tone="accent">{t('…')}</Badge>` · `<CountBadge count={n} label={t.plural('…', n)} />` |
-| `ActivityMark`, `topActivity` | `<ActivityMark kind="running" />` — kinds `running · attention · unseen`; differ in shape as well as colour and are announced |
-| `Spinner`, `LoadingRow` | `<Spinner size={20} label="…" />` · `<LoadingRow label={t('common.loading')} />` |
-| `Avatar` | `<Avatar name={user.displayName} size={40} />` |
-| `Glyph` | `<Glyph icon={<Bell size={18} />} tint="red" />` — an icon on a duotone plate |
-| `Tabs`, `tabPanelProps` | `<Tabs label="…" idBase="tools" value={tab} onChange={setTab} tabs={[{ value, label, accessory? }]} />` then `<div {...tabPanelProps('tools', tab)}>` |
-| `LogoMark` | `<LogoMark size={52} plated />` |
-| `Markdown`, `CodeBlock` | `import { Markdown } from '@/ui/markdown'` → `<Markdown>{source}</Markdown>` — `compact`, `resolveImage`, `remoteImages`, `onLinkClick`, `codeActions` (controls drawn in a code block's bar beside Copy, given `{ language, text }`) |
+| Component                                                       | One-line usage                                                                                                                                                                                                                                            |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Button`                                                        | `<Button variant="primary" loading={saving} loadingLabel={t('…')} onClick={save}>{t('common.save')}</Button>` — variants `primary · tinted · neutral · plain · danger · plain-danger`; sizes `sm · md · lg`; `block`, `icon`                              |
+| `IconButton`                                                    | `<IconButton label={t('home.refresh')} icon={<RefreshCw size={21} />} busy={refreshing} onClick={refresh} />` — `label` is required (name + tooltip); `variant="filled"`, `tone`                                                                          |
+| `TextField`                                                     | `<TextField label={t('…')} value={v} onChange={setV} hint="…" error={problem} onEnter={submit} />` — `type="password"` adds show/hide; `secret`, `mono`, `optional`, `leading`, `trailing`                                                                |
+| `TextArea`                                                      | `<TextArea label="…" value={v} onChange={setV} autoGrow maxRows={8} onSubmit={send} />` — Enter submits, Shift+Enter breaks the line                                                                                                                      |
+| `Form`                                                          | `<Form onSubmit={submit}>…</Form>` — input-method-safe Enter, no page reload                                                                                                                                                                              |
+| `Switch`                                                        | `<Switch checked={on} onChange={setOn} label="…" />` — inside a `ListRow` use `control={<Switch … />}` and drop `label`                                                                                                                                   |
+| `Checkbox`                                                      | `<Checkbox checked={c} onChange={setC} label="Read" hint="…" />` — several of a short list                                                                                                                                                                |
+| `SegmentedControl`                                              | `<SegmentedControl label="…" value={v} onChange={setV} options={[{ value, label, icon? }]} />` — two to four modes                                                                                                                                        |
+| `Select`                                                        | `<Select label="…" value={v} onChange={setV} options={[{ value, label, hint? }]} block />` — a menu; a bottom sheet on phone                                                                                                                              |
+| `Menu`, `MenuButton`                                            | `<MenuButton label={t('common.moreActions')} items={[{ id, label, icon, tone?: 'danger', onSelect }]} />`                                                                                                                                                 |
+| `List`, `ListRow`                                               | `<List header="…" footer="…"><ListRow leading={<Glyph … />} title="…" subtitle="…" value="…" to="/x" /></List>` — also `onPress`, `control`, `trailing`, `selected`, `tone`, `actions` (swipe-to-reveal, plus the same actions under a "…" button)        |
+| `NavigationBar`, `LargeTitle`                                   | normally through `Screen`; standalone: `<NavigationBar title="…" back={{ label, onPress }} trailing={…} />`                                                                                                                                               |
+| `Sheet`                                                         | `<Sheet open={open} onClose={close} title="…" footer={<Button …/>}>…</Sheet>` — bottom sheet with drag-to-dismiss on phone, dialog otherwise; `size`, `fill`, `flush`, `dismissible`, `leading`, `trailing`; focus an element first with `data-autofocus` |
+| `ConfirmDialog`, `confirm()`                                    | `if (await confirm({ title: 'Remove “x”?', message: '…', confirmLabel: t('common.remove'), tone: 'danger' })) …`                                                                                                                                          |
+| `toast`                                                         | `toast.success(t('…'))` · `toast.error(describeError(e, t))` · `toast.show({ title, detail, action: { label: t('common.undo'), onSelect }, duration: 'persistent', id })`                                                                                 |
+| `Skeleton`, `SkeletonText`, `DelayedSkeleton`, `useDelayedFlag` | `<DelayedSkeleton label={t('common.loading')}><Skeleton width={56} height={56} radius={16} /></DelayedSkeleton>`                                                                                                                                          |
+| `ProgressLine`, `progress`, `useProgress`                       | `await progress.track(refetch())` · inline: `<ProgressLine inline active value={0.4} />`                                                                                                                                                                  |
+| `EmptyState`                                                    | `<EmptyState icon={<Inbox size={28} />} title="…" description="…" action={<Button …/>} />`                                                                                                                                                                |
+| `ErrorState`                                                    | `<ErrorState error={query.error} onRetry={() => query.refetch()} actions={…} />` — picks gone / unreachable / forbidden from the error                                                                                                                    |
+| `Banner`                                                        | `<Banner tone="danger">{message}</Banner>` — tones `neutral · info · success · warning · danger`; `title`, `action`                                                                                                                                       |
+| `StaleNotice`                                                   | `<StaleNotice since={query.dataUpdatedAt} reason="…" />`                                                                                                                                                                                                  |
+| `Badge`, `CountBadge`                                           | `<Badge tone="accent">{t('…')}</Badge>` · `<CountBadge count={n} label={t.plural('…', n)} />`                                                                                                                                                             |
+| `ActivityMark`, `topActivity`                                   | `<ActivityMark kind="running" />` — kinds `running · attention · unseen`; differ in shape as well as colour and are announced                                                                                                                             |
+| `Spinner`, `LoadingRow`                                         | `<Spinner size={20} label="…" />` · `<LoadingRow label={t('common.loading')} />`                                                                                                                                                                          |
+| `Avatar`                                                        | `<Avatar name={user.displayName} size={40} />`                                                                                                                                                                                                            |
+| `Glyph`                                                         | `<Glyph icon={<Bell size={18} />} tint="red" />` — an icon on a duotone plate                                                                                                                                                                             |
+| `Tabs`, `tabPanelProps`                                         | `<Tabs label="…" idBase="tools" value={tab} onChange={setTab} tabs={[{ value, label, accessory? }]} />` then `<div {...tabPanelProps('tools', tab)}>`                                                                                                     |
+| `LogoMark`                                                      | `<LogoMark size={52} plated />`                                                                                                                                                                                                                           |
+| `Markdown`, `CodeBlock`                                         | `import { Markdown } from '@/ui/markdown'` → `<Markdown>{source}</Markdown>` — `compact`, `resolveImage`, `remoteImages`, `onLinkClick`, `codeActions` (controls drawn in a code block's bar beside Copy, given `{ language, text }`)                     |
 
 Icons are `lucide-react`, sized 18–22 px in rows and bars.
 
@@ -574,25 +609,25 @@ same-origin URLs your feature serves.
 
 ## Tokens (`src/styles/tokens.css`)
 
-| Group | Names |
-| --- | --- |
-| Surfaces | `--color-bg` `--color-surface` `--color-surface-alt` `--color-sunken` `--color-fill` `--color-fill-hover` `--color-fill-pressed` `--color-material-bar` `--color-material-sheet` `--color-scrim` |
-| Text | `--color-text` `--color-text-secondary` `--color-text-tertiary` `--color-text-disabled` |
-| Lines | `--color-separator` `--color-separator-strong` `--color-focus` |
-| Accent | `--color-accent` `--color-accent-hover` `--color-accent-pressed` `--color-on-accent` `--color-accent-text` `--color-accent-soft` `--color-accent-soft-hover` |
-| Status (text + soft background) | `--color-danger` `--color-positive` `--color-warning` `--color-info`, each with `…-soft` |
-| Marks (graphics) | `--color-mark-running` `--color-mark-attention` `--color-mark-unseen` `--color-mark-positive` `--color-mark-danger` |
-| Tints | `--tint-<name>-soft` / `--tint-<name>-strong` for `blue sky teal green amber orange red pink purple slate`; set `data-tint="<name>"` and use `--tint-soft` / `--tint-strong` |
-| Code | `--code-bg` `--code-text` `--code-comment` `--code-keyword` `--code-string` `--code-number` `--code-title` `--code-attr` |
-| Type | `--font-sans` `--font-mono`; `--text-display` `--text-title-1` `--text-title-2` `--text-title-3` `--text-body` `--text-callout` `--text-footnote` `--text-caption` `--text-field` with matching `--leading-…`; `--weight-regular` `--weight-medium` `--weight-semibold` `--weight-bold`. Classes: `text-display` … `text-caption`, `text-secondary`, `text-tertiary` |
-| Space | `--space-1` (4 px) `-2` `-3` `-4` `-5` `-6` `-8` `-10` `-12` `-16`; `--gutter` (page margin, grows with the layout class); `--content-max` |
-| Shape | `--radius-xs` `--radius-sm` `--radius-md` `--radius-lg` `--radius-xl` `--radius-full` |
-| Controls | `--hit-min` (44 px) `--control-height` `--control-height-lg` `--control-height-sm` `--bar-height` |
-| Elevation | `--shadow-1` `--shadow-2` `--shadow-3` `--ring-surface` |
-| Motion | `--motion-instant` `--motion-fast` `--motion-base` `--motion-slow`; `--ease-out` `--ease-in` `--ease-in-out` `--ease-standard`; `--motion-distance` (1, or 0 under reduced motion — multiply every travel by it) and `--motion-fade-from` |
-| Layers | `--z-base` `--z-sticky` `--z-bar` `--z-cue` `--z-overlay` `--z-sheet` `--z-menu` `--z-toast` `--z-progress` `--z-launch` |
-| Safe areas | `--safe-top` `--safe-right` `--safe-bottom` `--safe-left` (use these, not `env()` directly) |
-| Viewport | `--app-height` `--app-top` `--keyboard-inset` (kept by `platform/viewport.ts`) |
+| Group                           | Names                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Surfaces                        | `--color-bg` `--color-surface` `--color-surface-alt` `--color-sunken` `--color-fill` `--color-fill-hover` `--color-fill-pressed` `--color-material-bar` `--color-material-sheet` `--color-scrim`                                                                                                                                                                     |
+| Text                            | `--color-text` `--color-text-secondary` `--color-text-tertiary` `--color-text-disabled`                                                                                                                                                                                                                                                                              |
+| Lines                           | `--color-separator` `--color-separator-strong` `--color-focus`                                                                                                                                                                                                                                                                                                       |
+| Accent                          | `--color-accent` `--color-accent-hover` `--color-accent-pressed` `--color-on-accent` `--color-accent-text` `--color-accent-soft` `--color-accent-soft-hover`                                                                                                                                                                                                         |
+| Status (text + soft background) | `--color-danger` `--color-positive` `--color-warning` `--color-info`, each with `…-soft`                                                                                                                                                                                                                                                                             |
+| Marks (graphics)                | `--color-mark-running` `--color-mark-attention` `--color-mark-unseen` `--color-mark-positive` `--color-mark-danger`                                                                                                                                                                                                                                                  |
+| Tints                           | `--tint-<name>-soft` / `--tint-<name>-strong` for `blue sky teal green amber orange red pink purple slate`; set `data-tint="<name>"` and use `--tint-soft` / `--tint-strong`                                                                                                                                                                                         |
+| Code                            | `--code-bg` `--code-text` `--code-comment` `--code-keyword` `--code-string` `--code-number` `--code-title` `--code-attr`                                                                                                                                                                                                                                             |
+| Type                            | `--font-sans` `--font-mono`; `--text-display` `--text-title-1` `--text-title-2` `--text-title-3` `--text-body` `--text-callout` `--text-footnote` `--text-caption` `--text-field` with matching `--leading-…`; `--weight-regular` `--weight-medium` `--weight-semibold` `--weight-bold`. Classes: `text-display` … `text-caption`, `text-secondary`, `text-tertiary` |
+| Space                           | `--space-1` (4 px) `-2` `-3` `-4` `-5` `-6` `-8` `-10` `-12` `-16`; `--gutter` (page margin, grows with the layout class); `--content-max`                                                                                                                                                                                                                           |
+| Shape                           | `--radius-xs` `--radius-sm` `--radius-md` `--radius-lg` `--radius-xl` `--radius-full`                                                                                                                                                                                                                                                                                |
+| Controls                        | `--hit-min` (44 px) `--control-height` `--control-height-lg` `--control-height-sm` `--bar-height`                                                                                                                                                                                                                                                                    |
+| Elevation                       | `--shadow-1` `--shadow-2` `--shadow-3` `--ring-surface`                                                                                                                                                                                                                                                                                                              |
+| Motion                          | `--motion-instant` `--motion-fast` `--motion-base` `--motion-slow`; `--ease-out` `--ease-in` `--ease-in-out` `--ease-standard`; `--motion-distance` (1, or 0 under reduced motion — multiply every travel by it) and `--motion-fade-from`                                                                                                                            |
+| Layers                          | `--z-base` `--z-sticky` `--z-bar` `--z-cue` `--z-overlay` `--z-sheet` `--z-menu` `--z-toast` `--z-progress` `--z-launch`                                                                                                                                                                                                                                             |
+| Safe areas                      | `--safe-top` `--safe-right` `--safe-bottom` `--safe-left` (use these, not `env()` directly)                                                                                                                                                                                                                                                                          |
+| Viewport                        | `--app-height` `--app-top` `--keyboard-inset` (kept by `platform/viewport.ts`)                                                                                                                                                                                                                                                                                       |
 
 Utilities in `base.css`: `visually-hidden`, `u-scroll` (a vertical scroll area
 that keeps its overscroll), `u-no-callout` (for anything that can be lifted

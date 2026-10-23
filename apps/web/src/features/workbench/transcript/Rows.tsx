@@ -1,5 +1,21 @@
+import { ReadAloud } from '../media/ReadAloud';
+import { MessageBranchActions } from '../sessions/MessageBranchActions';
 import type { Agent, AttachmentRef } from '@agent-studio/protocol';
-import { Check, CircleAlert, CircleCheck, CircleDashed, CircleDot, CircleSlash, Clock, File as FileIcon, Info, ListChecks, MessageSquare, Square, TriangleAlert } from 'lucide-react';
+import {
+  Check,
+  CircleAlert,
+  CircleCheck,
+  CircleDashed,
+  CircleDot,
+  CircleSlash,
+  Clock,
+  File as FileIcon,
+  Info,
+  ListChecks,
+  MessageSquare,
+  Square,
+  TriangleAlert,
+} from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode, memo, useMemo, useState } from 'react';
 import { HandoffNotice, isHandoffNotice } from '@/features/collab/handoff/HandoffNotice';
 import { type MessageKey, useT } from '@/i18n';
@@ -9,7 +25,16 @@ import { formatBytes } from '../composer/attachments';
 import type { Outgoing } from '../composer/delivery';
 import { modelLabel } from '../agents';
 import { describeOutcome } from '../run/status';
-import type { ApprovalItem, AssistantItem, LabelItem, NoticeItem, RunEndItem, TodosItem, TranscriptItem, UserItem } from './model';
+import type {
+  ApprovalItem,
+  AssistantItem,
+  LabelItem,
+  NoticeItem,
+  RunEndItem,
+  TodosItem,
+  TranscriptItem,
+  UserItem,
+} from './model';
 import { StackView } from './ToolRows';
 import { Prose } from './Prose';
 import { splitStreamingMarkdown } from './streaming';
@@ -46,14 +71,20 @@ export interface RowContext {
 
 // ---- a failure in one row stays in that row -------------------------------------------
 
-class RowBoundaryInner extends Component<{ children: ReactNode; fallback: ReactNode; resetKey: string }, { failed: boolean; resetKey: string }> {
+class RowBoundaryInner extends Component<
+  { children: ReactNode; fallback: ReactNode; resetKey: string },
+  { failed: boolean; resetKey: string }
+> {
   override state = { failed: false, resetKey: this.props.resetKey };
 
   static getDerivedStateFromError() {
     return { failed: true };
   }
 
-  static getDerivedStateFromProps(props: { resetKey: string }, state: { failed: boolean; resetKey: string }) {
+  static getDerivedStateFromProps(
+    props: { resetKey: string },
+    state: { failed: boolean; resetKey: string },
+  ) {
     // New content for the row is a new chance to draw it.
     return props.resetKey === state.resetKey ? null : { failed: false, resetKey: props.resetKey };
   }
@@ -88,7 +119,13 @@ export function RowBoundary({ children, resetKey }: { children: ReactNode; reset
 
 // ---- pieces -----------------------------------------------------------------------------
 
-function Attachments({ attachments, onOpenImage }: { attachments: AttachmentRef[]; onOpenImage: (attachments: AttachmentRef[], index: number) => void }) {
+function Attachments({
+  attachments,
+  onOpenImage,
+}: {
+  attachments: AttachmentRef[];
+  onOpenImage: (attachments: AttachmentRef[], index: number) => void;
+}) {
   const t = useT();
   if (attachments.length === 0) return null;
   const images = attachments.filter((attachment) => attachment.isImage);
@@ -98,7 +135,13 @@ function Attachments({ attachments, onOpenImage }: { attachments: AttachmentRef[
       {images.length > 0 && (
         <div className="wb-attached__images">
           {images.map((image, index) => (
-            <button key={image.id} type="button" className="wb-attached__image" onClick={() => onOpenImage(images, index)} aria-label={t('workbench.attachment.open', { name: image.name })}>
+            <button
+              key={image.id}
+              type="button"
+              className="wb-attached__image"
+              onClick={() => onOpenImage(images, index)}
+              aria-label={t('workbench.attachment.open', { name: image.name })}
+            >
               <img src={image.url} alt="" loading="lazy" decoding="async" draggable={false} />
             </button>
           ))}
@@ -141,6 +184,14 @@ const UserRow = memo(function UserRow({ item, context }: { item: UserItem; conte
         {origin && <span className="wb-row__tag">{t(origin)}</span>}
         <time dateTime={new Date(item.at).toISOString()}>{t.date(item.at, 'time')}</time>
         {item.text !== '' && <CopyButton text={item.text} label={t('workbench.message.copy')} />}
+        {context.sessionId && (
+          <MessageBranchActions
+            sessionId={context.sessionId}
+            seq={item.seq}
+            text={item.text}
+            role="user"
+          />
+        )}
       </div>
     </div>
   );
@@ -156,7 +207,13 @@ const PENDING_KEYS = {
   failed: 'workbench.delivery.failed',
 } as const;
 
-const PendingRow = memo(function PendingRow({ row, context }: { row: PendingUserRow; context: RowContext }) {
+const PendingRow = memo(function PendingRow({
+  row,
+  context,
+}: {
+  row: PendingUserRow;
+  context: RowContext;
+}) {
   const t = useT();
   const settled = row.phase === 'unconfirmed' || row.phase === 'failed';
   return (
@@ -167,16 +224,33 @@ const PendingRow = memo(function PendingRow({ row, context }: { row: PendingUser
         {row.text !== '' && <p className="wb-bubble__text">{row.text}</p>}
       </div>
       <div className="wb-row__meta" role="status">
-        {settled ? <TriangleAlert size={14} aria-hidden="true" /> : row.phase === 'accepted' ? null : <Spinner size={14} />}
-        <span className="wb-row__pending" data-tone={row.phase === 'failed' ? 'danger' : row.phase === 'unconfirmed' ? 'warning' : undefined}>
-          {row.steer && (row.phase === 'sending' || row.phase === 'accepted') ? t('workbench.delivery.steering') : t(PENDING_KEYS[row.phase])}
+        {settled ? (
+          <TriangleAlert size={14} aria-hidden="true" />
+        ) : row.phase === 'accepted' ? null : (
+          <Spinner size={14} />
+        )}
+        <span
+          className="wb-row__pending"
+          data-tone={
+            row.phase === 'failed' ? 'danger' : row.phase === 'unconfirmed' ? 'warning' : undefined
+          }
+        >
+          {row.steer && (row.phase === 'sending' || row.phase === 'accepted')
+            ? t('workbench.delivery.steering')
+            : t(PENDING_KEYS[row.phase])}
         </span>
       </div>
     </div>
   );
 });
 
-const LabelRow = memo(function LabelRow({ item, context }: { item: LabelItem; context: RowContext }) {
+const LabelRow = memo(function LabelRow({
+  item,
+  context,
+}: {
+  item: LabelItem;
+  context: RowContext;
+}) {
   const agentId = item.agentId ?? context.sessionAgentId;
   const agent = context.agents.find((entry) => entry.id === agentId);
   const model = modelLabel(agent, item.model);
@@ -207,10 +281,24 @@ function StreamingProse({ text, streaming }: { text: string; streaming: boolean 
   );
 }
 
-const AssistantRow = memo(function AssistantRow({ item, continues, proseOf }: { item: AssistantItem; continues: boolean; proseOf: (key: string) => string }) {
+const AssistantRow = memo(function AssistantRow({
+  item,
+  continues,
+  proseOf,
+  sessionId,
+}: {
+  sessionId?: string | null | undefined;
+  item: AssistantItem;
+  continues: boolean;
+  proseOf: (key: string) => string;
+}) {
   const t = useT();
   return (
-    <div className="wb-row wb-row--assistant" data-streaming={item.streaming || undefined} data-continues={continues || undefined}>
+    <div
+      className="wb-row wb-row--assistant"
+      data-streaming={item.streaming || undefined}
+      data-continues={continues || undefined}
+    >
       <div className="wb-prose" data-quotable="">
         <StreamingProse text={item.text} streaming={item.streaming} />
       </div>
@@ -224,6 +312,15 @@ const AssistantRow = memo(function AssistantRow({ item, continues, proseOf }: { 
           )}
           <time dateTime={new Date(item.at).toISOString()}>{t.date(item.at, 'time')}</time>
           <CopyButton text={() => proseOf(item.key)} label={t('workbench.message.copy')} />
+          <ReadAloud text={proseOf(item.key)} />
+          {sessionId && (
+            <MessageBranchActions
+              sessionId={sessionId}
+              seq={item.seq}
+              text={item.text}
+              role="assistant"
+            />
+          )}
         </div>
       )}
     </div>
@@ -239,14 +336,29 @@ const TodosRow = memo(function TodosRow({ item }: { item: TodosItem }) {
         <p className="wb-card__title">
           <ListChecks size={17} aria-hidden="true" />
           <span>{t('workbench.todos.title')}</span>
-          <span className="wb-card__count u-tabular">{t('workbench.todos.progress', { done: t.number(done), total: t.number(item.items.length) })}</span>
+          <span className="wb-card__count u-tabular">
+            {t('workbench.todos.progress', {
+              done: t.number(done),
+              total: t.number(item.items.length),
+            })}
+          </span>
         </p>
         <ul className="wb-todos">
           {item.items.map((entry, index) => (
             <li key={index} data-status={entry.status}>
-              {entry.status === 'completed' ? <CircleCheck size={17} aria-hidden="true" /> : entry.status === 'in_progress' ? <CircleDot size={17} aria-hidden="true" /> : <CircleDashed size={17} aria-hidden="true" />}
+              {entry.status === 'completed' ? (
+                <CircleCheck size={17} aria-hidden="true" />
+              ) : entry.status === 'in_progress' ? (
+                <CircleDot size={17} aria-hidden="true" />
+              ) : (
+                <CircleDashed size={17} aria-hidden="true" />
+              )}
               <span className="visually-hidden">
-                {entry.status === 'completed' ? t('workbench.todos.completed') : entry.status === 'in_progress' ? t('workbench.todos.inProgress') : t('workbench.todos.pending')}
+                {entry.status === 'completed'
+                  ? t('workbench.todos.completed')
+                  : entry.status === 'in_progress'
+                    ? t('workbench.todos.inProgress')
+                    : t('workbench.todos.pending')}
               </span>
               <span className="wb-todos__text">{entry.text}</span>
             </li>
@@ -264,9 +376,16 @@ const NOTICE_TITLES: Record<string, MessageKey> = {
   question_skipped: 'workbench.notice.question_skipped',
 };
 
-const NoticeRow = memo(function NoticeRow({ item, sessionId }: { item: NoticeItem; sessionId: string | null }) {
+const NoticeRow = memo(function NoticeRow({
+  item,
+  sessionId,
+}: {
+  item: NoticeItem;
+  sessionId: string | null;
+}) {
   const t = useT();
-  const Icon = item.level === 'error' ? CircleAlert : item.level === 'warning' ? TriangleAlert : Info;
+  const Icon =
+    item.level === 'error' ? CircleAlert : item.level === 'warning' ? TriangleAlert : Info;
   const title = NOTICE_TITLES[item.code];
   // A handoff to or from another agent: folded to one line, with its brief and the other conversation (features/collab).
   if (isHandoffNotice(item.code)) {
@@ -281,7 +400,15 @@ const NoticeRow = memo(function NoticeRow({ item, sessionId }: { item: NoticeIte
       <div className="wb-notice" data-level={item.level} role="note">
         <Icon size={16} aria-hidden="true" />
         <p>
-          <strong>{title ? t(title) : item.level === 'error' ? t('workbench.notice.error') : item.level === 'warning' ? t('workbench.notice.warning') : t('workbench.notice.info')}</strong>
+          <strong>
+            {title
+              ? t(title)
+              : item.level === 'error'
+                ? t('workbench.notice.error')
+                : item.level === 'warning'
+                  ? t('workbench.notice.warning')
+                  : t('workbench.notice.info')}
+          </strong>
           <span>{item.text}</span>
         </p>
       </div>
@@ -292,7 +419,13 @@ const NoticeRow = memo(function NoticeRow({ item, sessionId }: { item: NoticeIte
 /** A plan can run to pages; past this it starts folded. */
 const PLAN_FOLD_CHARS = 1400;
 
-const ApprovalRow = memo(function ApprovalRow({ item, context }: { item: ApprovalItem; context: RowContext }) {
+const ApprovalRow = memo(function ApprovalRow({
+  item,
+  context,
+}: {
+  item: ApprovalItem;
+  context: RowContext;
+}) {
   const t = useT();
   const { approval } = item;
   const [unfolded, setUnfolded] = useState(false);
@@ -303,22 +436,43 @@ const ApprovalRow = memo(function ApprovalRow({ item, context }: { item: Approva
     if (approval.kind === 'plan') {
       if (pending) return t('workbench.plan.waiting');
       if (item.status === 'allowed') return t('workbench.plan.approved');
-      if (item.status === 'denied') return item.note ? t('workbench.plan.sentBackWithNote', { note: item.note }) : t('workbench.plan.sentBack');
-      return item.status === 'expired' ? t('workbench.approval.record.expired') : t('workbench.approval.record.cancelled');
+      if (item.status === 'denied')
+        return item.note
+          ? t('workbench.plan.sentBackWithNote', { note: item.note })
+          : t('workbench.plan.sentBack');
+      return item.status === 'expired'
+        ? t('workbench.approval.record.expired')
+        : t('workbench.approval.record.cancelled');
     }
     if (approval.kind === 'question') {
       if (pending) return t('workbench.question.waiting');
       if (item.status === 'allowed') return t('workbench.question.answered');
       if (item.status === 'denied') return t('workbench.question.skipped');
-      return item.status === 'expired' ? t('workbench.question.expired') : t('workbench.approval.record.cancelled');
+      return item.status === 'expired'
+        ? t('workbench.question.expired')
+        : t('workbench.approval.record.cancelled');
     }
     if (pending) return t('workbench.approval.record.pending');
-    if (item.status === 'allowed') return byYou ? t('workbench.approval.record.allowedByYou') : t('workbench.approval.record.allowed');
-    if (item.status === 'denied') return item.note ? t('workbench.approval.record.deniedWithNote', { note: item.note }) : t('workbench.approval.record.denied');
-    return item.status === 'expired' ? t('workbench.approval.record.expired') : t('workbench.approval.record.cancelled');
+    if (item.status === 'allowed')
+      return byYou
+        ? t('workbench.approval.record.allowedByYou')
+        : t('workbench.approval.record.allowed');
+    if (item.status === 'denied')
+      return item.note
+        ? t('workbench.approval.record.deniedWithNote', { note: item.note })
+        : t('workbench.approval.record.denied');
+    return item.status === 'expired'
+      ? t('workbench.approval.record.expired')
+      : t('workbench.approval.record.cancelled');
   })();
 
-  const StatusIcon = pending ? Clock : item.status === 'allowed' ? Check : item.status === 'denied' ? CircleSlash : CircleDashed;
+  const StatusIcon = pending
+    ? Clock
+    : item.status === 'allowed'
+      ? Check
+      : item.status === 'denied'
+        ? CircleSlash
+        : CircleDashed;
   const plan = approval.plan ?? '';
   const long = plan.length > PLAN_FOLD_CHARS;
 
@@ -326,8 +480,18 @@ const ApprovalRow = memo(function ApprovalRow({ item, context }: { item: Approva
     <div className="wb-row wb-row--card">
       <div className="wb-card" data-pending={pending || undefined}>
         <p className="wb-card__title">
-          {approval.kind === 'question' ? <MessageSquare size={17} aria-hidden="true" /> : <ListChecks size={17} aria-hidden="true" />}
-          <span>{approval.kind === 'plan' ? t('workbench.plan.title') : approval.kind === 'question' ? t('workbench.question.title') : approval.title}</span>
+          {approval.kind === 'question' ? (
+            <MessageSquare size={17} aria-hidden="true" />
+          ) : (
+            <ListChecks size={17} aria-hidden="true" />
+          )}
+          <span>
+            {approval.kind === 'plan'
+              ? t('workbench.plan.title')
+              : approval.kind === 'question'
+                ? t('workbench.question.title')
+                : approval.title}
+          </span>
         </p>
         {approval.kind === 'plan' && plan !== '' && (
           <div className="wb-plan" data-folded={(long && !unfolded) || undefined} data-quotable="">
@@ -343,22 +507,36 @@ const ApprovalRow = memo(function ApprovalRow({ item, context }: { item: Approva
           <dl className="wb-answers">
             {(approval.questions ?? []).map((question) => {
               const answer = item.answers?.find((entry) => entry.questionId === question.id);
-              const parts = answer ? [...answer.selected, ...(answer.other ? [answer.other] : [])] : [];
+              const parts = answer
+                ? [...answer.selected, ...(answer.other ? [answer.other] : [])]
+                : [];
               return (
                 <div key={question.id}>
                   <dt>{question.question}</dt>
-                  <dd data-empty={parts.length === 0 || undefined}>{parts.length > 0 ? t.list(parts) : pending ? t('workbench.question.waitingShort') : t('workbench.question.notAnswered')}</dd>
+                  <dd data-empty={parts.length === 0 || undefined}>
+                    {parts.length > 0
+                      ? t.list(parts)
+                      : pending
+                        ? t('workbench.question.waitingShort')
+                        : t('workbench.question.notAnswered')}
+                  </dd>
                 </div>
               );
             })}
           </dl>
         )}
-        {approval.kind === 'tool' && approval.command && <pre className="wb-card__command">{approval.command}</pre>}
+        {approval.kind === 'tool' && approval.command && (
+          <pre className="wb-card__command">{approval.command}</pre>
+        )}
         <p className="wb-card__status" data-status={item.status}>
           <StatusIcon size={15} aria-hidden="true" />
           <span>{statusText}</span>
           {pending && (
-            <button type="button" className="wb-inline-button" onClick={() => context.onReviewApproval(approval.id)}>
+            <button
+              type="button"
+              className="wb-inline-button"
+              onClick={() => context.onReviewApproval(approval.id)}
+            >
               {t('workbench.approval.review')}
             </button>
           )}
@@ -371,13 +549,30 @@ const ApprovalRow = memo(function ApprovalRow({ item, context }: { item: Approva
 const RunEndRow = memo(function RunEndRow({ item }: { item: RunEndItem }) {
   const t = useT();
   const outcome = describeOutcome(item.status, item.error, item.interruptedByRestart);
-  const Icon = item.status === 'completed' ? Check : item.status === 'stopped' ? Square : item.status === 'interrupted' ? TriangleAlert : CircleAlert;
+  const Icon =
+    item.status === 'completed'
+      ? Check
+      : item.status === 'stopped'
+        ? Square
+        : item.status === 'interrupted'
+          ? TriangleAlert
+          : CircleAlert;
   const tokens = item.usage ? item.usage.inputTokens + item.usage.outputTokens : 0;
   const details = [
     item.durationMs >= 1000 ? t.duration(item.durationMs / 1000) : null,
     item.steps > 0 ? t.plural('workbench.run.steps', item.steps) : null,
-    tokens > 0 ? t('workbench.run.tokens', { count: t.number(tokens, { notation: 'compact', maximumFractionDigits: 1 }) }) : null,
-    item.usage?.costUsd != null && item.usage.costUsd > 0 ? t.number(item.usage.costUsd, { style: 'currency', currency: 'USD', maximumFractionDigits: 4 }) : null,
+    tokens > 0
+      ? t('workbench.run.tokens', {
+          count: t.number(tokens, { notation: 'compact', maximumFractionDigits: 1 }),
+        })
+      : null,
+    item.usage?.costUsd != null && item.usage.costUsd > 0
+      ? t.number(item.usage.costUsd, {
+          style: 'currency',
+          currency: 'USD',
+          maximumFractionDigits: 4,
+        })
+      : null,
   ].filter((entry): entry is string => entry !== null);
   return (
     <div className="wb-row wb-row--end" data-tone={outcome.tone} role="note">
@@ -399,7 +594,11 @@ const RunEndRow = memo(function RunEndRow({ item }: { item: RunEndItem }) {
  * Draws one row of the transcript. Rows are memoised: an unchanged item is not drawn again.
  * `next` is the row after it, which decides whether a block of prose is the end of a reply.
  */
-export function renderRow(row: TranscriptRow, context: RowContext, next?: TranscriptRow): ReactNode {
+export function renderRow(
+  row: TranscriptRow,
+  context: RowContext,
+  next?: TranscriptRow,
+): ReactNode {
   switch (row.kind) {
     case 'pending':
       return <PendingRow row={row} context={context} />;
@@ -408,7 +607,14 @@ export function renderRow(row: TranscriptRow, context: RowContext, next?: Transc
     case 'label':
       return <LabelRow item={row} context={context} />;
     case 'assistant':
-      return <AssistantRow item={row} continues={next?.kind === 'assistant' && next.runId === row.runId} proseOf={context.proseOf} />;
+      return (
+        <AssistantRow
+          sessionId={context.sessionId}
+          item={row}
+          continues={next?.kind === 'assistant' && next.runId === row.runId}
+          proseOf={context.proseOf}
+        />
+      );
     case 'stack':
       return (
         <div className="wb-row wb-row--stack">
@@ -431,7 +637,11 @@ export function estimateRow(row: TranscriptRow): number {
   switch (row.kind) {
     case 'pending':
     case 'user':
-      return 64 + Math.min(12, Math.ceil(row.text.length / 60)) * 23 + (row.attachments.length > 0 ? 96 : 0);
+      return (
+        64 +
+        Math.min(12, Math.ceil(row.text.length / 60)) * 23 +
+        (row.attachments.length > 0 ? 96 : 0)
+      );
     case 'label':
       return 40;
     case 'assistant':

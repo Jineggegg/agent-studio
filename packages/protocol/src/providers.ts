@@ -50,7 +50,7 @@ export const PROVIDER_LIMITS = {
 } as const;
 
 /** The wire protocol a provider speaks. One today; the server keeps the door open for more. */
-export const providerKindSchema = z.enum(['openai-compatible']);
+export const providerKindSchema = z.enum(['openai-compatible', 'anthropic']);
 export type ProviderKind = z.infer<typeof providerKindSchema>;
 
 /**
@@ -62,13 +62,16 @@ export const providerBalanceKindSchema = z.enum(['none', 'deepseek']);
 export type ProviderBalanceKind = z.infer<typeof providerBalanceKindSchema>;
 
 /** Lowercase letters, digits and hyphens; chosen once and never changed. */
-export const providerIdSchema = z.string().regex(/^[a-z][a-z0-9-]{0,31}$/, 'Not a valid provider id.');
+export const providerIdSchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9-]{0,31}$/, 'Not a valid provider id.');
 
 /** The id of the agent that stands for a provider: what sessions are created with. */
 export const providerAgentId = (providerId: string): string => `api-${providerId}`;
 
 /** The provider behind an agent id, or null when the agent is not an API provider. */
-export const providerIdOfAgent = (agentId: string): string | null => (agentId.startsWith('api-') && agentId.length > 4 ? agentId.slice(4) : null);
+export const providerIdOfAgent = (agentId: string): string | null =>
+  agentId.startsWith('api-') && agentId.length > 4 ? agentId.slice(4) : null;
 
 // ---------------------------------------------------------------------------
 // The model catalogue

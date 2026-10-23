@@ -14,13 +14,15 @@ async function main(): Promise<void> {
   // The web client is served from the sibling package's build output unless told otherwise.
   const bundledWeb = fileURLToPath(new URL('../../web/dist', import.meta.url));
   const overrides =
-    process.env.AGENT_STUDIO_WEB_DIR === undefined && existsSync(bundledWeb) ? { webDir: bundledWeb } : {};
+    process.env.AGENT_STUDIO_WEB_DIR === undefined && existsSync(bundledWeb)
+      ? { webDir: bundledWeb }
+      : {};
   const config = loadConfig(process.env, overrides);
 
   const studio = await createStudio(config, modules);
   const { url } = await studio.start();
 
-  console.log(`\n  Agent Cloud Studio is running at ${url}`);
+  console.log(`\n  Cloud Harness is running at ${url}`);
   if (!config.webDir) console.log('  (API only: no web client build was found)');
   const setup = studio.context.services.auth.pendingSetupToken();
   if (setup) {

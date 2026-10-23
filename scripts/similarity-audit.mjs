@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Mechanical comparison of two source trees, used to check that this code base
-// shares no copied code with another one. It reports numbers and locations in
-// *our* tree; it never prints the other tree's content.
+// Mechanical comparison of two source trees, looking for matching sequences.
+// It cannot prove independent authorship. Console output reports numbers and
+// locations in *our* tree; JSON reports also include counterpart file names.
+// Neither output includes the other tree's source content.
 //
 //   node scripts/similarity-audit.mjs --ours . --theirs /path/to/other [--json report.json]
 //
@@ -26,11 +27,32 @@ const option = (name, fallback) => {
 const ours = option('ours');
 const theirs = option('theirs');
 if (!ours || !theirs) {
-  console.error('Usage: node scripts/similarity-audit.mjs --ours <dir> --theirs <dir> [--json <file>] [--ext ts,tsx,js,jsx,mjs,cjs,css,html]');
+  console.error(
+    'Usage: node scripts/similarity-audit.mjs --ours <dir> --theirs <dir> [--json <file>] [--ext ts,tsx,js,jsx,mjs,cjs,css,html]',
+  );
   process.exit(2);
 }
-const extensions = new Set(option('ext', 'ts,tsx,js,jsx,mjs,cjs,css,html').split(',').map((ext) => `.${ext}`));
-const SKIP_DIRS = new Set(['node_modules', 'dist', 'dist-server', 'build', 'coverage', '.git', '.vite', 'playwright-report', 'test-results', '.next', 'out', 'vendor']);
+const extensions = new Set(
+  option('ext', 'ts,tsx,js,jsx,mjs,cjs,css,html')
+    .split(',')
+    .map((ext) => `.${ext}`),
+);
+const SKIP_DIRS = new Set([
+  'node_modules',
+  'dist',
+  'dist-server',
+  'desktop-dist',
+  'dist-release',
+  'build',
+  'coverage',
+  '.git',
+  '.vite',
+  'playwright-report',
+  'test-results',
+  '.next',
+  'out',
+  'vendor',
+]);
 const SKIP_FILES = /(\.min\.(js|css)$|\.d\.ts$|package-lock\.json$|\.map$)/;
 
 function* walk(dir) {
@@ -45,13 +67,18 @@ function* walk(dir) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (!SKIP_DIRS.has(entry.name)) yield* walk(full);
-    } else if (entry.isFile() && extensions.has(path.extname(entry.name)) && !SKIP_FILES.test(entry.name)) {
+    } else if (
+      entry.isFile() &&
+      extensions.has(path.extname(entry.name)) &&
+      !SKIP_FILES.test(entry.name)
+    ) {
       if (statSync(full).size <= 2 * 1024 * 1024) yield full;
     }
   }
 }
 
-const IMPORT = /^(import\b|export\s+(\*|\{[^}]*\})\s+from\b|const\s+\{?[\w\s,{}:]*\}?\s*=\s*require\()/;
+const IMPORT =
+  /^(import\b|export\s+(\*|\{[^}]*\})\s+from\b|const\s+\{?[\w\s,{}:]*\}?\s*=\s*require\()/;
 function significantLines(text) {
   const result = [];
   const lines = text.split(/\r?\n/);
@@ -79,7 +106,15 @@ function index(root) {
 const windows = (lines, size) => {
   const result = [];
   for (let start = 0; start + size <= lines.length; start += 1) {
-    result.push({ key: hash(lines.slice(start, start + size).map((entry) => entry.text).join('\n')), line: lines[start].line });
+    result.push({
+      key: hash(
+        lines
+          .slice(start, start + size)
+          .map((entry) => entry.text)
+          .join('\n'),
+      ),
+      line: lines[start].line,
+    });
   }
   return result;
 };
@@ -92,7 +127,9 @@ const other = index(path.resolve(theirs));
 const otherLines = new Set();
 for (const file of other) for (const entry of file.lines) otherLines.add(entry.text);
 const myUnique = new Map();
-for (const file of mine) for (const entry of file.lines) if (!myUnique.has(entry.text)) myUnique.set(entry.text, `${file.file}:${entry.line}`);
+for (const file of mine)
+  for (const entry of file.lines)
+    if (!myUnique.has(entry.text)) myUnique.set(entry.text, `${file.file}:${entry.line}`);
 const sharedLines = [...myUnique.entries()].filter(([text]) => otherLines.has(text));
 
 // 2. shared six-line windows
@@ -110,7 +147,10 @@ for (const file of mine) {
 }
 
 // 3. best-matching file by three-line windows
-const otherThree = other.map((file) => ({ file: file.file, keys: new Set(windows(file.lines, 3).map((window) => window.key)) }));
+const otherThree = other.map((file) => ({
+  file: file.file,
+  keys: new Set(windows(file.lines, 3).map((window) => window.key)),
+}));
 const inverted = new Map();
 otherThree.forEach((file, position) => {
   for (const key of file.keys) {
@@ -124,7 +164,9 @@ for (const file of mine) {
   const keys = new Set(windows(file.lines, 3).map((window) => window.key));
   if (keys.size < 8) continue;
   const counts = new Map();
-  for (const key of keys) for (const position of inverted.get(key) ?? []) counts.set(position, (counts.get(position) ?? 0) + 1);
+  for (const key of keys)
+    for (const position of inverted.get(key) ?? [])
+      counts.set(position, (counts.get(position) ?? 0) + 1);
   let best = { position: -1, shared: 0 };
   for (const [position, shared] of counts) if (shared > best.shared) best = { position, shared };
   if (best.shared > 0) {
@@ -144,7 +186,9 @@ fileMatches.sort((a, b) => b.containment - a.containment);
 // 4. distinctive identifiers
 const DECLARATION = /\b(?:function|class|interface|type|const|let|enum)\s+([A-Za-z_$][\w$]{13,})/g;
 const myIdentifiers = new Map();
-for (const file of mine) for (const match of file.text.matchAll(DECLARATION)) if (!myIdentifiers.has(match[1])) myIdentifiers.set(match[1], file.file);
+for (const file of mine)
+  for (const match of file.text.matchAll(DECLARATION))
+    if (!myIdentifiers.has(match[1])) myIdentifiers.set(match[1], file.file);
 const otherText = other.map((file) => file.text).join('\n');
 const otherWords = new Set(otherText.match(/[A-Za-z_$][\w$]{13,}/g) ?? []);
 const sharedIdentifiers = [...myIdentifiers.entries()].filter(([name]) => otherWords.has(name));
@@ -152,13 +196,24 @@ const sharedIdentifiers = [...myIdentifiers.entries()].filter(([name]) => otherW
 const count = (files) => files.reduce((total, file) => total + file.lines.length, 0);
 const report = {
   generatedAt: new Date().toISOString(),
-  ours: { files: mine.length, significantLines: count(mine), uniqueSignificantLines: myUnique.size },
+  ours: {
+    files: mine.length,
+    significantLines: count(mine),
+    uniqueSignificantLines: myUnique.size,
+  },
   theirs: { files: other.length, significantLines: count(other) },
-  identicalLines: { count: sharedLines.length, shareOfOurs: sharedLines.length / Math.max(1, myUnique.size) },
+  identicalLines: {
+    count: sharedLines.length,
+    shareOfOurs: sharedLines.length / Math.max(1, myUnique.size),
+  },
   sharedSixLineWindows: { regions: sharedWindows.length, locations: sharedWindows },
   filesWithHighestOverlap: fileMatches.slice(0, 25),
   filesOverTenPercentContainment: fileMatches.filter((match) => match.containment >= 0.1).length,
-  distinctiveIdentifiers: { declaredHere: myIdentifiers.size, alsoThere: sharedIdentifiers.length, names: sharedIdentifiers.map(([name, file]) => ({ name, file })) },
+  distinctiveIdentifiers: {
+    declaredHere: myIdentifiers.size,
+    alsoThere: sharedIdentifiers.length,
+    names: sharedIdentifiers.map(([name, file]) => ({ name, file })),
+  },
   identicalLineSamples: sharedLines.slice(0, 400).map(([text, where]) => ({ where, text })),
 };
 
@@ -166,12 +221,27 @@ const jsonPath = option('json');
 if (jsonPath) writeFileSync(jsonPath, JSON.stringify(report, null, 2));
 
 const percent = (value) => `${(value * 100).toFixed(2)}%`;
-console.log(`Ours:   ${report.ours.files} files, ${report.ours.uniqueSignificantLines} unique significant lines`);
-console.log(`Theirs: ${report.theirs.files} files, ${report.theirs.significantLines} significant lines`);
-console.log(`Identical significant lines:        ${report.identicalLines.count} (${percent(report.identicalLines.shareOfOurs)} of ours)`);
+console.log(
+  `Ours:   ${report.ours.files} files, ${report.ours.uniqueSignificantLines} unique significant lines`,
+);
+console.log(
+  `Theirs: ${report.theirs.files} files, ${report.theirs.significantLines} significant lines`,
+);
+console.log(
+  `Identical significant lines:        ${report.identicalLines.count} (${percent(report.identicalLines.shareOfOurs)} of ours)`,
+);
 console.log(`Regions sharing 6+ consecutive lines: ${report.sharedSixLineWindows.regions}`);
-for (const region of sharedWindows.slice(0, 40)) console.log(`    ${region.file}:${region.first}-${region.last + 5}`);
-console.log(`Files with ≥10% of their 3-line windows found in one file there: ${report.filesOverTenPercentContainment}`);
-for (const match of fileMatches.slice(0, 10)) console.log(`    ${percent(match.containment).padStart(7)}  ${match.file}  (${match.shared}/${match.windows} windows)`);
-console.log(`Distinctive identifiers declared here that also occur there: ${report.distinctiveIdentifiers.alsoThere} of ${report.distinctiveIdentifiers.declaredHere}`);
-for (const { name, file } of report.distinctiveIdentifiers.names.slice(0, 40)) console.log(`    ${name}  (${file})`);
+for (const region of sharedWindows.slice(0, 40))
+  console.log(`    ${region.file}:${region.first}-${region.last + 5}`);
+console.log(
+  `Files with ≥10% of their 3-line windows found in one file there: ${report.filesOverTenPercentContainment}`,
+);
+for (const match of fileMatches.slice(0, 10))
+  console.log(
+    `    ${percent(match.containment).padStart(7)}  ${match.file}  (${match.shared}/${match.windows} windows)`,
+  );
+console.log(
+  `Distinctive identifiers declared here that also occur there: ${report.distinctiveIdentifiers.alsoThere} of ${report.distinctiveIdentifiers.declaredHere}`,
+);
+for (const { name, file } of report.distinctiveIdentifiers.names.slice(0, 40))
+  console.log(`    ${name}  (${file})`);

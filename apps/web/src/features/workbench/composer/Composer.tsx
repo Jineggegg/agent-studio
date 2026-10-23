@@ -1,6 +1,33 @@
+import { Dictation } from '../voice/Dictation';
 import { AGENT_LIMITS } from '@agent-studio/protocol';
-import { ArrowUp, ChevronDown, CornerDownRight, File as FileIcon, Folder, ListPlus, Paperclip, RotateCw, Square, TextQuote, TriangleAlert, X } from 'lucide-react';
-import { type ChangeEvent, type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode, type Ref, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
+import {
+  ArrowUp,
+  ChevronDown,
+  CornerDownRight,
+  File as FileIcon,
+  Folder,
+  ListPlus,
+  Paperclip,
+  RotateCw,
+  Square,
+  TextQuote,
+  TriangleAlert,
+  X,
+} from 'lucide-react';
+import {
+  type ChangeEvent,
+  type ClipboardEvent,
+  type DragEvent,
+  type KeyboardEvent,
+  type ReactNode,
+  type Ref,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useT } from '@/i18n';
 import { useCanHover } from '@/platform/media';
 import { useUnsavedWork } from '@/pwa/update';
@@ -8,7 +35,13 @@ import { Menu, Spinner, isImeConfirm } from '@/ui';
 import { type PendingAttachment, type Rejection, formatBytes } from './attachments';
 import { addFiles, removeAttachment, retryUpload, useAttachments } from './attachmentStore';
 import { type DraftKey, sessionOfDraft, setDraft, useDrafts } from './drafts';
-import { type MentionMatch, type MentionSource, type MentionToken, insertMention, mentionAt } from './mentions';
+import {
+  type MentionMatch,
+  type MentionSource,
+  type MentionToken,
+  insertMention,
+  mentionAt,
+} from './mentions';
 
 export interface ComposerHandle {
   focus(): void;
@@ -62,22 +95,41 @@ function rejectionText(rejections: readonly Rejection[], t: ReturnType<typeof us
   const megabytes = Math.round(AGENT_LIMITS.attachmentBytes / (1024 * 1024));
   const lines: string[] = [];
   for (const rejection of rejections) {
-    if (rejection.reason === 'too-large') lines.push(t('workbench.attach.tooLarge', { name: rejection.name, size: megabytes }));
-    else if (rejection.reason === 'empty') lines.push(t('workbench.attach.empty', { name: rejection.name }));
+    if (rejection.reason === 'too-large')
+      lines.push(t('workbench.attach.tooLarge', { name: rejection.name, size: megabytes }));
+    else if (rejection.reason === 'empty')
+      lines.push(t('workbench.attach.empty', { name: rejection.name }));
   }
   const overflow = rejections.filter((rejection) => rejection.reason === 'too-many').length;
-  if (overflow > 0) lines.push(t.plural('workbench.attach.tooMany', overflow, { max: AGENT_LIMITS.attachmentsPerMessage }));
+  if (overflow > 0)
+    lines.push(
+      t.plural('workbench.attach.tooMany', overflow, { max: AGENT_LIMITS.attachmentsPerMessage }),
+    );
   return lines;
 }
 
-function AttachmentTile({ attachment, held, onRemove, onRetry }: { attachment: PendingAttachment; held: boolean; onRemove: () => void; onRetry: () => void }) {
+function AttachmentTile({
+  attachment,
+  held,
+  onRemove,
+  onRetry,
+}: {
+  attachment: PendingAttachment;
+  held: boolean;
+  onRemove: () => void;
+  onRetry: () => void;
+}) {
   const t = useT();
   const percent = Math.round(attachment.progress * 100);
   // In a conversation that does not exist yet a file is simply kept until the first message creates it:
   // nothing is in progress, so nothing is drawn as if it were.
   const status = held && attachment.status === 'waiting' ? 'held' : attachment.status;
   return (
-    <li className="wb-tile" data-status={status} data-image={attachment.isImage && attachment.previewUrl ? '' : undefined}>
+    <li
+      className="wb-tile"
+      data-status={status}
+      data-image={attachment.isImage && attachment.previewUrl ? '' : undefined}
+    >
       {attachment.isImage && attachment.previewUrl ? (
         <img src={attachment.previewUrl} alt={attachment.name} draggable={false} />
       ) : (
@@ -88,16 +140,39 @@ function AttachmentTile({ attachment, held, onRemove, onRetry }: { attachment: P
         </span>
       )}
       {(status === 'uploading' || status === 'waiting') && (
-        <span className="wb-tile__progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-label={t('workbench.attach.uploading', { name: attachment.name })}>
-          <span style={{ transform: `scaleX(${status === 'waiting' ? 0 : Math.max(0.04, attachment.progress)})` }} />
+        <span
+          className="wb-tile__progress"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+          aria-label={t('workbench.attach.uploading', { name: attachment.name })}
+        >
+          <span
+            style={{
+              transform: `scaleX(${status === 'waiting' ? 0 : Math.max(0.04, attachment.progress)})`,
+            }}
+          />
         </span>
       )}
       {attachment.status === 'failed' && (
-        <button type="button" className="wb-tile__retry" onClick={onRetry} disabled={!attachment.file} title={attachment.error ?? undefined} aria-label={t('workbench.attach.retry', { name: attachment.name })}>
+        <button
+          type="button"
+          className="wb-tile__retry"
+          onClick={onRetry}
+          disabled={!attachment.file}
+          title={attachment.error ?? undefined}
+          aria-label={t('workbench.attach.retry', { name: attachment.name })}
+        >
           <RotateCw size={16} aria-hidden="true" />
         </button>
       )}
-      <button type="button" className="wb-tile__remove" onClick={onRemove} aria-label={t('workbench.attach.remove', { name: attachment.name })}>
+      <button
+        type="button"
+        className="wb-tile__remove"
+        onClick={onRemove}
+        aria-label={t('workbench.attach.remove', { name: attachment.name })}
+      >
         <X size={14} aria-hidden="true" />
       </button>
     </li>
@@ -159,13 +234,19 @@ export function Composer({
   const hasContent = hasText || attachments.length > 0;
   /** No conversation yet: files are kept here and go up with the first message. */
   const held = sessionOfDraft(draftKey) === null;
-  const uploading = attachments.some((attachment) => attachment.status === 'uploading' || (attachment.status === 'waiting' && !held));
+  const uploading = attachments.some(
+    (attachment) => attachment.status === 'uploading' || (attachment.status === 'waiting' && !held),
+  );
   const failed = attachments.filter((attachment) => attachment.status === 'failed');
   const tooLong = text.length > AGENT_LIMITS.messageChars;
   const steerable = busy && canSteer;
   const mode: 'queue' | 'steer' = steerable ? whenBusy : 'queue';
 
-  useImperativeHandle(ref, () => ({ focus: () => field.current?.focus({ preventScroll: true }) }), []);
+  useImperativeHandle(
+    ref,
+    () => ({ focus: () => field.current?.focus({ preventScroll: true }) }),
+    [],
+  );
   useUnsavedWork(hasContent);
 
   useEffect(() => {
@@ -194,7 +275,8 @@ export function Composer({
 
   const syncMention = useCallback(
     (value: string, caret: number | null, selectionEnd: number | null) => {
-      if (!mentions || caret === null || caret !== selectionEnd || composing.current) return setMention(null);
+      if (!mentions || caret === null || caret !== selectionEnd || composing.current)
+        return setMention(null);
       const found = mentionAt(value, caret);
       if (!found) dismissedAt.current = null;
       setMention(found && dismissedAt.current !== found.start ? found : null);
@@ -237,7 +319,11 @@ export function Composer({
     (match: MentionMatch) => {
       if (!mention) return;
       const current = useDrafts.getState().texts[draftKey] ?? '';
-      const next = insertMention(current, mention, match.kind === 'directory' ? `${match.path}/` : match.path);
+      const next = insertMention(
+        current,
+        mention,
+        match.kind === 'directory' ? `${match.path}/` : match.path,
+      );
       setDraft(draftKey, next.text);
       setMention(null);
       window.requestAnimationFrame(() => {
@@ -283,9 +369,18 @@ export function Composer({
       if (matches.length > 0) {
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
           event.preventDefault();
-          return setMentionIndex((index) => (index + (event.key === 'ArrowDown' ? 1 : matches.length - 1)) % matches.length);
+          return setMentionIndex(
+            (index) =>
+              (index + (event.key === 'ArrowDown' ? 1 : matches.length - 1)) % matches.length,
+          );
         }
-        if ((event.key === 'Enter' || event.key === 'Tab') && !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        if (
+          (event.key === 'Enter' || event.key === 'Tab') &&
+          !event.shiftKey &&
+          !event.metaKey &&
+          !event.ctrlKey &&
+          !event.altKey
+        ) {
           event.preventDefault();
           return chooseMention(matches[Math.min(mentionIndex, matches.length - 1)]!);
         }
@@ -299,7 +394,11 @@ export function Composer({
     if (event.key !== 'Enter') return;
     // Enter that confirms an input-method candidate is never a send — including the browsers that end
     // the composition a few milliseconds before they deliver the key.
-    if (composing.current || isImeConfirm(event) || event.timeStamp - compositionEndedAt.current < 80) {
+    if (
+      composing.current ||
+      isImeConfirm(event) ||
+      event.timeStamp - compositionEndedAt.current < 80
+    ) {
       if (!composing.current && !isImeConfirm(event)) event.preventDefault();
       return;
     }
@@ -364,7 +463,9 @@ export function Composer({
     : {};
 
   // Pressing a control must not take the focus — and with it the keyboard — away from the field.
-  const keepFocus = { onPointerDown: (event: { preventDefault: () => void }) => event.preventDefault() };
+  const keepFocus = {
+    onPointerDown: (event: { preventDefault: () => void }) => event.preventDefault(),
+  };
 
   const showStop = busy && !hasContent;
   const sendDisabled = !showStop && (!hasContent || blocked || tooLong || failed.length > 0);
@@ -384,16 +485,29 @@ export function Composer({
         <div className="wb-composer__quote">
           <TextQuote size={16} aria-hidden="true" />
           <p>{quote}</p>
-          <button type="button" className="wb-chip-close" onClick={onClearQuote} aria-label={t('workbench.quote.remove')} {...keepFocus}>
+          <button
+            type="button"
+            className="wb-chip-close"
+            onClick={onClearQuote}
+            aria-label={t('workbench.quote.remove')}
+            {...keepFocus}
+          >
             <X size={15} aria-hidden="true" />
           </button>
         </div>
       )}
       {mention && mentions && (
-        <div className="wb-mentions" id={`mentions-${draftKey}`} role="listbox" aria-label={t('workbench.mention.label')}>
+        <div
+          className="wb-mentions"
+          id={`mentions-${draftKey}`}
+          role="listbox"
+          aria-label={t('workbench.mention.label')}
+        >
           {matches.length > 0 ? (
             matches.map((match, index) => {
-              const folder = match.path.includes('/') ? match.path.slice(0, match.path.lastIndexOf('/')) : '';
+              const folder = match.path.includes('/')
+                ? match.path.slice(0, match.path.lastIndexOf('/'))
+                : '';
               return (
                 <button
                   key={match.path}
@@ -406,7 +520,11 @@ export function Composer({
                   onPointerMove={() => setMentionIndex(index)}
                   {...keepFocus}
                 >
-                  {match.kind === 'directory' ? <Folder size={16} aria-hidden="true" /> : <FileIcon size={16} aria-hidden="true" />}
+                  {match.kind === 'directory' ? (
+                    <Folder size={16} aria-hidden="true" />
+                  ) : (
+                    <FileIcon size={16} aria-hidden="true" />
+                  )}
                   <span className="wb-mentions__name u-truncate">{match.name}</span>
                   {folder && <span className="wb-mentions__folder u-truncate">{folder}</span>}
                 </button>
@@ -441,12 +559,22 @@ export function Composer({
         aria-invalid={tooLong || undefined}
         aria-autocomplete={mentions ? 'list' : undefined}
         aria-controls={mention ? `mentions-${draftKey}` : undefined}
-        aria-activedescendant={mention && matches.length > 0 ? `mentions-${draftKey}-${Math.min(mentionIndex, matches.length - 1)}` : undefined}
+        aria-activedescendant={
+          mention && matches.length > 0
+            ? `mentions-${draftKey}-${Math.min(mentionIndex, matches.length - 1)}`
+            : undefined
+        }
         onChange={(event) => {
           setDraft(draftKey, event.target.value);
           syncMention(event.target.value, event.target.selectionStart, event.target.selectionEnd);
         }}
-        onSelect={(event) => syncMention(event.currentTarget.value, event.currentTarget.selectionStart, event.currentTarget.selectionEnd)}
+        onSelect={(event) =>
+          syncMention(
+            event.currentTarget.value,
+            event.currentTarget.selectionStart,
+            event.currentTarget.selectionEnd,
+          )
+        }
         onBlur={() => setMention(null)}
         onKeyDown={onKeyDown}
         onPaste={onPaste}
@@ -457,7 +585,11 @@ export function Composer({
         onCompositionEnd={(event) => {
           composing.current = false;
           compositionEndedAt.current = event.timeStamp;
-          syncMention(event.currentTarget.value, event.currentTarget.selectionStart, event.currentTarget.selectionEnd);
+          syncMention(
+            event.currentTarget.value,
+            event.currentTarget.selectionStart,
+            event.currentTarget.selectionEnd,
+          );
         }}
       />
       {attachments.length > 0 && (
@@ -484,7 +616,10 @@ export function Composer({
           {failed.map((attachment) => (
             <p key={attachment.localId}>
               <TriangleAlert size={15} aria-hidden="true" />
-              {t('workbench.attach.failedNamed', { name: attachment.name, reason: attachment.error ?? failedText })}
+              {t('workbench.attach.failedNamed', {
+                name: attachment.name,
+                reason: attachment.error ?? failedText,
+              })}
             </p>
           ))}
           {notices.map((notice) => (
@@ -498,17 +633,43 @@ export function Composer({
       <div className="wb-composer__bar">
         {attachmentsEnabled && (
           <>
-            <input ref={picker} type="file" multiple hidden tabIndex={-1} aria-hidden="true" onChange={onPick} />
-            <button type="button" className="wb-bar-button" onClick={() => picker.current?.click()} aria-label={t('workbench.attach.add')} title={t('workbench.attach.add')} {...keepFocus}>
+            <input
+              ref={picker}
+              type="file"
+              multiple
+              hidden
+              tabIndex={-1}
+              aria-hidden="true"
+              onChange={onPick}
+            />
+            <button
+              type="button"
+              className="wb-bar-button"
+              onClick={() => picker.current?.click()}
+              aria-label={t('workbench.attach.add')}
+              title={t('workbench.attach.add')}
+              {...keepFocus}
+            >
               <Paperclip size={20} aria-hidden="true" />
             </button>
           </>
         )}
+        <Dictation key={draftKey} draftKey={draftKey} disabled={blocked || submitting} />
         <div className="wb-composer__controls">{controls}</div>
         {steerable && hasContent && (
           <>
-            <button ref={modeAnchor} type="button" className="wb-chip" aria-haspopup="menu" aria-expanded={modeMenu} onClick={() => setModeMenu(!modeMenu)} {...keepFocus}>
-              <span>{mode === 'steer' ? t('workbench.composer.steer') : t('workbench.composer.queue')}</span>
+            <button
+              ref={modeAnchor}
+              type="button"
+              className="wb-chip"
+              aria-haspopup="menu"
+              aria-expanded={modeMenu}
+              onClick={() => setModeMenu(!modeMenu)}
+              {...keepFocus}
+            >
+              <span>
+                {mode === 'steer' ? t('workbench.composer.steer') : t('workbench.composer.queue')}
+              </span>
               <ChevronDown size={14} aria-hidden="true" />
             </button>
             <Menu
@@ -518,8 +679,22 @@ export function Composer({
               label={t('workbench.composer.whileRunning')}
               align="end"
               items={[
-                { id: 'queue', label: t('workbench.composer.queue'), hint: t('workbench.composer.queueHint'), icon: <ListPlus size={18} />, checked: mode === 'queue', onSelect: () => setWhenBusy('queue') },
-                { id: 'steer', label: t('workbench.composer.steer'), hint: t('workbench.composer.steerHint'), icon: <CornerDownRight size={18} />, checked: mode === 'steer', onSelect: () => setWhenBusy('steer') },
+                {
+                  id: 'queue',
+                  label: t('workbench.composer.queue'),
+                  hint: t('workbench.composer.queueHint'),
+                  icon: <ListPlus size={18} />,
+                  checked: mode === 'queue',
+                  onSelect: () => setWhenBusy('queue'),
+                },
+                {
+                  id: 'steer',
+                  label: t('workbench.composer.steer'),
+                  hint: t('workbench.composer.steerHint'),
+                  icon: <CornerDownRight size={18} />,
+                  checked: mode === 'steer',
+                  onSelect: () => setWhenBusy('steer'),
+                },
               ]}
             />
           </>

@@ -1,4 +1,4 @@
-title = "Agent Cloud Studio secret scanning"
+title = "Cloud Harness secret scanning"
 
 [extend]
 useDefault = true

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Cloud Harness</title>
+    <link rel="stylesheet" href="connect.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Cloud Harness</h1>
+      <p>Connect to your server. / 连接你的服务。</p>
+      <p>
+        Use HTTPS for remote servers, or HTTP on localhost. This desktop app does not start or
+        install a server. / 远程服务须使用 HTTPS，本机可用 HTTP。桌面应用不会启动或安装服务。
+      </p>
+      <form id="connect">
+        <label for="url">Server URL / 服务地址</label
+        ><input
+          id="url"
+          type="url"
+          required
+          autocomplete="url"
+          placeholder="https://harness.example.com"
+        /><button type="submit">Connect / 连接</button>
+      </form>
+      <p id="status" role="status"></p>
+    </main>
+    <script src="connect.js"></script>
+  </body>
+</html>

@@ -88,9 +88,18 @@ export interface AgentAdapter {
    * tool of unknown kind, taking `command` and file paths from conventional
    * input fields.
    */
-  onPermissionPrompt?(prompt: PermissionPrompt, host: AgentRunHost, request: AgentRunRequest): Promise<PermissionPromptResult>;
+  onPermissionPrompt?(
+    prompt: PermissionPrompt,
+    host: AgentRunHost,
+    request: AgentRunRequest,
+  ): Promise<PermissionPromptResult>;
   /** Removes the agent's own copy of a conversation when its session is deleted. */
-  deleteNativeSession?(input: { nativeSessionId: string; cwd: string | null }): Promise<void>;
+  deleteNativeSession?(input: {
+    nativeSessionId: string;
+    cwd: string | null;
+    accountEnvironment?: Readonly<Record<string, string>>;
+    accountDirectory?: string;
+  }): Promise<void>;
 }
 
 /** A failure whose message is fit to show to the user. */
@@ -136,6 +145,9 @@ export interface BridgeConnection {
 }
 
 export interface AgentRunRequest {
+  readonly fastMode?: boolean;
+  readonly accountEnvironment?: Readonly<Record<string, string>>;
+  readonly accountDirectory?: string;
   readonly runId: string;
   readonly sessionId: string;
   readonly userId: string;
@@ -167,11 +179,32 @@ export interface AgentRunRequest {
 export type AgentEvent =
   /** The agent's own id for this conversation, to resume it later. Kept on the server; never shown. */
   | { readonly type: 'session'; readonly nativeSessionId: string }
-  | { readonly type: 'text.delta'; readonly messageId: string; readonly text: string; readonly parentToolCallId?: string }
+  | {
+      readonly type: 'text.delta';
+      readonly messageId: string;
+      readonly text: string;
+      readonly parentToolCallId?: string;
+    }
   /** A completed block of prose. Replaces the deltas sent under the same `messageId`. */
-  | { readonly type: 'text'; readonly messageId: string; readonly text: string; readonly model?: string; readonly parentToolCallId?: string }
-  | { readonly type: 'thinking.delta'; readonly messageId: string; readonly text: string; readonly parentToolCallId?: string }
-  | { readonly type: 'thinking'; readonly messageId: string; readonly text: string; readonly parentToolCallId?: string }
+  | {
+      readonly type: 'text';
+      readonly messageId: string;
+      readonly text: string;
+      readonly model?: string;
+      readonly parentToolCallId?: string;
+    }
+  | {
+      readonly type: 'thinking.delta';
+      readonly messageId: string;
+      readonly text: string;
+      readonly parentToolCallId?: string;
+    }
+  | {
+      readonly type: 'thinking';
+      readonly messageId: string;
+      readonly text: string;
+      readonly parentToolCallId?: string;
+    }
   | {
       readonly type: 'tool.started';
       readonly toolCallId: string;
@@ -216,7 +249,12 @@ export type AgentEvent =
       readonly cumulative?: boolean;
     }
   /** Something the user should see that is not prose: a compaction, a rate limit, a recoverable error. */
-  | { readonly type: 'notice'; readonly level: 'info' | 'warning' | 'error'; readonly code: string; readonly text: string }
+  | {
+      readonly type: 'notice';
+      readonly level: 'info' | 'warning' | 'error';
+      readonly code: string;
+      readonly text: string;
+    }
   /** A better name for the session. Never replaces a name the user typed. */
   | { readonly type: 'title'; readonly title: string };
 
@@ -320,7 +358,11 @@ export interface AgentRunHost {
      * `toolCallId` is the id the adapter gave this call in `tool.started`, when it has one: an approval the call
      * needs then names it. A refusal comes back with `denied: true` and is recorded as `denied` for that call.
      */
-    call(name: string, input: unknown, options?: { toolCallId?: string }): Promise<AgentToolResult>;
+    call(
+      name: string,
+      input: unknown,
+      options?: { toolCallId?: string; signal?: AbortSignal },
+    ): Promise<AgentToolResult>;
   };
   /** Structured logging, already tagged with the run. Never log message text or credentials. */
   readonly log: FastifyBaseLogger;
@@ -344,7 +386,10 @@ export interface AgentRunHandle {
    * `false` for a message the agent did take. Omit when the agent cannot be
    * steered.
    */
-  steer?(message: { text: string; attachments: readonly PromptAttachment[] }): boolean | Promise<boolean>;
+  steer?(message: {
+    text: string;
+    attachments: readonly PromptAttachment[];
+  }): boolean | Promise<boolean>;
 }
 
 /** What the bridge's `permission_prompt` tool was called with. */

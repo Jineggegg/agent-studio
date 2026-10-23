@@ -173,3 +173,14 @@
   font-size: var(--text-footnote);
   line-height: var(--leading-footnote);
 }
+
+.ntf-external-form {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+.ntf-external-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

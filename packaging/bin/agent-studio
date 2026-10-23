@@ -100,7 +100,7 @@ service_install() {
     mkdir -p "$(dirname "$unit")"
     cat >"$unit" <<EOF
 [Unit]
-Description=Agent Cloud Studio
+Description=Cloud Harness
 After=network-online.target
 
 [Service]
