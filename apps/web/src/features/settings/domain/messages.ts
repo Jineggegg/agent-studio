@@ -96,8 +96,8 @@ export const domainZhCN: Record<keyof typeof domainEn, string> = {
   'domain.port.hint': '填写 Cloud Harness 服务器实际监听的端口，默认为 7420。',
   'domain.port.error': '请输入 1 到 65535 之间的端口。',
   'domain.method': '连接方式',
-  'domain.caddy': 'Caddy',
-  'domain.cloudflare': 'Cloudflare Tunnel',
+  'domain.caddy': 'Caddy 代理',
+  'domain.cloudflare': 'Cloudflare 隧道',
   'domain.caddy.hint': '适合有公网 IP 的服务器。将 DNS 指向服务器，由 Caddy 管理 HTTPS 证书。',
   'domain.cloudflare.hint':
     '适合位于家庭路由器后的服务器。隧道主动向外连接，域名需托管在 Cloudflare。',
@@ -112,7 +112,7 @@ export const domainZhCN: Record<keyof typeof domainEn, string> = {
   'domain.proxy.detail':
     '把这个站点配置加入 Caddyfile，验证配置文件后重新加载 Caddy 服务。保留原始 Host 请求头；WebSocket 会自动得到支持。',
   'domain.proxy.docs': 'Caddy HTTPS 配置说明',
-  'domain.caddyfile': 'Caddyfile',
+  'domain.caddyfile': 'Caddyfile 配置',
   'domain.tunnel.title': '创建 Cloudflare Tunnel',
   'domain.tunnel.detail':
     '在 Cloudflare 中打开 Networking → Tunnels，创建隧道，并使用页面提供的命令在这台服务器上安装连接器。请妥善保管隧道令牌。',
@@ -120,7 +120,7 @@ export const domainZhCN: Record<keyof typeof domainEn, string> = {
   'domain.route.detail':
     '选择下面的公开域名，把 Service URL 设为本地地址。路径留空，不要改写 Host 请求头。Cloudflare 会创建 DNS 路由。保持 WebSocket 开启，并为这个域名绕过缓存。',
   'domain.route.host': '公开域名',
-  'domain.route.service': 'Service URL',
+  'domain.route.service': '服务地址（Service URL）',
   'domain.route.docs': 'Cloudflare Tunnel 配置说明',
   'domain.access':
     '如果希望限制登录页的访问人群，可添加 Cloudflare Access 策略。通过后仍需登录 Cloud Harness。',
