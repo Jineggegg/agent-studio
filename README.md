@@ -1,92 +1,155 @@
 # Cloud Harness
 
-**Your self-hosted workspace for AI agents, projects and everyday tools — on phone, tablet and desktop.**
+**Your agents. Your projects. Any screen.**
 
-Cloud Harness runs on your own machine — a workstation, a home server, a
-VPS — next to the agent CLIs you already use, and gives you one touch-first web
-app to drive them from an iPhone, an iPad or a desktop browser. The agents work
-on _your_ files with _your_ sign-ins; your phone only ever talks to your server.
+A self-hosted workspace for Claude Code, Codex and API models. Start a task on
+your computer, review it on an iPad, and pick it up on your phone. Conversations,
+project files and shared memory stay together on your own server.
 
-```
-phone / tablet / laptop ──HTTPS──▶ your server (Cloud Harness) ──▶ Claude Code CLI · Codex CLI · model APIs
-```
+[简体中文](README.zh-CN.md) · [Screenshot tour](docs/guides/showcase.md) · [Quick start](#quick-start) · [Releases](https://github.com/Jineggegg/cloud-harness/releases) · [Security](SECURITY.md)
 
-[简体中文](README.zh-CN.md) · [Guides](docs/guides/README.md) · [Architecture](docs/architecture/ARCHITECTURE.md) · [Security](SECURITY.md) · [Status](docs/STATUS.md)
+![Cloud Harness on desktop, tablet and phone, using the same responsive workspace](docs/assets/screenshots/devices.png)
 
-> **Status: beta.** The server, its security model and its test suites are the
-> most mature parts. The client has been verified in desktop and emulated
-> phone/tablet browsers, not yet on physical devices. Read
-> [what is and is not finished](docs/STATUS.md) before relying on it.
+_Actual application screens in browser device frames. All projects, notes and
+mail are fictional; agent replies are scripted demonstrations. These are not
+live model results or physical-device tests._
 
-## What it does
+> **Beta.** Verified in desktop and emulated phone/tablet browsers; physical-device
+> testing is still pending. See [what is ready and what is not](docs/STATUS.md).
 
-**Work with agents**
+## One workspace, from the first prompt to the next decision
 
-- Chat with **Claude Code** and **Codex** through their official CLIs (using
-  the sign-in you already have), with **Anthropic’s native Messages API**, and with **OpenAI-compatible API models**
-  (DeepSeek, OpenAI, a model server on your own machine) using a key you store
-  encrypted on the server.
-- Live streaming of text, reasoning, tool calls and diffs. Runs belong to the
-  server: lock your phone, lose signal, switch devices — the run carries on and
-  the transcript catches up exactly where it left off.
-- **You stay in control.** Every side effect an agent asks for passes through
-  one permission engine. Risky actions wait for your approval — the inbox and a
-  push notification point you to them — and you answer in the conversation,
-  from any of your devices.
-- Queue messages while an agent is busy, steer a running turn, stop it, and
-  continue a run that a restart interrupted.
-- Use several agents on the same project, hand a conversation from one model to
-  another with a summary, and see token usage and cost per session.
+<table>
+<tr>
+<td width="50%">
 
-- Organise conversations into groups, branch from a message, edit a prompt into a
-  new branch, and select isolated CLI account profiles. Inspect context usage,
-  supported speed options and real text-file checkpoints before restoring them.
-- Annotate attached images, dictate a draft, listen to an answer and follow
-  background work. Import external CLI conversations only from roots you enable.
+### Work in context
 
-**Work on projects**
+![Project conversation with a responsive sidebar and file editor](docs/assets/screenshots/workspace.png)
 
-- Projects are folders on your server. Browse and edit files, review diffs,
-  stage, commit, branch, push and pull, work in Git worktrees.
-- See pull requests and CI status and merge with safeguards, through the GitHub
-  CLI sign-in already on your server.
-- A real terminal in the project directory that keeps running when you put the
-  phone down, and terminals on other machines you have configured over SSH.
+Chat beside your projects. Review tool calls and approvals, organise conversations,
+branch a prompt, and return to a run after switching devices.
 
-**Remember and automate**
+[Explore the workspace →](docs/guides/showcase.md#your-project-within-reach)
 
-- **Shared memory**: Markdown notes — per project and global — that every agent
-  can search and write through the same tools, and that you can read, edit and
-  delete. An agent sees only its own project's notes and the global ones.
-- **Automations**: schedules that notify you or start an agent run unattended
-  (what would need approval is denied and reported, never silently done).
-- **Inbox and Web Push**: what needs you, what failed, what finished.
+</td>
+<td width="50%">
 
-- Optional **mail** connects your Gmail or Outlook account for folders, search,
-  reading, attachments, encrypted drafts and explicitly confirmed sending.
-  Summary generation requires consent and a configured local model.
-- Add SMTP or Bark notifications and let agents propose reminders for approval.
+### Choose the right agent
 
-**Tools around the conversation**
+![Model settings with example Anthropic, OpenAI-compatible and local provider catalogues](docs/assets/screenshots/models.png)
 
-- Manage project-scoped **skills, slash commands and MCP connections**. External
-  MCP calls use the same tool approval flow as other agent actions.
-- Build and preview **static project apps** in an isolated frame. An optional
-  agent browser runs behind a sandbox and guarded network transport.
-- Pair your own Windows device for reviewed screenshot, click and typing actions.
-  No device, account or external service is preconfigured.
+Use your Claude Code and Codex CLI sign-ins, Anthropic's native Messages API,
+or an OpenAI-compatible provider. Choose from your configured agents and models.
 
-**Built for touch**
+[Connect your models →](docs/guides/showcase.md#several-models-one-place)
 
-- An installable PWA with phone, tablet and desktop layouts, light and dark
-  themes, English and Simplified Chinese. An optional [desktop wrapper](desktop/README.md)
-  connects to your existing installation.
+</td>
+</tr>
+<tr>
+<td>
 
-**Extend it**
+### Remember across conversations
 
-- A plugin system for your own tools: plugins run in sandboxed processes with
-  only the permissions you grant, and their UI is isolated from your session.
-- New agents plug in through one adapter interface.
+![Searchable shared memory with project and global notes](docs/assets/screenshots/memory.png)
+
+Keep decisions and preferences in readable Markdown notes. Agents share the
+current project's notes and global memory, within your access permissions.
+
+[See shared memory →](docs/guides/showcase.md#memory-you-can-read-and-edit)
+
+</td>
+<td>
+
+### Pass the work along
+
+![A linked conversation continuing after an agent handoff](docs/assets/screenshots/collaboration.png)
+
+Give the next agent a brief and a note, then continue in a linked conversation.
+Ask several agents in parallel and optionally have another compare their answers.
+
+[See agent collaboration →](docs/guides/showcase.md#agents-that-can-pick-up-each-others-work)
+
+</td>
+</tr>
+<tr>
+<td>
+
+### Make useful tools reusable
+
+![Tools library with skills, reusable commands and MCP connections](docs/assets/screenshots/tools.png)
+
+Bring your skills, slash commands and MCP connections into the conversation.
+Browse files, review Git changes, use a terminal and preview static project apps.
+
+[Explore the tools →](docs/guides/showcase.md#tools-that-belong-to-your-workflow)
+
+</td>
+<td>
+
+### Keep mail close
+
+![Demonstration mailbox with fictional messages and a local draft](docs/assets/screenshots/mail.png)
+
+Connect your own Gmail or Outlook credentials. Read and search mail, keep
+an encrypted draft, then review the account and recipients before sending.
+
+[Set up your mailbox →](docs/guides/showcase.md#mail-with-an-explicit-send-step)
+
+</td>
+</tr>
+<tr>
+<td>
+
+### Follow work in progress
+
+![Activity screen showing several demonstration agent runs](docs/assets/screenshots/activity.png)
+
+See running conversations in one place. The inbox collects approvals, failures
+and results; optional notifications and schedules bring you back when needed.
+
+[Follow activity →](docs/guides/showcase.md#know-what-needs-you)
+
+</td>
+<td>
+
+### Use your own address
+
+![Custom domain settings with HTTPS setup steps and configuration preview](docs/assets/screenshots/domain.png)
+
+Open **Settings → Domain & access** to prepare your HTTPS address and copy
+configuration for a reverse proxy or tunnel. Follow the guide to apply it.
+
+[Connect your domain →](docs/deployment/remote-access.md)
+
+</td>
+</tr>
+</table>
+
+The [full screenshot tour](docs/guides/showcase.md) includes the launcher,
+multi-agent tasks and a short workflow for each feature.
+
+<details>
+<summary><strong>More ways to work</strong></summary>
+
+- **Conversations:** groups, branches, edit-and-resend, isolated CLI account
+  profiles, explicit history imports, context usage and supported speed options.
+  Preview eligible text-file checkpoints before restoring them.
+- **Files and Git:** browse and edit files, inspect diffs, stage, commit, branch,
+  use worktrees, push and pull. Check PRs and CI through your server's GitHub CLI.
+- **Images and voice:** annotate attachments, dictate a draft and opt into
+  reading an answer aloud. Availability and processing depend on your browser
+  and configured services.
+- **Automation:** reminders, send-later messages and scheduled agent runs.
+  Actions needing approval are denied during unattended runs and reported.
+- **Optional integrations:** an isolated agent browser, reviewed actions on a
+  paired Windows device and a [desktop wrapper](desktop/README.md).
+- **Personal setup:** English or Simplified Chinese, light or dark, an installable
+  PWA, and sandboxed extensions through the plugin SDK.
+
+[All guides](docs/guides/README.md) · [Architecture](docs/architecture/ARCHITECTURE.md)
+
+</details>
 
 ## Quick start
 

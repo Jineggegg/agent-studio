@@ -1,3 +1,4 @@
+import { domainZhCN } from '@/features/settings/domain/messages';
 import { usageGateMessagesZh } from '@/features/usage/messages';
 import { computerMessagesZh } from '@/features/computer/messages';
 import { browserZhCN } from '@/features/browser/messages';
@@ -16,6 +17,7 @@ import { reminderMessagesZh } from '@/features/automation/messages';
 import { conversationMessagesZh } from '@/features/workbench/sessions/messages';
 
 export const zhCN: Record<keyof typeof en, string> = {
+  ...domainZhCN,
   ...libraryMessagesZh,
   ...miniAppMessagesZh,
   ...browserZhCN,

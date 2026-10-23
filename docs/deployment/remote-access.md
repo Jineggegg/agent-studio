@@ -1,4 +1,47 @@
-# Reaching your Studio from a phone
+# Your domain, on every device
+
+**In the app:** sign in as the owner, then open **Settings → Domain & access**
+(`/settings/domain`). Enter a hostname you own and the app's local port (default
+`7420`), then choose **Caddy** or **Cloudflare Tunnel**. The page prepares copyable
+configuration and shows the addresses actually allowed by the running server.
+It does not change DNS, install a proxy, restart a service, or claim to have
+verified DNS/TLS reachability. Keep the server terminal available while changing
+its address.
+
+**中文快速入口：**以管理员身份打开 **设置 → 域名与访问**，填写自己的域名和本地服务
+端口，选择 Caddy 或 Cloudflare Tunnel。复制页面配置后，在域名服务商和服务器上
+应用配置并重启。页面会读取服务器允许的地址；DNS、HTTPS 证书和外网连通性需要
+另行验证。不要把任何隧道令牌、DNS API 密钥或证书私钥粘贴到本页面。
+
+For an installed release, settings live in `~/.config/agent-studio/env`
+(or the location selected through `XDG_CONFIG_HOME` / `AGENT_STUDIO_ENV_FILE`).
+Edit existing values instead of appending duplicate keys. The compatibility names
+`AGENT_STUDIO_*` and `agent-studio` remain supported after the Cloud Harness rename.
+For Docker or source deployments, set the same variables in the environment
+provided by your container or service manager.
+
+```ini
+AGENT_STUDIO_HOST=127.0.0.1
+AGENT_STUDIO_PORT=7420
+AGENT_STUDIO_PUBLIC_ORIGINS=https://harness.example.com
+AGENT_STUDIO_TRUST_PROXY=on
+```
+
+Replace the example hostname with your own. Keep any other origins you still use
+in `AGENT_STUDIO_PUBLIC_ORIGINS`, separated by commas. Keep the app bound to
+loopback when the proxy or tunnel connector runs on the same host. For containers,
+use a private container network and do not publish the unencrypted app port to the
+Internet; `127.0.0.1` inside one container cannot reach another container.
+
+After applying the proxy/tunnel setup below, restart an installed service:
+
+```sh
+cloud-harness service restart
+```
+
+Restart/recreate other deployment types using their own service manager and the
+updated environment. Cloud Harness does not load a `.env` file when started
+directly with Node.js; its environment must be supplied by the launching process.
 
 The shape is always the same:
 
@@ -42,40 +85,52 @@ Plain `http://100.x.y.z:7420` also works on a tailnet if you bind the Studio to
 the Tailscale address and list that origin, but cookies cannot be `Secure`
 there and passkeys do not work on IP addresses; the app will warn you.
 
-## Cloudflare Tunnel (public host name, no open ports)
+## Cloudflare Tunnel (public hostname, no inbound ports)
 
-```
-cloudflared tunnel create studio
-cloudflared tunnel route dns studio studio.example.com
-```
+1. Add your domain to Cloudflare. In **Networking → Tunnels**, create a tunnel
+   and install its connector on the Cloud Harness host using the command shown in
+   the dashboard. Keep that command's tunnel token private.
+2. Under the tunnel's **Routes**, add a **Published application**. Set the hostname
+   to your chosen domain, and the service URL to `http://127.0.0.1:7420`. Leave the
+   path empty: Cloud Harness needs the root of its hostname.
+3. Cloudflare creates the DNS route. Keep the original Host header and WebSockets
+   enabled. Configure a cache bypass rule for this hostname so authenticated
+   pages and API responses are never cached by an edge rule.
+4. Apply the server environment above and restart Cloud Harness. For an extra
+   sign-in boundary, add a Cloudflare Access policy; Cloud Harness authentication
+   remains required. Connector health alone does not verify app sign-in.
 
-`~/.cloudflared/config.yml`:
-
-```yaml
-tunnel: studio
-credentials-file: /home/you/.cloudflared/<tunnel-id>.json
-ingress:
-  - hostname: studio.example.com
-    service: http://127.0.0.1:7420
-  - service: http_status:404
-```
-
-Set `AGENT_STUDIO_PUBLIC_ORIGINS=https://studio.example.com` and
-`AGENT_STUDIO_TRUST_PROXY=on`. Strongly consider putting Cloudflare Access in
-front, so that the sign-in page itself is only reachable after your identity
-provider has let you through.
-
-WebSockets pass through tunnels without extra configuration.
+See the official [Cloudflare Tunnel setup](https://developers.cloudflare.com/tunnel/get-started/)
+and [published application routing](https://developers.cloudflare.com/tunnel/concepts/routing/).
+The domain setup page provides a hostname and local service address to copy; it
+never asks for or stores your Cloudflare credentials.
 
 ## A reverse proxy you run yourself
 
-Caddy obtains certificates automatically:
+Use a DNS A record pointing to your server's public IPv4 address. Add AAAA only
+when the server is reachable over IPv6. Install Caddy on the same host, make
+ports 80 and 443 reachable from the Internet, and keep port 7420 private.
+Caddy obtains and renews certificates automatically for the hostname:
 
 ```
 studio.example.com {
     reverse_proxy 127.0.0.1:7420
 }
 ```
+
+Add that block to your Caddyfile, validate it, then reload the installed Caddy
+service. For a standard Linux system service using `/etc/caddy/Caddyfile`:
+
+```sh
+caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+Use the actual config path and service manager on your installation. Caddy
+preserves Host and supports WebSocket upgrades. See its official
+[HTTPS quick-start](https://caddyserver.com/docs/quick-starts/https) and
+[reverse proxy reference](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy).
+Apply the server environment above and restart Cloud Harness as well.
 
 nginx — note the `Host` header, which nginx otherwise replaces with the
 upstream address, and the upgrade headers for WebSockets:
@@ -126,7 +181,7 @@ renewing the certificate.
 ```ini
 # ~/.config/systemd/user/agent-studio.service
 [Unit]
-Description=Agent Cloud Studio
+Description=Cloud Harness
 After=network-online.target
 
 [Service]
@@ -168,6 +223,24 @@ or later).
 
 ## Checking the result
 
-After signing in as the owner, **Settings → About** lists anything about the
-configuration that deserves a second look (plain-http exposure, a missing
-sandbox, a data directory other accounts can read).
+Open `https://harness.example.com` from another device or network. Confirm the
+hostname and valid certificate before entering your password. You can check
+liveness from that network with:
+
+```sh
+curl --fail --show-error https://harness.example.com/api/health
+```
+
+An `ok` response is only a liveness result; it does not prove server identity or
+that sign-in, WebSockets and uploads work. Sign in, open a conversation and send a
+message to confirm the live connection. Never disable certificate verification
+to make a failing setup look successful.
+
+**Settings → Domain & access → Refresh status** reads the running server's allowed
+origins. “Address listed in server configuration” means exactly that; it is not a
+DNS or TLS verification. **Settings → About** also lists configuration warnings
+such as unencrypted exposure or a missing sandbox.
+
+Passkeys belong to a hostname. Keep a password or another working sign-in method
+while moving, then register a new passkey on the new address. Keep the old origin
+allowed until all devices can sign in through the new one.

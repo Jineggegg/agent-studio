@@ -1,6 +1,6 @@
 {
   "name": "@agent-studio/server",
-  "version": "2.0.0-beta.4",
+  "version": "2.0.0-beta.5",
   "private": true,
   "description": "Cloud Harness server: authentication, agent runtime, projects, memory and automation.",
   "license": "MIT",
@@ -16,7 +16,7 @@
     "start": "node dist/main.js"
   },
   "dependencies": {
-    "@agent-studio/protocol": "2.0.0-beta.4",
+    "@agent-studio/protocol": "2.0.0-beta.5",
     "@fastify/cookie": "^11.1.3",
     "@fastify/helmet": "^13.1.2",
     "@fastify/multipart": "^10.1.3",

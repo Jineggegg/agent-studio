@@ -1,4 +1,4 @@
-import { FolderOpen, Info, Mic, Palette, Settings, ShieldCheck, Users } from 'lucide-react';
+import { FolderOpen, Globe2, Info, Mic, Palette, Settings, ShieldCheck, Users } from 'lucide-react';
 import { registerSettingsPage, registerSettingsQuickControl, registerSystemTile } from '@/registry';
 import { BUILD_ID } from '@/pwa/update';
 import { useSession } from '@/data/session';
@@ -14,6 +14,16 @@ function useVersionSummary(): string | undefined {
  * same way, from their own `index.ts`.
  */
 registerSettingsPage(
+  {
+    id: 'domain',
+    title: 'domain.title',
+    icon: Globe2,
+    tint: 'blue',
+    group: 'connections',
+    order: 10,
+    access: 'owner',
+    load: () => import('./domain/DomainPage'),
+  },
   {
     id: 'voice',
     title: 'voice.title',

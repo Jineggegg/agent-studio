@@ -4,11 +4,10 @@ This guide covers what the Studio keeps and does between conversations: shared
 memory, automations and messages sent later, the inbox and notifications on
 your devices, working with several agents, and usage figures.
 
-A note on the state of the app: the screens described here for the inbox,
-memory, notifications, automations and "send later" were being added to the
-app when this guide was written, and the usage screens were still being built.
-The server side of everything here is finished and tested.
-Where a feature has no screen, this guide names the HTTP route instead. Routes
+The app includes screens for memory, the inbox, notifications, automations,
+usage, conversation handoffs and multi-agent tasks. The
+[screenshot tour](showcase.md) introduces the main workflows. This guide also names
+HTTP routes for scripted access. Routes
 marked "user" accept an API token (**Settings → Account & security → API
 tokens**) sent as `Authorization: Bearer …`, unless noted otherwise.
 
@@ -366,7 +365,15 @@ the digest is used and you are told why. Both conversations get a note in
 their transcript. Conversations handed on form a chain; only the newest of a
 chain can be handed on again.
 
-**There is no screen for this yet.** Routes ("user"):
+After the current reply finishes, open **Conversation actions (⋯) → Continue
+with another agent…**. Choose the recipient and brief format, then optionally
+add **A note for the new agent**. **I will write first** leaves the note in
+the new conversation's draft; **Start now** sends it as the first message.
+The handoff record links both conversations and lets you inspect the brief.
+Handoffs are initiated by the user; agents do not send each other arbitrary
+messages or start an autonomous dialogue through this feature.
+
+Routes ("user"):
 `POST /api/sessions/:sessionId/handoff` with `requestId`, `agentId` (must differ
 from the current agent), optional `model`, `permissionMode`, `note` (your
 words for the new agent), `start` (send the first message at once) and
@@ -387,7 +394,14 @@ a conversation of its own, and follows them as one task:
 - At most three tasks per person run at a time. A task can be stopped as a
   whole.
 
-**There is no screen for this yet.** Routes ("user"):
+Choose **Ask several agents…** from the conversation's **Conversation actions
+(⋯)** menu, or open a project's multi-agent tasks. Select the participants,
+isolation mode and optional comparison agent, then start the task. Its screen
+shows each participant's status and answer, the comparison when ready, and
+links to the individual conversations. **Running** shows active work across
+your conversations and tasks.
+
+Routes ("user"):
 `POST /api/projects/:projectId/tasks`, `GET /api/projects/:projectId/tasks`,
 `GET /api/tasks`, `GET /api/tasks/:taskId`, `POST /api/tasks/:taskId/stop`,
 `DELETE /api/tasks/:taskId`, and `GET /api/work/running` for everything that is

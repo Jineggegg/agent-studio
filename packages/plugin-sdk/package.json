@@ -1,6 +1,6 @@
 {
   "name": "@agent-studio/plugin-sdk",
-  "version": "2.0.0-beta.4",
+  "version": "2.0.0-beta.5",
   "private": true,
   "description": "Types and a small runtime for writing Cloud Harness plugins.",
   "license": "MIT",
