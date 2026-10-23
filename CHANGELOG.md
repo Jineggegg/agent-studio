@@ -29,6 +29,8 @@ All notable changes to this project are recorded here. The format follows
 - Precommit review hardens checkpoint credential exclusions, deleted-account cleanup,
   cancellation of pending MCP calls and immutable app-build confirmations.
 - Browser subprocesses use a minimal environment and isolated network namespace.
+- Passkey challenges can only be consumed once after successful verification;
+  concurrent reuse and challenges that expire during verification are rejected.
 - Historical personal API cost observations were removed from the current guide;
   existing public Git history was not rewritten.
 

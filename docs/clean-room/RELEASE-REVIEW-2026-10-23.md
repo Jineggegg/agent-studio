@@ -24,6 +24,7 @@ The following findings were fixed and independently re-reviewed before commit:
 | Cascaded tool-library deletion left encrypted tokens                      | Database trigger removes the corresponding secret                                                                                              |
 | Chromium inherited operator environment passthrough                       | Start from an empty environment with only fixed runtime paths and private home/temp directories                                                |
 | CodeQL flagged regex-based mail HTML text extraction                      | Replace regex stripping with a bounded parse5 tree walk and render message bodies as literal React text; retain hostile-input regression tests |
+| Concurrent passkey responses could consume the same challenge twice      | After successful cryptographic verification, synchronously recheck nonce use and expiry before marking it used; reject losing login and registration requests |
 
 Regression tests cover these boundaries with synthetic inputs. See
 [STATUS.md](../STATUS.md) for the final verification results and their scope.

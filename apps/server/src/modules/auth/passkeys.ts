@@ -94,22 +94,29 @@ class ChallengeIssuer {
     return copy;
   }
 
-  /** Returns a consume function when the challenge is genuine, current and unused; otherwise null. */
-  check(purpose: string, encoded: string, now = Date.now()): (() => void) | null {
+  /** Returns an atomic consume function when genuine, current and unused; otherwise null. */
+  check(purpose: string, encoded: string, now = Date.now()): (() => boolean) | null {
     const bytes = Buffer.from(encoded, 'base64url');
     if (bytes.length !== 56) return null;
     const nonce = bytes.subarray(0, 16);
     const expiry = bytes.subarray(16, 24);
     const mac = bytes.subarray(24);
     if (!timingSafeEqual(mac, this.#mac(purpose, nonce, expiry))) return null;
-    if (Number(expiry.readBigUInt64BE()) < now) return null;
+    const expiresAt = Number(expiry.readBigUInt64BE());
+    if (expiresAt < now) return null;
     const id = nonce.toString('hex');
     if (this.#used.has(id)) return null;
     return () => {
-      this.#used.set(id, now + CHALLENGE_TTL_MS);
+      // Verification awaits cryptography after check(). Another valid request
+      // may have consumed this nonce in the meantime. Claim it only once, after
+      // successful verification, so a bad signature cannot burn the challenge.
+      const consumedAt = Date.now();
+      if (expiresAt < consumedAt || this.#used.has(id)) return false;
+      this.#used.set(id, consumedAt + CHALLENGE_TTL_MS);
       if (this.#used.size > 1000) {
-        for (const [key, until] of this.#used) if (until < now) this.#used.delete(key);
+        for (const [key, until] of this.#used) if (until < consumedAt) this.#used.delete(key);
       }
+      return true;
     };
   }
 }
@@ -265,7 +272,7 @@ export function setupPasskeys(
           'too_many_passkeys',
         );
 
-      let consume: (() => void) | null = null;
+      let consume: (() => boolean) | null = null;
       const result = await verifyRegistrationResponse({
         response: body.response as unknown as Parameters<
           typeof verifyRegistrationResponse
@@ -277,15 +284,13 @@ export function setupPasskeys(
         expectedRPID: party.rpId,
         requireUserVerification: true,
       }).catch(() => null);
-      if (!result?.verified || !consume) {
+      if (!result?.verified || !consume || !(consume as () => boolean)()) {
         throw badRequest(
           'That passkey could not be verified. Try again.',
           undefined,
           'passkey_rejected',
         );
       }
-      (consume as () => void)();
-
       const { credential, credentialBackedUp } = result.registrationInfo;
       const id = newId();
       try {
@@ -387,7 +392,7 @@ export function setupPasskeys(
       );
       if (!row || row.disabled === 1) throw refuse();
 
-      let consume: (() => void) | null = null;
+      let consume: (() => boolean) | null = null;
       const publicKey = new Uint8Array(new ArrayBuffer(row.public_key.length));
       publicKey.set(row.public_key);
       const result = await verifyAuthenticationResponse({
@@ -406,8 +411,7 @@ export function setupPasskeys(
         },
         requireUserVerification: true,
       }).catch(() => null);
-      if (!result?.verified || !consume) throw refuse();
-      (consume as () => void)();
+      if (!result?.verified || !consume || !(consume as () => boolean)()) throw refuse();
 
       db.run(
         'UPDATE passkeys SET counter = ?, last_used_at = ?, backed_up = ? WHERE id = ?',

@@ -137,7 +137,14 @@ describe('6.4 passkeys', () => {
       '/api/auth/passkeys/login-options',
       {},
     );
-    const tampered = { ...options.body, challenge: flipLastChar(options.body.challenge) };
+    const originalBytes = Buffer.from(options.body.challenge, 'base64url');
+    const alteredBytes = Buffer.from(originalBytes);
+    // Flip an actual MAC byte. Changing the last base64url character may change
+    // only ignored padding bits, leaving the signed challenge bytes untouched.
+    expect(alteredBytes.length).toBeGreaterThan(0);
+    alteredBytes[alteredBytes.length - 1] = alteredBytes[alteredBytes.length - 1]! ^ 1;
+    const tampered = { ...options.body, challenge: alteredBytes.toString('base64url') };
+    expect(Buffer.from(tampered.challenge, 'base64url')).not.toEqual(originalBytes);
     expect(
       (
         await new ApiClient(base).post('/api/auth/passkeys/login', {
@@ -391,7 +398,3 @@ describe('6.4 a passkey sign-in lifts a password lock', () => {
     }
   });
 });
-
-function flipLastChar(value: string): string {
-  return value.slice(0, -1) + (value.endsWith('A') ? 'B' : 'A');
-}

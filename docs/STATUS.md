@@ -24,6 +24,10 @@ Local verification for this expansion:
   and four mailbox integration tests pass; typecheck, lint, build and package
   installation were repeated successfully.
 - Integration regression: 1,334 passed, 13 skipped (opt-in external/runtime checks).
+- Passkey follow-up: 16 integration tests and 12 black-box tests pass, including
+  concurrent challenge consumption, failed-signature reuse and expiry during
+  verification. Typecheck, lint, build, package installation and artifact scans
+  were repeated successfully after the fix.
 - Black-box acceptance: 434 passed.
 - Chromium browser coverage: 66 application scenarios pass across phone, tablet
   and desktop; six phone-only cases are intentionally skipped at other sizes.
