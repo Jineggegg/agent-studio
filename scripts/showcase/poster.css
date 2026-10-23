@@ -1,0 +1,331 @@
+/* Original layout for the Cloud Harness product images. Local fonts only. */
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+:root {
+  --ink: #17181c;
+  --muted: #5d6070;
+  --paper: #f4f2ee;
+  --accent: #3340d6;
+  --line: rgba(23, 24, 28, 0.09);
+  --shadow:
+    0 1px 2px rgba(23, 24, 28, 0.06), 0 12px 32px rgba(23, 24, 28, 0.1),
+    0 40px 80px rgba(23, 24, 28, 0.12);
+  font-family:
+    'Inter', 'Ubuntu Sans', 'Segoe UI', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+:lang(zh-CN) {
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', 'Ubuntu Sans', system-ui, sans-serif;
+}
+body {
+  background: var(--paper);
+}
+.canvas {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(1200px 700px at 100% 0%, var(--tint) 0%, transparent 60%),
+    radial-gradient(900px 600px at 0% 100%, var(--tint-2, transparent) 0%, transparent 55%),
+    var(--paper);
+}
+
+/* ---- text ---------------------------------------------------------------- */
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--accent);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+:lang(zh-CN) .kicker {
+  letter-spacing: 0.12em;
+}
+.kicker::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+}
+h1,
+h2 {
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+}
+:lang(zh-CN) h1,
+:lang(zh-CN) h2 {
+  letter-spacing: 0;
+  line-height: 1.18;
+}
+h2 {
+  margin-top: 18px;
+  font-size: 58px;
+}
+.lede {
+  margin-top: 20px;
+  color: var(--muted);
+  font-size: 24px;
+  line-height: 1.5;
+}
+:lang(zh-CN) .lede {
+  font-size: 23px;
+  line-height: 1.65;
+}
+.note {
+  position: absolute;
+  right: 28px;
+  bottom: 20px;
+  color: rgba(23, 24, 28, 0.42);
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+/* ---- pictures --------------------------------------------------------------- */
+.shot {
+  position: absolute;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.shot img {
+  display: block;
+  width: 100%;
+}
+.glow {
+  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 6px;
+}
+
+/* ---- feature card: 1200 × 750 ------------------------------------------------- */
+.card {
+  width: 1200px;
+  height: 750px;
+}
+.card .copy {
+  position: absolute;
+  top: 76px;
+  left: 76px;
+  width: 470px;
+}
+.card.stack .copy {
+  width: 1000px;
+}
+.card.stack h2 {
+  font-size: 54px;
+}
+
+/* ---- hero: 1600 × 900 -------------------------------------------------------- */
+.hero {
+  width: 1600px;
+  height: 900px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 26px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+.brand img {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+.hero .copy {
+  position: absolute;
+  top: 92px;
+  left: 92px;
+  width: 620px;
+}
+.hero h1 {
+  margin-top: 70px;
+  font-size: 66px;
+}
+:lang(zh-CN) .hero h1 {
+  font-size: 62px;
+}
+.hero .lede,
+.hero .chips {
+  width: 500px;
+}
+.hero .lede {
+  font-size: 25px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 36px;
+}
+.chip {
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #33363f;
+  font-size: 17px;
+  font-weight: 600;
+}
+.window {
+  position: absolute;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.window .bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfaf8;
+}
+.window .bar i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #dcd9d3;
+}
+.window .bar span {
+  margin: 0 auto;
+  padding: 4px 18px;
+  border-radius: 8px;
+  background: #efede9;
+  color: #6b6e78;
+  font-size: 14px;
+}
+.window img {
+  display: block;
+  width: 100%;
+}
+.phone {
+  position: absolute;
+  padding: 11px;
+  border-radius: 50px;
+  background: #1b1c20;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    var(--shadow);
+}
+.phone img {
+  display: block;
+  width: 100%;
+  border-radius: 39px;
+}
+
+/* ---- self-hosting list ------------------------------------------------------- */
+.points {
+  display: grid;
+  gap: 26px;
+  margin-top: 40px;
+  list-style: none;
+  padding: 0;
+}
+.points li {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 18px;
+  align-items: center;
+  font-size: 23px;
+  line-height: 1.35;
+}
+.points b {
+  display: block;
+  font-size: 24px;
+}
+.points span {
+  color: var(--muted);
+  font-size: 19px;
+}
+.points svg {
+  width: 52px;
+  height: 52px;
+  padding: 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 12%, white);
+  color: var(--accent);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.terminal {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #16171b;
+  box-shadow: var(--shadow);
+  color: #e7e8ec;
+  font-family: 'Cascadia Mono', 'Ubuntu Mono', 'DejaVu Sans Mono', monospace;
+  font-size: 19px;
+  line-height: 1.7;
+}
+.terminal .bar {
+  display: flex;
+  gap: 8px;
+  padding: 16px 18px;
+  background: #202127;
+}
+.terminal .bar i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #3a3c45;
+}
+.terminal pre {
+  padding: 22px 26px 28px;
+  font: inherit;
+  white-space: pre-wrap;
+}
+.terminal .dim {
+  color: #8b8f9c;
+}
+.terminal .ok {
+  color: #7bd88f;
+}
+.terminal .cmd {
+  color: #fff;
+}
+
+.facts {
+  display: grid;
+  gap: 14px;
+  margin-top: 34px;
+  padding: 0;
+  list-style: none;
+  font-size: 21px;
+  font-weight: 600;
+}
+.facts li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.facts svg {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 14%, white);
+  color: var(--accent);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

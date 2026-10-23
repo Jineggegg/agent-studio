@@ -1,194 +1,142 @@
 # A look around Cloud Harness
 
-**One workspace for your agents, projects and everyday tools.**
+**Your coding agents, anywhere you are.**
 
 [简体中文](showcase.zh-CN.md) · [Install Cloud Harness](../../README.md#quick-start) · [All guides](README.md)
 
-![Cloud Harness on desktop, tablet and phone](../assets/screenshots/devices.png)
+![Cloud Harness on a desktop and a phone](../assets/showcase/en/hero.png)
 
-These are screenshots of the running application with fictional projects,
-notes and mail. Replies come from scripted demonstration agents, not live
-Claude, Codex or API calls. Device frames show browser layouts, not physical
-device tests. A fresh installation has no sample accounts, credentials or
-integrations configured.
+The pictures show the real application running a fictional shop project,
+`lumen-shop`. Agent replies are scripted for the demo; they are not live Claude
+Code, Codex or API calls, and the device frame is a browser viewport, not a test
+on a physical phone. A fresh installation has no sample accounts, credentials
+or integrations. The scripts that make these pictures are in
+[scripts/showcase](../../scripts/showcase/README.md).
 
-## Your project, within reach
+## Approve from your phone
 
-![Cloud Harness launcher with projects and feature tiles](../assets/screenshots/launcher.png)
+![An approval request showing the exact diff, with Allow and Deny](../assets/showcase/en/approval.png)
 
-The launcher brings projects, Memory, Inbox and your tools into one place.
-Open a project to start a conversation or return to recent work. The layout
-adapts to a phone, a tablet or a wide desktop window.
+Each conversation has a permission mode. In **Ask**, the default, an agent stops
+before it edits a file, runs a command or uses the network, and the request
+shows exactly what it wants to do: the diff, the command or the address. Answer
+it in the conversation from any signed-in device. **Allow and remember** saves a
+rule for this conversation, the project or always. Nobody answers within 30
+minutes? The request is denied and the agent carries on without it.
 
-![Project workspace with a conversation and its sidebar](../assets/screenshots/workspace.png)
+**Try it:** start a conversation in **Ask**, ask for a small change, and answer
+the request from your phone.
 
-**Try it:** add a project, select an agent, then ask it to explain a file or plan
-a change. Follow the reply, inspect a tool call and answer any approval in the
-conversation. Open Files, Git or Terminal when you need the underlying work.
-Runs live on the server, so a disconnected browser can reconnect to their
-record. The server and agent process still need to remain running.
+[Agents and approvals](agents-and-approvals.md)
 
-Groups keep related conversations together. **Fork here** and **Edit and
-resend** explore another direction in a new conversation; they do not rewind
-your project files. Eligible text-file checkpoints have a separate preview and
-restore flow.
+## See what changed, and why
+
+![The files the agent read, its edit, the test run and its summary](../assets/showcase/en/changes.png)
+
+Every file read, search, edit and command appears in the conversation as it
+happens. Open a step to see its full input and output. Beside the conversation,
+**Files**, **Terminal** and **Git** show the project itself: the changed files,
+their diffs, and a commit box.
+
+Runs live on the server, so a browser that disconnects reconnects to their
+record; the server and the agent process still need to keep running.
+**Branch from here** and **Edit and resend** try another direction in a new
+conversation without rewinding your files. Text-file checkpoints have their own
+preview and restore.
 
 [Working on projects](working-on-projects.md) · [Conversations and branches](conversations.md)
 
-## Several models, one place
+## Every agent, one place
 
-![Model settings with example native Anthropic, OpenAI-compatible and local providers](../assets/screenshots/models.png)
+![Claude Code, Codex and local models in the agent picker](../assets/showcase/en/agents.png)
 
-Use Claude Code and Codex through their official CLIs, or add a provider using
-Anthropic's native Messages API or an OpenAI-compatible API. Available models
-come from your configuration and provider capabilities. Your sign-ins and
-provider accounts remain your own.
+Use Claude Code and Codex through their official CLIs with the sign-ins you
+already have, or add a provider using Anthropic's native Messages API or an
+OpenAI-compatible API, including local model servers. The models you can choose
+come from your configuration; your accounts remain your own.
 
-![The agent picker showing CLI fixtures and scripted demonstration agents](../assets/screenshots/agent-picker.png)
+**Try it:** sign in to a detected CLI, or open **Settings → Models** and add your
+provider. Choose the agent and model when you start a conversation. Separate CLI
+sign-ins live under **Settings → Agent accounts**.
 
-**Try it:** sign in to a detected CLI, or open **Settings → Models** and add
-your provider. Start a conversation and choose its agent and model. Isolated
-CLI account profiles are available under **Settings → Agent accounts**.
-To continue an existing conversation with a different agent, use a handoff.
+[Model setup](providers.md)
 
-[Model setup](providers.md) · [Agent permissions](agents-and-approvals.md)
+## Two agents, one review
 
-## Memory you can read and edit
+![Claude Code and Codex answers side by side](../assets/showcase/en/review.png)
 
-![Memory screen with searchable project decisions and global notes](../assets/screenshots/memory.png)
+Choose **Ask several agents…** to give the same prompt to two to six agents.
+Their answers appear together, and another agent can compare them. In a shared
+folder the agents only read and plan; the owner can give each one its own Git
+worktree when changes are needed. Nothing is merged automatically.
 
-Keep a project decision once, then let the next conversation find it. Memory
-uses Markdown notes that people can inspect and edit. Claude Code, Codex and
-tool-capable API models use the same memory tools.
-
-**Try it:** open **Memory**, create a note in your project's folder and write a
-lasting decision, such as a preferred test command. In the next conversation,
-ask the agent to find that decision before planning its work.
-
-Each run can access its current project and **global**, subject to the user's
-permissions. It cannot browse other projects' memory. Agents may read other
-authors' notes but can modify only notes they created; writes also follow the
-selected permission mode. The owner can disable agent access to memory.
-
-[Memory scopes, permissions and editing](memory-automation-notifications.md#shared-memory)
-
-## Agents that can pick up each other's work
-
-![A linked conversation continuing after an agent handoff](../assets/screenshots/collaboration.png)
-
-Let one agent investigate, then give another its findings and your next step.
-A handoff creates a linked conversation in the same project, carries a brief
-of the earlier work and lets you add **A note for the new agent**. Both sides
-keep a visible handoff record.
-
-**Try it:** after a reply finishes, choose **Conversation actions (⋯) →
-Continue with another agent…**. Select the recipient and brief format, add a
-note such as “Review this plan for accessibility,” then choose **I will write
-first** or **Start now**. You initiate the handoff; the app does not create an
-autonomous back-and-forth chat between agents.
-
-![Multi-agent task showing two scripted agents' individual answers](../assets/screenshots/tasks.png)
-
-For parallel perspectives, choose **Ask several agents…** and give the same
-prompt to two to six agents. Their results appear together; an optional extra
-agent can compare the answers. Shared-folder tasks use Plan mode. The owner
-can give each agent its own Git worktree when changes are needed. Results are
-never merged automatically.
+To pass work along instead, choose **Conversation actions (⋯) → Continue with
+another agent…**. The new conversation gets a brief of the earlier work and your
+note, and both sides keep a record of the handoff.
 
 [Handoffs and multi-agent tasks](memory-automation-notifications.md#several-agents)
 
-## Tools that belong to your workflow
+## Memory your agents share
 
-![Tools and skills screen with reusable entries and connection management](../assets/screenshots/tools.png)
+![A project decision written as a Markdown note](../assets/showcase/en/memory.png)
 
-Turn a repeated prompt into a slash command, keep reusable guidance in a skill,
-or connect an MCP server. These entries belong to your account and can apply
-across your projects or to one accessible project.
+Write a decision down once and the next conversation can find it. Memory is a
+set of Markdown notes, per project and global, that people read and edit in
+**Memory** and that Claude Code, Codex and tool-capable API models reach through
+the same memory tools. A run sees its own project and global notes only. Agents
+may read anyone's notes but change only their own, and the owner can turn agent
+access off.
 
-**Try it:** open **Tools and skills**, create a command called `review`, and
-use `/review` in a conversation. Add a skill for a longer workflow. For MCP,
-save your connection and explicitly choose **Connect and list tools**; remote
-tool calls follow the agent approval flow.
+**Try it:** write the project's test command in a note, then ask the agent in a
+new conversation to look it up before planning.
 
-Project **Apps** provides reviewed static builds and sandboxed previews.
-Optional image annotation, dictation and an isolated agent browser extend the
-workspace when their prerequisites are configured.
+[Memory scopes, permissions and editing](memory-automation-notifications.md#shared-memory)
 
-[Tools and skills](tools-and-skills.md) · [Project apps](project-apps.md) · [Browser, images and voice](browser-and-media.md)
+## Know what is running
 
-## Mail with an explicit send step
+![Work in progress and the requests that wait for you](../assets/showcase/en/running.png)
 
-![Fictional mailbox with messages and a local draft](../assets/screenshots/mail.png)
-
-Browse folders, search mail and read messages in a safe text view. Keep a draft
-locally, then review its sending account, recipients and subject before sending.
-
-![A fictional email opened in the safe text reading view](../assets/screenshots/mail-reading.png)
-
-**Try it:** open **Mailbox → Add account** and follow the Gmail or Outlook
-delegated OAuth setup. This version requires your own access token and optional
-refresh credentials; it does not provide a hosted sign-in service. Credentials
-and local drafts are encrypted on the server. **Review and send** is a separate
-confirmed action.
-
-Optional summaries require your consent and an owner-configured local model.
-The demo mailbox above uses fabricated messages and a test transport; no real
-mail was read or sent for these screenshots.
-
-[Mailbox setup and notification channels](mail-and-channels.md)
-
-## Know what needs you
-
-![Running screen listing demonstration conversations in progress](../assets/screenshots/activity.png)
-
-The **Running** screen shows active work across your conversations. Open a run
-to see its transcript or stop it. **Inbox** brings together approvals, work
-that needs attention and finished results. Approval decisions remain in the
-conversation so their context stays visible.
-
-**Try it:** start work in two conversations, open **Running**, then return to a
-conversation from its card. Configure reminders or scheduled runs in
-**Automations**; notification channels are optional. Unattended work cannot
-approve its own requests.
+**Running** lists the work in all your conversations: what is busy and what is
+waiting for you. Open one to read its record or stop it. **Inbox** collects
+approvals, problems and finished results. Reminders and scheduled runs live in
+**Automations**; unattended work can never approve its own requests.
 
 [Inbox, schedules and notifications](memory-automation-notifications.md)
 
-## Your own domain, with a clear setup path
+## Your server, your keys
 
-![Domain and access settings with a domain field and deployment instructions](../assets/screenshots/domain.png)
+![Runs on your machine, sandboxed agents, passkeys and HTTPS, open source](../assets/showcase/en/hosting.png)
 
-The owner can open **Settings → Domain & access** to prepare an HTTPS address,
-review the instance's current access configuration and generate setup snippets
-for **Caddy** or **Cloudflare Tunnel**.
-The interface guides the setup; DNS, proxy or tunnel configuration and service
-restart still happen on your infrastructure.
+The installer puts Cloud Harness on your own Linux, macOS or WSL machine as a
+service for your user. On Linux with bubblewrap installed, agents run in a sandbox. People
+sign in with passwords or passkeys, and API tokens can never approve anything.
 
-**Try it:** enter a hostname you control, choose the supported access method
-and follow the generated instructions. Apply the matching public-origin and
-trusted-proxy settings before opening the domain. Keep the server on loopback
-behind the proxy or tunnel, then verify login and a live conversation at the
-new HTTPS address. The wizard does not change DNS or deploy configuration for
-you.
+To reach it from other devices, the owner opens **Settings → Domain & access**,
+enters a hostname they control and copies the generated **Caddy** or
+**Cloudflare Tunnel** configuration. DNS, the proxy or tunnel and the service
+restart still happen on your own infrastructure; the page does not change them.
 
-![Copyable Caddy and server environment configuration for an example domain](../assets/screenshots/domain-setup.png)
+![Domain and access settings with an example hostname](../assets/showcase/en/domain.png)
 
-[Domain and remote-access instructions](../deployment/remote-access.md) · [Configuration reference](../configuration.md)
+[Install Cloud Harness](../../README.md#quick-start) · [Remote access](../deployment/remote-access.md) · [Security](../../SECURITY.md)
 
-## Start on one screen, continue on another
+## And more
 
-![Cloud Harness desktop, tablet and phone layouts together](../assets/screenshots/devices.png)
-
-Use a wide workspace on a computer, a focused layout on a tablet and a
-touch-friendly conversation on a phone. Install the PWA from a supported
-browser for an app-style shortcut; English, Simplified Chinese, light and dark
-themes are available. The optional desktop wrapper connects to an existing
-installation.
-
-[Install Cloud Harness](../../README.md#quick-start) · [Desktop wrapper](../../desktop/README.md) · [Current status and limits](../STATUS.md)
+- **Tools and skills:** save repeated prompts as slash commands, longer
+  workflows as skills, and connect MCP servers. Remote tool calls follow the
+  same approvals. [Tools and skills](tools-and-skills.md)
+- **Mail:** read Gmail or Outlook in a safe text view, keep encrypted drafts and
+  send only after an explicit review. [Mailbox setup](mail-and-channels.md)
+- **Project apps, images and voice:** reviewed static builds with sandboxed
+  previews, image annotation, dictation and an isolated agent browser.
+  [Project apps](project-apps.md) · [Browser, images and voice](browser-and-media.md)
+- **Any screen:** a wide workspace on a computer, a focused one on a tablet and
+  a touch-friendly conversation on a phone, as an installable PWA, in English
+  or Simplified Chinese, light or dark. [Current status and limits](../STATUS.md)
 
 <details>
-<summary>See the workspace in dark mode</summary>
+<summary>The workspace in dark mode</summary>
 
-![The same fictional project in the actual dark theme](../assets/screenshots/workspace-dark.png)
+![The same conversation and Git panel in the dark theme](../assets/showcase/en/dark.png)
 
 </details>

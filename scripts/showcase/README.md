@@ -1,43 +1,49 @@
-# Reproduce the product screenshots
+# Reproduce the product images
 
-The screenshots in `docs/assets/screenshots` render the real built web client
-against the real server modules. All projects, notes, conversations, messages,
-provider catalogues and identities are fictional. The two demo assistants use
-the existing scripted test adapter. CLI availability comes from the repository's
-test executables. Nothing pictured is evidence of a live provider run.
+The images in `docs/assets/showcase/<lang>/` are the real built web client and
+server modules, photographed with fictional data and then laid out as product
+images. Nothing pictured is evidence of a live agent or provider run.
 
 ```sh
 npm ci
 npm run build
-build-queue node scripts/showcase/capture.mjs --domain
-build-queue node scripts/showcase/render-devices.mjs
+build-queue node scripts/showcase/build.mjs
 ```
 
 On a machine without the optional local `build-queue` wrapper, run the `node`
 command directly. Install Playwright's Chromium if it is not already available:
 `npx playwright install chromium`.
 
-The runner creates a fresh random temporary directory for the server's home,
-data and project workspace. It starts a loopback server on a free port with an
-explicit minimal environment and generates ephemeral authentication in memory.
-It never reads an existing Studio installation or reuses a browser profile.
-Browser requests are restricted to that server. Mail goes through a closed
-synthetic transport that refuses sending, token refresh and unknown requests.
-Provider catalogues use example addresses and are never verified or invoked.
+## What runs
 
-Only PNGs and a descriptive `manifest.json` go into the screenshot directory;
-cookies, tokens, databases and files stay in the temporary directory. Normal
-completion, failures and termination signals stop the server/browser and remove
-that directory. An uncatchable process kill can leave it behind in the system
-temporary directory; it is never a Git input. The source fixture lives in this
-documentation tooling folder and is not imported by production code.
+- `content.mjs`: everything that is pictured, in English and Chinese. This
+  includes the fictional `lumen-shop` project and its files, the agent replies,
+  the notes, the tools and the mail.
+- `server.ts`: starts the real server with two scripted stand-ins, shown as
+  Claude Code and Codex, in place of the real adapters. Every reply is written
+  out in `content.mjs`; no CLI, model or provider is ever started. Mail goes
+  through a closed fixture that refuses sending, token refresh and unknown
+  requests. Provider catalogues use reserved example addresses and are never
+  contacted.
+- `capture.mjs --lang <en|zh-CN> --out <dir>`: creates a fresh temporary home,
+  data folder and workspace, and a disposable account. It turns the project into
+  a throwaway Git repository and changes one file after the first commit, so the
+  Git panel shows a real diff. It then photographs the screens at twice the pixel
+  density. The browser can reach only that local server.
+- `compose.mjs --lang <en|zh-CN> --raw <dir> --out <dir>`: lays the captures
+  out with `poster.css`. This produces the hero (1600 × 900) and one card per
+  idea (1200 × 750). Everything is local: no web fonts, scripts or images are
+  fetched.
+- `build.mjs`: runs both steps for both languages and writes the finished images.
+  It also keeps the dark-theme and domain screens for the tour. The raw captures
+  stay in a temporary directory that is removed afterwards.
 
-The shots use desktop (1440 × 900), tablet (820 × 1180) and phone (390 × 844)
-viewports. They demonstrate responsive layouts, not hardware-specific testing.
-The separate device-composition script wraps these unaltered product captures
-in decorative CSS device frames. Captions and the feature tour identify the
-sample data so readers can distinguish UI capabilities from demo output.
+## Fonts and review
 
-Review every generated PNG before committing it. Keep examples fictional and
-use reserved domains; never replace the fixtures with personal accounts,
-messages, service addresses, credentials or billing data.
+The text uses locally installed fonts: Inter or Ubuntu Sans for Latin text, and
+Noto Sans SC or Microsoft YaHei for Chinese, with system fallbacks. Other
+machines may render slightly different glyphs.
+
+Review every generated PNG before committing it. Keep examples fictional and use
+reserved domains. Never replace the fixtures with personal accounts, messages,
+service addresses, credentials or billing data.

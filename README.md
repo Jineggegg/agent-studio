@@ -1,133 +1,47 @@
 # Cloud Harness
 
-**Your agents. Your projects. Any screen.**
+**Your coding agents, anywhere you are.**
 
-A self-hosted workspace for Claude Code, Codex and API models. Start a task on
-your computer, review it on an iPad, and pick it up on your phone. Conversations,
-project files and shared memory stay together on your own server.
+Run Claude Code, Codex and API models on your own server. Watch every change as
+it happens, and approve the next step from your phone, tablet or desktop.
 
-[简体中文](README.zh-CN.md) · [Screenshot tour](docs/guides/showcase.md) · [Quick start](#quick-start) · [Releases](https://github.com/Jineggegg/cloud-harness/releases) · [Security](SECURITY.md)
+[简体中文](README.zh-CN.md) · [Quick start](#quick-start) · [Screenshot tour](docs/guides/showcase.md) · [Releases](https://github.com/Jineggegg/cloud-harness/releases) · [Security](SECURITY.md)
 
-![Cloud Harness on desktop, tablet and phone, using the same responsive workspace](docs/assets/screenshots/devices.png)
+![Cloud Harness on a desktop, showing Claude Code fixing a bug with the Git diff beside it, and on a phone, showing a request to approve a file change](docs/assets/showcase/en/hero.png)
 
-_Actual application screens in browser device frames. All projects, notes and
-mail are fictional; agent replies are scripted demonstrations. These are not
-live model results or physical-device tests._
+<sub>Real product screens with fictional demo data. Agent replies are scripted
+for the demo; they are not live model output or tests on physical devices.</sub>
 
 > **Beta.** Verified in desktop and emulated phone/tablet browsers; physical-device
 > testing is still pending. See [what is ready and what is not](docs/STATUS.md).
 
-## One workspace, from the first prompt to the next decision
+## Why Cloud Harness
+
+- **You stay in charge.** Agents stop before risky steps. You see the exact
+  change and allow or deny it from any device.
+- **Nothing is hidden.** Every file read, edit and command shows up in the
+  conversation, next to your project's files, diffs and Git.
+- **Use the agents you have.** Claude Code and Codex with your existing
+  sign-ins, plus Anthropic, OpenAI-compatible and local models.
+- **It is yours.** One-line install on your own machine, sandboxed agents,
+  passkeys, HTTPS and [your own domain](docs/deployment/remote-access.md). MIT licensed.
 
 <table>
 <tr>
-<td width="50%">
-
-### Work in context
-
-![Project conversation with a responsive sidebar and file editor](docs/assets/screenshots/workspace.png)
-
-Chat beside your projects. Review tool calls and approvals, organise conversations,
-branch a prompt, and return to a run after switching devices.
-
-[Explore the workspace →](docs/guides/showcase.md#your-project-within-reach)
-
-</td>
-<td width="50%">
-
-### Choose the right agent
-
-![Model settings with example Anthropic, OpenAI-compatible and local provider catalogues](docs/assets/screenshots/models.png)
-
-Use your Claude Code and Codex CLI sign-ins, Anthropic's native Messages API,
-or an OpenAI-compatible provider. Choose from your configured agents and models.
-
-[Connect your models →](docs/guides/showcase.md#several-models-one-place)
-
-</td>
+<td width="50%"><img src="docs/assets/showcase/en/approval.png" alt="Approve from your phone: an approval request showing the exact diff, with Allow and Deny" /></td>
+<td width="50%"><img src="docs/assets/showcase/en/changes.png" alt="See what changed: the files the agent read, its edit, the test run and its summary" /></td>
 </tr>
 <tr>
-<td>
-
-### Remember across conversations
-
-![Searchable shared memory with project and global notes](docs/assets/screenshots/memory.png)
-
-Keep decisions and preferences in readable Markdown notes. Agents share the
-current project's notes and global memory, within your access permissions.
-
-[See shared memory →](docs/guides/showcase.md#memory-you-can-read-and-edit)
-
-</td>
-<td>
-
-### Pass the work along
-
-![A linked conversation continuing after an agent handoff](docs/assets/screenshots/collaboration.png)
-
-Give the next agent a brief and a note, then continue in a linked conversation.
-Ask several agents in parallel and optionally have another compare their answers.
-
-[See agent collaboration →](docs/guides/showcase.md#agents-that-can-pick-up-each-others-work)
-
-</td>
+<td><img src="docs/assets/showcase/en/agents.png" alt="Every agent in one place: Claude Code, Codex and local models in the picker" /></td>
+<td><img src="docs/assets/showcase/en/review.png" alt="Two agents, one review: Claude Code and Codex answers side by side" /></td>
 </tr>
 <tr>
-<td>
-
-### Make useful tools reusable
-
-![Tools library with skills, reusable commands and MCP connections](docs/assets/screenshots/tools.png)
-
-Bring your skills, slash commands and MCP connections into the conversation.
-Browse files, review Git changes, use a terminal and preview static project apps.
-
-[Explore the tools →](docs/guides/showcase.md#tools-that-belong-to-your-workflow)
-
-</td>
-<td>
-
-### Keep mail close
-
-![Demonstration mailbox with fictional messages and a local draft](docs/assets/screenshots/mail.png)
-
-Connect your own Gmail or Outlook credentials. Read and search mail, keep
-an encrypted draft, then review the account and recipients before sending.
-
-[Set up your mailbox →](docs/guides/showcase.md#mail-with-an-explicit-send-step)
-
-</td>
-</tr>
-<tr>
-<td>
-
-### Follow work in progress
-
-![Activity screen showing several demonstration agent runs](docs/assets/screenshots/activity.png)
-
-See running conversations in one place. The inbox collects approvals, failures
-and results; optional notifications and schedules bring you back when needed.
-
-[Follow activity →](docs/guides/showcase.md#know-what-needs-you)
-
-</td>
-<td>
-
-### Use your own address
-
-![Custom domain settings with HTTPS setup steps and configuration preview](docs/assets/screenshots/domain.png)
-
-Open **Settings → Domain & access** to prepare your HTTPS address and copy
-configuration for a reverse proxy or tunnel. Follow the guide to apply it.
-
-[Connect your domain →](docs/deployment/remote-access.md)
-
-</td>
+<td><img src="docs/assets/showcase/en/memory.png" alt="Shared memory: a project decision written as a Markdown note" /></td>
+<td><img src="docs/assets/showcase/en/running.png" alt="Know what is running: work in progress and the requests that wait for you" /></td>
 </tr>
 </table>
 
-The [full screenshot tour](docs/guides/showcase.md) includes the launcher,
-multi-agent tasks and a short workflow for each feature.
+![Your server, your keys: runs on your machine, sandboxed agents, passkeys and HTTPS, open source](docs/assets/showcase/en/hosting.png)
 
 <details>
 <summary><strong>More ways to work</strong></summary>

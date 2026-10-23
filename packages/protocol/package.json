@@ -1,6 +1,6 @@
 {
   "name": "@agent-studio/protocol",
-  "version": "2.0.0-beta.5",
+  "version": "2.0.0-beta.6",
   "private": true,
   "description": "Wire contracts shared by the Cloud Harness server and clients: REST payloads, realtime messages and domain types.",
   "license": "MIT",

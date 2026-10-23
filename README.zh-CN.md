@@ -1,131 +1,42 @@
 # Cloud Harness
 
-**你的 Agent，你的项目，随手就能接着做。**
+**编程智能体，随时随地掌控。**
 
-为 Claude Code、Codex 和 API 模型准备的自托管工作空间。在电脑上开始任务，
-用 iPad 查看进度，再从手机继续。对话、项目文件与共享记忆集中在你自己的服务器上。
+在自己的服务器上运行 Claude Code、Codex 和 API 模型。每处改动都实时可见，
+下一步用手机、平板或电脑都能批准。
 
-[English](README.md) · [截图导览](docs/guides/showcase.zh-CN.md) · [快速开始](#快速开始) · [版本下载](https://github.com/Jineggegg/cloud-harness/releases) · [安全说明](SECURITY.md)
+[English](README.md) · [快速开始](#快速开始) · [截图导览](docs/guides/showcase.zh-CN.md) · [版本下载](https://github.com/Jineggegg/cloud-harness/releases) · [安全说明](SECURITY.md)
 
-![Cloud Harness 在电脑、平板和手机上的响应式工作空间](docs/assets/screenshots/devices.zh-CN.png)
+![Cloud Harness：电脑上 Claude Code 正在修复问题，旁边是 Git 改动；手机上显示一条等待批准的文件修改请求](docs/assets/showcase/zh-CN/hero.png)
 
-_图片来自实际应用界面，设备外框用于展示。项目、笔记和邮件均为虚构演示数据，
-Agent 回复由演示脚本生成，不代表真实模型输出或真机测试。_
+<sub>图片来自真实产品界面，演示数据均为虚构；智能体回复为演示脚本，不代表真实模型输出，也不是真机测试。</sub>
 
 > **Beta。** 已在桌面浏览器和模拟手机／平板尺寸下验证，真机测试仍待完成。
 > 使用前请看[哪些已完成、哪些尚未完成](docs/STATUS.md)。
 
-## 从第一句提示，到下一步决定
+## 为什么用 Cloud Harness
+
+- **由你做主。** 有风险的操作会先停下来，你看清具体改动，在任何设备上允许或拒绝。
+- **过程透明。** 读了哪些文件、改了什么、跑了哪些命令，都显示在对话里，旁边就是项目文件、diff 和 Git。
+- **沿用你已有的智能体。** Claude Code 和 Codex 用你现有的登录，也能接入 Anthropic、OpenAI 兼容和本地模型。
+- **完全属于你。** 一行命令装在自己的机器上，智能体在沙箱中运行，支持通行密钥、HTTPS 和[自己的域名](docs/deployment/remote-access.md)。MIT 开源。
 
 <table>
 <tr>
-<td width="50%">
-
-### 带着项目上下文对话
-
-![项目对话界面，包含会话侧栏与文件编辑器](docs/assets/screenshots/workspace.png)
-
-查看工具调用和待审批操作，整理会话、从提示词另开分支。
-换一台设备，继续查看服务器上的任务。
-
-[看看工作空间 →](docs/guides/showcase.zh-CN.md#项目就在手边)
-
-</td>
-<td width="50%">
-
-### 为任务选择合适的 Agent
-
-![模型设置，展示 Anthropic、OpenAI 兼容与本地服务的示例模型目录](docs/assets/screenshots/models.png)
-
-沿用 Claude Code、Codex 的 CLI 登录，或接入 Anthropic 原生 API、
-OpenAI 兼容模型。在同一个界面选择自己配置好的 Agent 和模型。
-
-[接入你的模型 →](docs/guides/showcase.zh-CN.md#多个模型在一起工作)
-
-</td>
+<td width="50%"><img src="docs/assets/showcase/zh-CN/approval.png" alt="用手机批准每一步：审批请求显示具体 diff，可以允许或拒绝" /></td>
+<td width="50%"><img src="docs/assets/showcase/zh-CN/changes.png" alt="改了什么，一目了然：智能体读取的文件、修改、测试运行和总结" /></td>
 </tr>
 <tr>
-<td>
-
-### 不必每次重新交代
-
-![共享记忆界面，按项目和全局范围查找笔记](docs/assets/screenshots/memory.png)
-
-把决定、偏好和项目事实记成可读的 Markdown 笔记。
-Agent 在你的权限范围内共享当前项目与全局记忆。
-
-[了解共享记忆 →](docs/guides/showcase.zh-CN.md#看得见也能修改的记忆)
-
-</td>
-<td>
-
-### 给下一位 Agent 留下交接
-
-![Agent 交接后的关联会话，继续前一段工作](docs/assets/screenshots/collaboration.png)
-
-带上前一段对话的摘要和留言，交给另一个 Agent 继续。
-也可以让多个 Agent 同时分析任务，再选择一个汇总比较。
-
-[了解 AI 协作 →](docs/guides/showcase.zh-CN.md#让-agent-接得上彼此的工作)
-
-</td>
+<td><img src="docs/assets/showcase/zh-CN/agents.png" alt="所有智能体，一个入口：选择器里的 Claude Code、Codex 和本地模型" /></td>
+<td><img src="docs/assets/showcase/zh-CN/review.png" alt="两个智能体，一次对比：Claude Code 和 Codex 的回答并排显示" /></td>
 </tr>
 <tr>
-<td>
-
-### 常用工具随手可用
-
-![工具库中的技能、可复用命令和 MCP 连接](docs/assets/screenshots/tools.png)
-
-把技能、斜杠命令和 MCP 连接带进对话。
-浏览文件、查看 Git 差异、打开终端，也能预览项目里的静态小应用。
-
-[看看工具库 →](docs/guides/showcase.zh-CN.md#把常用工具带进工作流)
-
-</td>
-<td>
-
-### 邮件也放在手边
-
-![演示邮箱，包含虚构邮件与本地草稿](docs/assets/screenshots/mail.png)
-
-配置自己的 Gmail 或 Outlook 凭据，阅读和搜索邮件、保存加密草稿，
-确认发件账号与收件人后再发出。
-
-[设置邮箱 →](docs/guides/showcase.zh-CN.md#发信前再确认一步)
-
-</td>
-</tr>
-<tr>
-<td>
-
-### 看清谁在做什么
-
-![任务动态界面，显示多个演示 Agent 的运行状态](docs/assets/screenshots/activity.png)
-
-集中查看运行中的会话；收件箱汇总待审批、失败和已完成的任务。
-按需配置通知与计划，在需要你时回来处理。
-
-[查看任务动态 →](docs/guides/showcase.zh-CN.md#需要你时一眼看见)
-
-</td>
-<td>
-
-### 用自己的域名访问
-
-![域名设置页，包含 HTTPS 接入步骤与配置预览](docs/assets/screenshots/domain.png)
-
-从**设置 → 域名与访问**进入，准备 HTTPS 地址、复制反向代理或隧道配置，
-再按指引完成域名解析和服务器设置。
-
-[连接自己的域名 →](docs/deployment/remote-access.md)
-
-</td>
+<td><img src="docs/assets/showcase/zh-CN/memory.png" alt="共享的项目记忆：写成 Markdown 笔记的项目决定" /></td>
+<td><img src="docs/assets/showcase/zh-CN/running.png" alt="谁在干活，一眼看清：正在运行的工作和等你处理的请求" /></td>
 </tr>
 </table>
 
-[完整截图导览](docs/guides/showcase.zh-CN.md)还包含主界面、多 Agent 任务，
-以及每项功能从哪里进入、如何使用。
+![你的服务器，你的密钥：装在自己的机器上、沙箱运行、通行密钥与 HTTPS、开源](docs/assets/showcase/zh-CN/hosting.png)
 
 <details>
 <summary><strong>更多工作方式</strong></summary>
