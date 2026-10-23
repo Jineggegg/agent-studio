@@ -14,7 +14,17 @@ for (const scenario of [
         #scroll { width: 200px; height: 100px; overflow: auto; }
         #content { position: relative; }
         .spacer { height: 100px; }
-        button { display: block; width: 100px; height: ${scenario.height}px; padding: 0; border: 0; }
+        /* Keep the label inside the fixture's box regardless of native button typography. */
+        button {
+          appearance: none;
+          display: block;
+          width: 100px;
+          height: ${scenario.height}px;
+          padding: 0;
+          border: 0;
+          font: 12px/20px sans-serif;
+          white-space: nowrap;
+        }
         #cover { position: absolute; left: 0; top: 100px; width: 100px; height: ${scenario.cover}px; }
       </style>
       <div id="scroll">
