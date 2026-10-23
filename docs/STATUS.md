@@ -20,6 +20,9 @@ Local verification for this expansion:
 - Typecheck, lint, production build and the built-server smoke test pass.
 - Full unit regression: 3,272 passed, one skipped. Subsequent targeted tool-schema
   and bridge regressions also pass after the MCP object-union compatibility fix.
+  After the CodeQL mail fix, eight parser tests, two plain-text rendering tests
+  and four mailbox integration tests pass; typecheck, lint, build and package
+  installation were repeated successfully.
 - Integration regression: 1,334 passed, 13 skipped (opt-in external/runtime checks).
 - Black-box acceptance: 434 passed.
 - Chromium browser coverage: 66 application scenarios pass across phone, tablet
@@ -40,7 +43,7 @@ Local verification for this expansion:
   [the publication review](clean-room/RELEASE-REVIEW-2026-10-23.md).
 - Secret scans cover the candidate tree, existing public history, desktop archive
   and extracted release material. No leaks were reported. The release contains
-  9,250 files including dependencies, with 474 application files and no application
+  9,336 files including dependencies, with 474 application files and no application
   source maps, compiled tests or runtime databases. Realistic planted-key canaries
   still fail the scanner as expected. Source comparisons are recorded in
   [SIMILARITY.md](clean-room/SIMILARITY.md).

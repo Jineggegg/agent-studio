@@ -27,6 +27,7 @@
   overflow-wrap: anywhere;
 }
 .mail-body {
+  white-space: pre-wrap;
   padding: var(--space-4);
   border: 1px solid var(--color-separator);
   border-radius: var(--radius-md);

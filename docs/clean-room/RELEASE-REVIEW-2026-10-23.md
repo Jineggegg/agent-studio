@@ -15,14 +15,15 @@ This is an AI-assisted code review, not an external professional security audit.
 
 The following findings were fixed and independently re-reviewed before commit:
 
-| Finding                                                                   | Resolution                                                                                                                                  |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pending MCP initialization could outlive cancellation and dispatch a tool | Propagate the originating cancellation signal through runtime, provider, tool registry and transport; check before every request            |
-| A build confirmation could execute edited app configuration               | Separate monotonic configuration revision, immutable proposal snapshot, explicit command display and stale-confirmation refusal             |
-| Checkpoints could retain credential files in plaintext                    | Exclude credential paths and entire recognizable secret-bearing snapshots; apply the checks to capture, preview, restore and legacy records |
-| Deleted users could leave CLI credentials on disk                         | Revoke and drain profile operations, agent launches/runs and terminals before safe directory removal; startup orphan cleanup                |
-| Cascaded tool-library deletion left encrypted tokens                      | Database trigger removes the corresponding secret                                                                                           |
-| Chromium inherited operator environment passthrough                       | Start from an empty environment with only fixed runtime paths and private home/temp directories                                             |
+| Finding                                                                   | Resolution                                                                                                                                     |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pending MCP initialization could outlive cancellation and dispatch a tool | Propagate the originating cancellation signal through runtime, provider, tool registry and transport; check before every request               |
+| A build confirmation could execute edited app configuration               | Separate monotonic configuration revision, immutable proposal snapshot, explicit command display and stale-confirmation refusal                |
+| Checkpoints could retain credential files in plaintext                    | Exclude credential paths and entire recognizable secret-bearing snapshots; apply the checks to capture, preview, restore and legacy records    |
+| Deleted users could leave CLI credentials on disk                         | Revoke and drain profile operations, agent launches/runs and terminals before safe directory removal; startup orphan cleanup                   |
+| Cascaded tool-library deletion left encrypted tokens                      | Database trigger removes the corresponding secret                                                                                              |
+| Chromium inherited operator environment passthrough                       | Start from an empty environment with only fixed runtime paths and private home/temp directories                                                |
+| CodeQL flagged regex-based mail HTML text extraction                      | Replace regex stripping with a bounded parse5 tree walk and render message bodies as literal React text; retain hostile-input regression tests |
 
 Regression tests cover these boundaries with synthetic inputs. See
 [STATUS.md](../STATUS.md) for the final verification results and their scope.

@@ -26,8 +26,8 @@ What it measures, from coarse to strict:
 The 2026-10-23 Cloud Harness candidate is compared against both the private
 predecessor and public upstream `siteboon/claudecodeui` at
 `7238368fca24e90938e9a6736d38af8b86575eb9`. Build products and dependencies are
-excluded. This tree contains 984 compared files, 114,233 significant lines and
-101,863 unique significant lines.
+excluded. This tree contains 986 compared files, 114,295 significant lines and
+101,923 unique significant lines.
 
 | Measure                                                    | Private predecessor | Public upstream |
 | ---------------------------------------------------------- | ------------------: | --------------: |
@@ -36,7 +36,7 @@ excluded. This tree contains 984 compared files, 114,233 significant lines and
 | Identical significant lines                                |         524 (0.51%) |     179 (0.18%) |
 | Regions with six consecutive matching significant lines    |                   0 |               0 |
 | Files with at least 10% three-line-window overlap          |                   0 |               0 |
-| Shared distinctive identifiers, out of 2,751 declared here |                 103 |              38 |
+| Shared distinctive identifiers, out of 2,756 declared here |                 103 |              38 |
 
 There are no three-line file matches against the private predecessor. Against
 the public upstream, one three-line window appears in the existing public

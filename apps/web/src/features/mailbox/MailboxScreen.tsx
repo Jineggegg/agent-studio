@@ -37,6 +37,7 @@ import {
   toast,
 } from '@/ui';
 import { Markdown } from '@/ui/markdown';
+import { MailBody } from './MailBody';
 import './mailbox.css';
 const enc = encodeURIComponent;
 const base = (id: string) => `/api/mailbox/accounts/${enc(id)}`;
@@ -319,9 +320,7 @@ function Message({ accountId, id, back }: { accountId: string; id: string; back:
           <p>{message.data.from}</p>
           <p>{message.data.to}</p>
           <Banner>{t('mail.textOnly')}</Banner>
-          <div className="mail-body">
-            <Markdown>{message.data.text}</Markdown>
-          </div>
+          <MailBody text={message.data.text} />
           {message.data.attachments.length > 0 && (
             <section>
               <h3>{t('mail.attachments')}</h3>

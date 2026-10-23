@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parse, type DefaultTreeAdapterTypes } from 'parse5';
 import {
   mailAddressSchema,
   type MailCredentials,
@@ -80,34 +81,48 @@ const gmailMessage = z.object({
   payload: gmailPart.optional(),
 });
 
-/** All email is rendered as inert text. No images, styles, forms or links are loaded. */
+const maxMailHtmlLength = 1_000_000;
+const maxMailTextLength = 500_000;
+const ignoredMailElements = new Set(['head', 'script', 'style', 'template', 'noscript']);
+const mailLineBreakElements = new Set(['p', 'div', 'tr', 'li', 'blockquote', 'pre']);
+
+/** Extract text only; the client must also render this as text, never HTML or Markdown. */
 export function htmlToMailText(raw: string): string {
-  return (
-    raw
-      .replace(/<(script|style|head)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
-      .replace(/<\s*(br|\/p|\/div|\/tr|\/li)\b[^>]*>/gi, '\n')
-      .replace(/<[^>]*>/g, '')
-      .replace(/&(?:amp|lt|gt|quot|apos|nbsp|#\d{1,7}|#x[a-f0-9]{1,6});/gi, (entity) => {
-        const named: Record<string, string> = {
-          '&amp;': '&',
-          '&lt;': '<',
-          '&gt;': '>',
-          '&quot;': '"',
-          '&apos;': "'",
-          '&nbsp;': ' ',
-        };
-        if (named[entity.toLowerCase()]) return named[entity.toLowerCase()]!;
-        const value = entity.toLowerCase().startsWith('&#x')
-          ? Number.parseInt(entity.slice(3, -1), 16)
-          : Number(entity.slice(2, -1));
-        return value > 0 && value <= 0x10ffff && !(value >= 0xd800 && value <= 0xdfff)
-          ? String.fromCodePoint(value)
-          : '';
-      })
-      // eslint-disable-next-line no-control-regex -- Reject or remove control characters from untrusted mail data.
-      .replace(/\x00/g, '')
-      .slice(0, 500000)
-  );
+  // parse5 creates an inert tree: it neither executes scripts nor fetches resources.
+  // Limit parsing work before creating that tree, independently of the output limit.
+  const document = parse(raw.slice(0, maxMailHtmlLength));
+  const pending: Array<DefaultTreeAdapterTypes.Node | '\n'> = [document];
+  const chunks: string[] = [];
+  let length = 0;
+  const append = (value: string) => {
+    const text = value.slice(0, maxMailTextLength - length);
+    if (text) chunks.push(text);
+    length += text.length;
+  };
+  // Iterative traversal keeps deeply nested, untrusted messages off the call stack.
+  while (pending.length && length < maxMailTextLength) {
+    const node = pending.pop()!;
+    if (node === '\n') {
+      append(node);
+      continue;
+    }
+    if ('value' in node) {
+      append(node.value.replaceAll('\u00a0', ' ').replaceAll('\u0000', ''));
+      continue;
+    }
+    if ('tagName' in node) {
+      if (
+        ignoredMailElements.has(node.tagName) ||
+        node.attrs.some((attribute) => attribute.name === 'hidden')
+      )
+        continue;
+      if (node.tagName === 'br' || node.tagName === 'hr') append('\n');
+      else if (mailLineBreakElements.has(node.tagName)) pending.push('\n');
+    }
+    if ('childNodes' in node)
+      for (let i = node.childNodes.length - 1; i >= 0; i--) pending.push(node.childNodes[i]!);
+  }
+  return chunks.join('');
 }
 function gmailView(raw: unknown): MailMessage {
   const m = gmailMessage.parse(raw);
