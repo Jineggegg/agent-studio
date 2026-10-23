@@ -6,6 +6,20 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [2.0.0-beta.6] — 2026-10-23
+
+### Documentation
+
+- Redesigned product images: a hero showing a coding agent's change on the
+  desktop and its approval on a phone, and one card per idea (approvals, visible
+  changes, agents and models, side-by-side reviews, shared memory, running work,
+  self-hosting), in English and Chinese.
+- The demo is a fictional shop project in which Claude Code fixes a rounding
+  bug, with a real Git diff, instead of a design-review conversation.
+- New README introduction and screenshot tour. One command,
+  `node scripts/showcase/build.mjs`, regenerates every image; the old device
+  poster and its script were removed.
+
 ## [2.0.0-beta.5] — 2026-10-23
 
 ### Added
