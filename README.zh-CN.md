@@ -1,11 +1,11 @@
-# Agent Cloud Studio
+# Cloud Harness
 
-**自托管的 AI 编程 Agent 工作台，手机上就能用。**
+**自托管的 AI 工作空间：把 Agent、项目和日常工具放在一起，手机、平板和电脑都能用。**
 
-Agent Cloud Studio 跑在你自己的机器上（工作站、家用服务器或 VPS），和你已经在用的 Agent 命令行工具放在一起，提供一个为触摸设计的 Web 应用：在 iPhone、iPad 或电脑浏览器里指挥它们干活。Agent 操作的是**你的**文件、用的是**你的**登录；手机只和你自己的服务器通信。
+Cloud Harness 跑在你自己的机器上（工作站、家用服务器或 VPS），和你已经在用的 Agent 命令行工具放在一起，提供一个为触摸设计的 Web 应用：在 iPhone、iPad 或电脑浏览器里指挥它们干活。Agent 操作的是**你的**文件、用的是**你的**登录；手机只和你自己的服务器通信。
 
 ```
-手机 / 平板 / 电脑 ──HTTPS──▶ 你的服务器（Agent Cloud Studio）──▶ Claude Code CLI · Codex CLI · 模型 API
+手机 / 平板 / 电脑 ──HTTPS──▶ 你的服务器（Cloud Harness）──▶ Claude Code CLI · Codex CLI · 模型 API
 ```
 
 [English](README.md) · [使用指南（英文）](docs/guides/README.md) · [架构](docs/architecture/ARCHITECTURE.md) · [安全](SECURITY.md) · [进度](docs/STATUS.md)
@@ -15,38 +15,57 @@ Agent Cloud Studio 跑在你自己的机器上（工作站、家用服务器或 
 ## 能做什么
 
 **和 Agent 一起工作**
-- 通过官方 CLI 使用 **Claude Code** 和 **Codex**（沿用你已有的登录），也可以接入**任何 OpenAI 兼容的 API 模型**（DeepSeek、OpenAI、你自己机器上的模型服务），密钥加密保存在服务器上。
+
+- 通过官方 CLI 使用 **Claude Code** 和 **Codex**（沿用你已有的登录），也可以接入 **Anthropic 原生 Messages API** 和 **OpenAI 兼容的 API 模型**（DeepSeek、OpenAI、你自己机器上的模型服务），密钥加密保存在服务器上。
 - 文字、思考过程、工具调用和代码差异实时流式显示。运行属于服务器：锁屏、断网、换设备都不影响，回来时对话从断点补齐。
 - **决定权在你手里。** Agent 想做的每个有副作用的操作都要经过服务器上的同一个权限引擎；有风险的操作会等你批准——收件箱和推送通知会提醒你，在对话里作出决定，任何一台设备都可以。
 - Agent 忙的时候可以排队发消息、中途插话、停止，也可以接着跑被重启打断的任务。
 - 同一个项目可以用多个 Agent，带着摘要把对话交接给另一个模型，并查看每个会话的 Token 用量和费用。
 
+- 会话分组、从消息处分支、编辑提示词另开分支，以及隔离的 CLI 账户配置。可查看上下文、当前支持的快速选项，并先预览真实的文本文件检查点再恢复。
+- 为图片添加批注、语音听写、朗读回答、查看后台任务；仅从你明确启用的目录导入外部 CLI 会话。
+
 **管理项目**
+
 - 项目就是服务器上的文件夹：浏览和编辑文件、看差异、暂存、提交、建分支、推送拉取、使用 Git worktree。
 - 通过服务器上已登录的 GitHub CLI 查看 PR 和 CI 状态，并在有保护的前提下合并。
 - 项目目录里的真实终端，放下手机后继续运行；也可以打开你通过 SSH 配置好的其他机器上的终端。
 
 **记忆与自动化**
+
 - **共享记忆**：Markdown 笔记，分项目级和全局级，所有 Agent 用同一套工具搜索和写入，你也可以查看、修改、删除。Agent 只能看到自己项目的笔记和全局笔记。
 - **自动化**：定时提醒，或定时无人值守地启动一次 Agent 运行（需要审批的操作会被拒绝并上报，绝不悄悄执行）。
 - **收件箱与 Web Push**：哪些在等你、哪些失败了、哪些完成了。
 
+- 可选**邮箱**连接自己的 Gmail 或 Outlook，支持文件夹、搜索、阅读、附件、加密草稿和确认后发信。邮件摘要需要明确同意，并配置本地模型。
+- 可配置 SMTP、Bark 通知；Agent 可以提出提醒计划，经过审批后执行。
+
+**围绕会话的工具**
+
+- 管理按项目隔离的**技能、斜杠命令与 MCP 连接**，外部 MCP 调用经过同一套工具权限流程。
+- 在隔离环境构建**静态小应用**并预览；可选的 Agent 浏览器通过沙箱和受限网络访问运行。
+- 主动配对自己的 Windows 设备，再审批截图、点击和输入操作。默认不配置任何设备、账户或外部服务。
+
 **为触摸而做**
-- 可安装的 PWA，手机、平板、桌面三种布局，深色与浅色，中英文界面。
+
+- 可安装的 PWA，手机、平板、桌面三种布局，深色与浅色，中英文界面。可选的[桌面外壳](desktop/README.md)连接你现有的安装。
 
 **可扩展**
+
 - 插件系统：插件运行在沙箱进程里，只拥有你授予的权限，界面与你的登录会话隔离。可以用它接入不属于开源版的私人工具。
 - 新的 Agent 通过统一的适配器接口接入。
+
+旧版 `agent-studio` 命令、`AGENT_STUDIO_*` 环境变量、安装目录和包命名空间保留兼容；产品名称统一为 Cloud Harness。
 
 ## 快速开始
 
 在 Linux（或 Windows 上的 WSL）或 macOS 上，用平时使用它的账号运行：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Jineggegg/agent-studio/main/packaging/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Jineggegg/cloud-harness/main/packaging/install.sh | bash
 ```
 
-安装脚本会下载最新版本和一份专用的 Node.js，逐个核对官方公布的 SHA-256 校验值，然后以当前用户的后台服务（systemd 或 launchd）启动 Studio，最后打印访问地址和**一次性安装令牌**。整个过程不需要 root；只有你同意安装 `bubblewrap`（Linux 上 Agent 的沙箱）时才会用 sudo。更多选项：`… | bash -s -- --help`。之后用 `agent-studio service status|restart|logs` 管理；设置在 `~/.config/agent-studio/env`，数据在 `~/.agent-studio`。
+安装脚本会下载最新版本和一份专用的 Node.js，逐个核对官方公布的 SHA-256 校验值，然后以当前用户的后台服务（systemd 或 launchd）启动 Studio，最后打印访问地址和**一次性安装令牌**。整个过程不需要 root；只有你同意安装 `bubblewrap`（Linux 上 Agent 的沙箱）时才会用 sudo。更多选项：`… | bash -s -- --help`。之后用 `cloud-harness service status|restart|logs` 管理；设置在 `~/.config/agent-studio/env`，数据在 `~/.agent-studio`。
 
 macOS 可以用，但测试得比 Linux 少，而且没有沙箱（见 [SECURITY.md](SECURITY.md)）；此时除非你明确允许，否则 Codex 会拒绝运行。
 
@@ -56,8 +75,8 @@ macOS 可以用，但测试得比 Linux 少，而且没有沙箱（见 [SECURITY
 需要 Node.js **22.13 或更高**和 git，不需要编译器。
 
 ```bash
-git clone https://github.com/Jineggegg/agent-studio.git
-cd agent-studio
+git clone https://github.com/Jineggegg/cloud-harness.git
+cd cloud-harness
 npm ci
 npm run build
 npm start
@@ -106,11 +125,11 @@ npm run test:e2e            # 手机、平板、桌面三种尺寸的浏览器�
 
 ## 它从哪里来，以及这里说的「独立」是什么意思
 
-这个想法来自一个建立在 CloudCLI UI（AGPL 许可）之上的私人系统。本项目与它**不共享任何代码**：它根据行为需求文档（[docs/requirements](docs/requirements)）编写，架构、数据模型、协议和设计都是自己的，发布前还会对两个代码库做机械比对。
+这个想法来自一个建立在 CloudCLI UI（AGPL 许可）之上的私人系统。本项目根据行为需求文档（[docs/requirements](docs/requirements)）编写，架构、数据模型、协议和设计都是自己的，发布前还会对两个代码库做机械比对。
 
 本项目大量借助了 AI：需求文档和代码由 AI Agent 在一个总控 Agent 和项目所有者的指挥下完成。「读过旧系统的人」和「写新系统的人」之间的隔离靠的是指令约束，而不是操作系统层面的隔离，因此**不**声称这是严格意义上的 Clean-Room 实现。[docs/clean-room/PROCESS.md](docs/clean-room/PROCESS.md) 如实记录了做了什么、哪里没有做到。
 
-Agent Cloud Studio 与 Anthropic、OpenAI、DeepSeek、GitHub、CloudCLI 均无关联。Claude Code、Codex 等名称归各自所有者；你需要自己的账号，并遵守各服务商的条款。
+Cloud Harness 与 Anthropic、OpenAI、DeepSeek、GitHub、CloudCLI 均无关联。Claude Code、Codex 等名称归各自所有者；你需要自己的账号，并遵守各服务商的条款。
 
 ## 许可证
 

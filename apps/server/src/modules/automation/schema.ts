@@ -84,4 +84,9 @@ export const AUTOMATION_MIGRATIONS: readonly Migration[] = [
       CREATE INDEX deferred_messages_run ON deferred_messages(run_id) WHERE run_id IS NOT NULL;
     `,
   },
+  {
+    version: 2,
+    name: 'reminders pending human approval',
+    sql: `CREATE TABLE reminder_proposals (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, proposal TEXT NOT NULL, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL); CREATE INDEX reminder_proposals_owner ON reminder_proposals(user_id, project_id);`,
+  },
 ];

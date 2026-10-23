@@ -12,10 +12,14 @@ export default tseslint.config(
       'apps/web/public/**',
       'playwright-report/**',
       'test-results/**',
+      'desktop-dist/**',
     ],
   },
+  { files: ['desktop/*.mjs', 'desktop/*.cjs'], languageOptions: { globals: { ...globals.node } } },
+  { files: ['desktop/connect.js'], languageOptions: { globals: { ...globals.browser } } },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  { files: ['desktop/preload.cjs'], rules: { '@typescript-eslint/no-require-imports': 'off' } },
   {
     files: ['**/*.{ts,tsx}'],
     rules: {
@@ -57,7 +61,8 @@ export default tseslint.config(
           paths: [
             {
               name: 'node:child_process',
-              message: 'Spawn through kernel/process.ts so the environment is scrubbed and no shell is involved.',
+              message:
+                'Spawn through kernel/process.ts so the environment is scrubbed and no shell is involved.',
             },
             { name: 'child_process', message: 'Use kernel/process.ts.' },
           ],
@@ -82,7 +87,13 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.{js,mjs}', 'tests/fixtures/**/*.{js,mjs}', '*.config.{js,ts}', 'apps/server/src/main.ts', 'apps/server/src/bin/**'],
+    files: [
+      'scripts/**/*.{js,mjs}',
+      'tests/fixtures/**/*.{js,mjs}',
+      '*.config.{js,ts}',
+      'apps/server/src/main.ts',
+      'apps/server/src/bin/**',
+    ],
     languageOptions: { globals: { ...globals.node } },
     rules: { 'no-console': 'off' },
   },

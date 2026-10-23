@@ -13,7 +13,7 @@ import { VERSION } from './kernel/version.js';
  * available to someone with a shell on the host, which is the point.
  */
 
-export const USAGE = `Agent Cloud Studio ${VERSION}
+export const USAGE = `Cloud Harness ${VERSION}
 
 Usage: agent-studio [command]
 
@@ -31,15 +31,23 @@ Configuration is read from AGENT_STUDIO_* environment variables; see docs/config
 
 function openDatabase(config: StudioConfig): Database {
   const file = path.join(config.dataDir, 'studio.db');
-  if (!existsSync(file)) throw new Error(`No Studio data found in ${config.dataDir}. Has the server ever been started with this data directory?`);
+  if (!existsSync(file))
+    throw new Error(
+      `No Studio data found in ${config.dataDir}. Has the server ever been started with this data directory?`,
+    );
   return new Database(file);
 }
 
 /** Reads one line without echoing it when attached to a terminal. */
-async function readSecret(prompt: string, input: NodeJS.ReadStream, output: NodeJS.WriteStream): Promise<string> {
+async function readSecret(
+  prompt: string,
+  input: NodeJS.ReadStream,
+  output: NodeJS.WriteStream,
+): Promise<string> {
   if (!input.isTTY) {
     const chunks: Buffer[] = [];
-    for await (const chunk of input) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+    for await (const chunk of input)
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
     return Buffer.concat(chunks).toString('utf8').split(/\r?\n/)[0] ?? '';
   }
   output.write(prompt);
@@ -56,8 +64,13 @@ async function readSecret(prompt: string, input: NodeJS.ReadStream, output: Node
   });
 }
 
-export async function resetPassword(config: StudioConfig, username: string, newPassword: string): Promise<void> {
-  if (newPassword.length < PASSWORD_MIN_LENGTH) throw new Error(`Use at least ${PASSWORD_MIN_LENGTH} characters.`);
+export async function resetPassword(
+  config: StudioConfig,
+  username: string,
+  newPassword: string,
+): Promise<void> {
+  if (newPassword.length < PASSWORD_MIN_LENGTH)
+    throw new Error(`Use at least ${PASSWORD_MIN_LENGTH} characters.`);
   if (newPassword.length > 256) throw new Error('Use at most 256 characters.');
   const db = openDatabase(config);
   try {
@@ -65,7 +78,12 @@ export async function resetPassword(config: StudioConfig, username: string, newP
     if (!user) throw new Error(`There is no account named "${username}".`);
     const hash = await hashPassword(newPassword);
     db.transaction(() => {
-      db.run('UPDATE users SET password_hash = ?, disabled = 0, updated_at = ? WHERE id = ?', hash, Date.now(), user.id);
+      db.run(
+        'UPDATE users SET password_hash = ?, disabled = 0, updated_at = ? WHERE id = ?',
+        hash,
+        Date.now(),
+        user.id,
+      );
       db.run('DELETE FROM auth_sessions WHERE user_id = ?', user.id);
       db.run('DELETE FROM api_tokens WHERE user_id = ?', user.id);
       db.run('DELETE FROM auth_throttle');
@@ -84,7 +102,9 @@ export function unlock(config: StudioConfig): number {
   }
 }
 
-export async function status(config: StudioConfig): Promise<{ running: boolean; url: string; dataDir: string; accounts: number | null }> {
+export async function status(
+  config: StudioConfig,
+): Promise<{ running: boolean; url: string; dataDir: string; accounts: number | null }> {
   const host = config.host === '0.0.0.0' || config.host === '::' ? '127.0.0.1' : config.host;
   const url = `${config.tls ? 'https' : 'http'}://${host.includes(':') ? `[${host}]` : host}:${config.port}`;
   const running = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(2000) }).then(
@@ -109,7 +129,10 @@ export async function status(config: StudioConfig): Promise<{ running: boolean; 
 export async function runCommand(
   argv: readonly string[],
   config: () => StudioConfig,
-  io: { input: NodeJS.ReadStream; output: NodeJS.WriteStream } = { input: process.stdin, output: process.stdout },
+  io: { input: NodeJS.ReadStream; output: NodeJS.WriteStream } = {
+    input: process.stdin,
+    output: process.stdout,
+  },
 ): Promise<number | null> {
   const [command = 'start', ...rest] = argv;
   const print = (text: string) => io.output.write(text + '\n');
@@ -128,15 +151,21 @@ export async function runCommand(
       return 0;
     case 'status': {
       const report = await status(config());
-      print(`Server:     ${report.running ? `answering at ${report.url}` : `not answering at ${report.url}`}`);
+      print(
+        `Server:     ${report.running ? `answering at ${report.url}` : `not answering at ${report.url}`}`,
+      );
       print(`Data:       ${report.dataDir}`);
-      print(`Accounts:   ${report.accounts === null ? 'no data yet' : report.accounts === 0 ? 'none — first-run setup is pending' : report.accounts}`);
+      print(
+        `Accounts:   ${report.accounts === null ? 'no data yet' : report.accounts === 0 ? 'none — first-run setup is pending' : report.accounts}`,
+      );
       return report.running ? 0 : 1;
     }
     case 'setup-token': {
       const file = path.join(config().dataDir, 'setup-token');
       if (!existsSync(file)) {
-        print('There is no pending setup token: either setup is complete or the server has not been started yet.');
+        print(
+          'There is no pending setup token: either setup is complete or the server has not been started yet.',
+        );
         return 1;
       }
       print(readFileSync(file, 'utf8').trim());
@@ -150,12 +179,18 @@ export async function runCommand(
       }
       const password = await readSecret(`New password for ${username}: `, io.input, io.output);
       await resetPassword(config(), username, password);
-      print(`Password changed. "${username}" has been signed out everywhere and all sign-in locks are cleared.`);
+      print(
+        `Password changed. "${username}" has been signed out everywhere and all sign-in locks are cleared.`,
+      );
       return 0;
     }
     case 'unlock': {
       const cleared = unlock(config());
-      print(cleared === 0 ? 'Nothing was locked.' : `Cleared ${cleared} lock${cleared === 1 ? '' : 's'}.`);
+      print(
+        cleared === 0
+          ? 'Nothing was locked.'
+          : `Cleared ${cleared} lock${cleared === 1 ? '' : 's'}.`,
+      );
       return 0;
     }
     default:

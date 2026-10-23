@@ -1,4 +1,5 @@
 import os from 'node:os';
+import { realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 export type RuntimeEnv = 'development' | 'production' | 'test';
@@ -23,6 +24,8 @@ export interface StudioConfig {
   readonly workspaceRoots: readonly string[];
   readonly tls: { readonly certFile: string; readonly keyFile: string } | null;
   readonly sandbox: SandboxMode;
+  /** Optional operator-selected Chromium executable. Browser automation is disabled when absent. */
+  readonly browserExecutable: string | null;
   readonly terminalEnabled: boolean;
   /** Operator-managed list of remote SSH hosts. Null means `remote-hosts.json` inside the data directory. */
   readonly remoteHostsFile: string | null;
@@ -62,7 +65,9 @@ const LOOPBACK_NAMES = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
 
 export function isLoopbackHostname(hostname: string): boolean {
   const name = hostname.toLowerCase();
-  return LOOPBACK_NAMES.has(name) || name.endsWith('.localhost') || /^127(\.\d{1,3}){3}$/.test(name);
+  return (
+    LOOPBACK_NAMES.has(name) || name.endsWith('.localhost') || /^127(\.\d{1,3}){3}$/.test(name)
+  );
 }
 
 function expandHome(value: string): string {
@@ -86,11 +91,19 @@ function flag(raw: string | undefined, fallback: boolean, name: string): boolean
   throw new ConfigError(`${name} must be on or off, got "${raw}".`);
 }
 
-function integer(raw: string | undefined, fallback: number, name: string, min: number, max: number) {
+function integer(
+  raw: string | undefined,
+  fallback: number,
+  name: string,
+  min: number,
+  max: number,
+) {
   if (raw === undefined || raw === '') return fallback;
   const value = Number(raw);
   if (!Number.isInteger(value) || value < min || value > max) {
-    throw new ConfigError(`${name} must be a whole number between ${min} and ${max}, got "${raw}".`);
+    throw new ConfigError(
+      `${name} must be a whole number between ${min} and ${max}, got "${raw}".`,
+    );
   }
   return value;
 }
@@ -107,7 +120,9 @@ export function parseOrigin(raw: string, name = 'origin'): string {
     throw new ConfigError(`${name}: "${raw}" must start with https:// or http://.`);
   }
   if ((url.pathname !== '/' && url.pathname !== '') || url.search || url.hash || url.username) {
-    throw new ConfigError(`${name}: "${raw}" must be a bare origin such as https://studio.example.com.`);
+    throw new ConfigError(
+      `${name}: "${raw}" must be a bare origin such as https://studio.example.com.`,
+    );
   }
   return url.origin;
 }
@@ -163,8 +178,20 @@ export function loadConfig(
     path.resolve(expandHome(root)),
   );
 
-  const sessionIdleDays = integer(read('SESSION_IDLE_DAYS'), 30, `${ENV_PREFIX}SESSION_IDLE_DAYS`, 1, 365);
-  const sessionMaxDays = integer(read('SESSION_MAX_DAYS'), 90, `${ENV_PREFIX}SESSION_MAX_DAYS`, 1, 730);
+  const sessionIdleDays = integer(
+    read('SESSION_IDLE_DAYS'),
+    30,
+    `${ENV_PREFIX}SESSION_IDLE_DAYS`,
+    1,
+    365,
+  );
+  const sessionMaxDays = integer(
+    read('SESSION_MAX_DAYS'),
+    90,
+    `${ENV_PREFIX}SESSION_MAX_DAYS`,
+    1,
+    730,
+  );
 
   const webDirRaw = read('WEB_DIR');
   const config: StudioConfig = {
@@ -172,19 +199,40 @@ export function loadConfig(
     host: read('HOST') ?? '127.0.0.1',
     port: integer(read('PORT'), DEFAULT_PORT, `${ENV_PREFIX}PORT`, 0, 65535),
     dataDir,
-    webDir: webDirRaw === undefined ? null : webDirRaw === '' ? null : path.resolve(expandHome(webDirRaw)),
+    webDir:
+      webDirRaw === undefined
+        ? null
+        : webDirRaw === ''
+          ? null
+          : path.resolve(expandHome(webDirRaw)),
     publicOrigins: list(read('PUBLIC_ORIGINS')).map((raw) =>
       parseOrigin(raw, `${ENV_PREFIX}PUBLIC_ORIGINS`),
     ),
     trustProxy: flag(read('TRUST_PROXY'), false, `${ENV_PREFIX}TRUST_PROXY`),
     workspaceRoots,
-    tls: certFile && keyFile ? { certFile: path.resolve(certFile), keyFile: path.resolve(keyFile) } : null,
+    tls:
+      certFile && keyFile
+        ? { certFile: path.resolve(certFile), keyFile: path.resolve(keyFile) }
+        : null,
     sandbox,
+    browserExecutable: source.CLOUD_HARNESS_CHROMIUM?.trim() || null,
     terminalEnabled: flag(read('TERMINAL'), true, `${ENV_PREFIX}TERMINAL`),
-    remoteHostsFile: read('REMOTE_HOSTS_FILE') ? path.resolve(expandHome(read('REMOTE_HOSTS_FILE')!)) : null,
-    pluginSourceDir: read('PLUGIN_SOURCE_DIR') ? path.resolve(expandHome(read('PLUGIN_SOURCE_DIR')!)) : null,
-    pluginsUnsandboxed: flag(read('PLUGINS_UNSANDBOXED'), false, `${ENV_PREFIX}PLUGINS_UNSANDBOXED`),
-    codexWithoutSandbox: flag(read('CODEX_WITHOUT_SANDBOX'), false, `${ENV_PREFIX}CODEX_WITHOUT_SANDBOX`),
+    remoteHostsFile: read('REMOTE_HOSTS_FILE')
+      ? path.resolve(expandHome(read('REMOTE_HOSTS_FILE')!))
+      : null,
+    pluginSourceDir: read('PLUGIN_SOURCE_DIR')
+      ? path.resolve(expandHome(read('PLUGIN_SOURCE_DIR')!))
+      : null,
+    pluginsUnsandboxed: flag(
+      read('PLUGINS_UNSANDBOXED'),
+      false,
+      `${ENV_PREFIX}PLUGINS_UNSANDBOXED`,
+    ),
+    codexWithoutSandbox: flag(
+      read('CODEX_WITHOUT_SANDBOX'),
+      false,
+      `${ENV_PREFIX}CODEX_WITHOUT_SANDBOX`,
+    ),
     logLevel: logLevel as LogLevel,
     masterKey,
     setupToken,
@@ -194,8 +242,24 @@ export function loadConfig(
     ...overrides,
   };
 
+  if (config.browserExecutable !== null) {
+    if (!path.isAbsolute(config.browserExecutable))
+      throw new ConfigError('CLOUD_HARNESS_CHROMIUM must be an absolute executable path.');
+    try {
+      if (
+        realpathSync(config.browserExecutable) !== config.browserExecutable ||
+        !statSync(config.browserExecutable).isFile()
+      )
+        throw new Error();
+    } catch {
+      throw new ConfigError(
+        'CLOUD_HARNESS_CHROMIUM must name a canonical existing executable file.',
+      );
+    }
+  }
+
   for (const name of config.childEnvPassthrough) {
-    if (name.startsWith(ENV_PREFIX)) {
+    if (name.startsWith(ENV_PREFIX) || name.startsWith('CLOUD_HARNESS_')) {
       throw new ConfigError(`${name} can never be passed to agent processes.`);
     }
   }

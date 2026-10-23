@@ -919,7 +919,8 @@
   align-items: center;
   justify-content: center;
   min-height: 0;
-  padding: calc(var(--safe-top) + var(--space-6)) var(--wb-gutter) calc(var(--safe-bottom) + var(--space-6));
+  padding: calc(var(--safe-top) + var(--space-6)) var(--wb-gutter)
+    calc(var(--safe-bottom) + var(--space-6));
   overflow-y: auto;
 }
 
@@ -1302,6 +1303,18 @@ button.wb-titlebar__title::after {
   line-height: var(--leading-caption);
   color: var(--color-text-tertiary);
 }
+:root[data-layout='phone'] .wb-row__meta {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+:root[data-layout='phone'] .wb-row__meta > .wb-copy {
+  flex: none;
+  width: var(--hit-min);
+  height: var(--hit-min);
+}
+:root[data-layout='phone'] .wb-row__meta > .wb-copy::after {
+  inset: 0;
+}
 .wb-row__tag {
   padding: 1px 7px;
   border-radius: var(--radius-full);
@@ -1635,7 +1648,9 @@ button.wb-titlebar__title::after {
   white-space: pre;
 }
 .wb-output[data-tone='error'] {
-  box-shadow: inset 3px 0 0 var(--color-mark-danger), inset 0 0 0 1px var(--color-separator);
+  box-shadow:
+    inset 3px 0 0 var(--color-mark-danger),
+    inset 0 0 0 1px var(--color-separator);
 }
 .wb-output__note {
   margin: 0;
@@ -1731,7 +1746,8 @@ button.wb-titlebar__title::after {
 }
 .wb-diff__line[data-kind='remove'] {
   background:
-    repeating-linear-gradient(to bottom, var(--color-mark-danger) 0 4px, transparent 4px 7px) left / 3px 100% no-repeat,
+    repeating-linear-gradient(to bottom, var(--color-mark-danger) 0 4px, transparent 4px 7px) left /
+      3px 100% no-repeat,
     var(--color-danger-soft);
 }
 .wb-diff__line[data-kind='remove'] .wb-diff__sign {
@@ -2133,7 +2149,8 @@ button.wb-titlebar__title::after {
   width: 100%;
   max-width: calc(var(--wb-reading) + 2 * var(--wb-gutter));
   margin: 0 auto;
-  padding: 4px calc(var(--wb-gutter) + var(--safe-right)) calc(10px + var(--safe-bottom)) var(--wb-gutter);
+  padding: 4px calc(var(--wb-gutter) + var(--safe-right)) calc(10px + var(--safe-bottom))
+    var(--wb-gutter);
 }
 .wb[data-list='hidden'] .wb-dock {
   padding-left: calc(var(--wb-gutter) + var(--safe-left));
@@ -2160,10 +2177,14 @@ button.wb-titlebar__title::after {
   padding: 6px;
   border-radius: 22px;
   background: var(--color-surface);
-  box-shadow: var(--shadow-1), inset 0 0 0 1px var(--color-separator-strong);
+  box-shadow:
+    var(--shadow-1),
+    inset 0 0 0 1px var(--color-separator-strong);
 }
 .wb-composer:focus-within {
-  box-shadow: var(--shadow-1), inset 0 0 0 2px var(--color-focus);
+  box-shadow:
+    var(--shadow-1),
+    inset 0 0 0 2px var(--color-focus);
 }
 .wb-composer__field {
   display: block;
@@ -2566,10 +2587,14 @@ button.wb-titlebar__title::after {
   padding: 12px 12px 12px 14px;
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-2), inset 0 0 0 1.5px var(--color-mark-attention);
+  box-shadow:
+    var(--shadow-2),
+    inset 0 0 0 1.5px var(--color-mark-attention);
 }
 .wb-approval[data-variant='dock'][data-risk='dangerous'] {
-  box-shadow: var(--shadow-2), inset 0 0 0 2px var(--color-mark-danger);
+  box-shadow:
+    var(--shadow-2),
+    inset 0 0 0 2px var(--color-mark-danger);
 }
 .wb-approval__header {
   display: flex;
@@ -2764,7 +2789,9 @@ button.wb-titlebar__title::after {
   padding: 12px 12px 12px 14px;
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-1), inset 0 0 0 1.5px var(--color-mark-attention);
+  box-shadow:
+    var(--shadow-1),
+    inset 0 0 0 1.5px var(--color-mark-attention);
 }
 .wb-recovery__head {
   display: flex;
@@ -2974,7 +3001,8 @@ button.wb-titlebar__title::after {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: calc(var(--safe-top) + 6px) calc(var(--safe-right) + 8px) 6px calc(var(--safe-left) + 8px);
+  padding: calc(var(--safe-top) + 6px) calc(var(--safe-right) + 8px) 6px
+    calc(var(--safe-left) + 8px);
 }
 .wb-viewer__name {
   flex: 1;

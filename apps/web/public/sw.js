@@ -1,5 +1,5 @@
 /*
- * Agent Studio service worker. Plain JavaScript, no build step; served with
+ * Cloud Harness service worker. Plain JavaScript, no build step; served with
  * `cache-control: no-cache` so a new version is picked up on the next visit.
  *
  * What it does, and — more importantly — what it never does:
@@ -131,7 +131,13 @@ function clean(value, max) {
 function safePath(value) {
   if (typeof value !== 'string' || value.length > 2000) return BASE;
   // eslint-disable-next-line no-control-regex
-  if (!value.startsWith('/') || value.startsWith('//') || value.includes('\\') || /[\u0000-\u001f\u007f]/.test(value)) return BASE;
+  if (
+    !value.startsWith('/') ||
+    value.startsWith('//') ||
+    value.includes('\\') ||
+    /[\u0000-\u001f\u007f]/.test(value)
+  )
+    return BASE;
   try {
     const url = new URL(value, self.location.origin);
     if (url.origin !== self.location.origin) return BASE;
@@ -149,7 +155,7 @@ self.addEventListener('push', (event) => {
     payload = { body: event.data ? event.data.text() : '' };
   }
   if (payload === null || typeof payload !== 'object') payload = {};
-  const title = clean(payload.title, 120) || 'Agent Studio';
+  const title = clean(payload.title, 120) || 'Cloud Harness';
   const tag = clean(payload.tag, 120);
   event.waitUntil(
     self.registration.showNotification(title, {
@@ -170,7 +176,10 @@ self.addEventListener('notificationclick', (event) => {
     (async () => {
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       const inScope = windows.filter((client) => new URL(client.url).pathname.startsWith(BASE));
-      const client = inScope.find((item) => item.focused) || inScope.find((item) => item.visibilityState === 'visible') || inScope[0];
+      const client =
+        inScope.find((item) => item.focused) ||
+        inScope.find((item) => item.visibilityState === 'visible') ||
+        inScope[0];
       if (client) {
         try {
           await client.focus();

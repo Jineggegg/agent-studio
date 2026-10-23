@@ -27,3 +27,8 @@ import './collab';
 import './plugins';
 import './home';
 import './onboarding';
+import './mailbox';
+import './tool-library';
+import './mini-apps';
+import './browser';
+import './computer';

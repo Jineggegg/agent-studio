@@ -4,7 +4,18 @@ import { useSession } from '@/data/session';
 import { useT } from '@/i18n';
 import { clearCachedFiles } from '@/pwa/register';
 import { BUILD_ID, BUILD_TIME, checkForUpdate } from '@/pwa/update';
-import { Badge, Banner, ErrorState, List, ListRow, LoadingRow, LogoMark, StaleNotice, confirm, toast } from '@/ui';
+import {
+  Badge,
+  Banner,
+  ErrorState,
+  List,
+  ListRow,
+  LoadingRow,
+  LogoMark,
+  StaleNotice,
+  confirm,
+  toast,
+} from '@/ui';
 import { useSystemInfo } from '../api';
 
 const WARNING_TONE = { info: 'info', warning: 'warning', danger: 'danger' } as const;
@@ -17,7 +28,9 @@ export default function AboutPage() {
   const isOwner = useSession((state) => state.user?.role === 'owner');
   const [checking, setChecking] = useState(false);
   const data = info.data;
-  const warnings = [...(data?.warnings ?? [])].sort((a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity));
+  const warnings = [...(data?.warnings ?? [])].sort(
+    (a, b) => SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity),
+  );
 
   const check = async () => {
     if (checking) return;
@@ -31,7 +44,14 @@ export default function AboutPage() {
   };
 
   const clear = async () => {
-    if (!(await confirm({ title: t('about.cache.confirm.title'), message: t('about.cache.confirm.message'), confirmLabel: t('about.cache.clear') }))) return;
+    if (
+      !(await confirm({
+        title: t('about.cache.confirm.title'),
+        message: t('about.cache.confirm.message'),
+        confirmLabel: t('about.cache.clear'),
+      }))
+    )
+      return;
     try {
       const removed = await clearCachedFiles();
       toast.success(removed > 0 ? t('about.cache.cleared') : t('about.cache.nothing'));
@@ -44,7 +64,7 @@ export default function AboutPage() {
     <>
       <div className="about-head">
         <LogoMark size={76} plated />
-        <p className="about-head__name">Agent Studio</p>
+        <p className="about-head__name">Cloud Harness</p>
         <p className="text-secondary">{t('about.tagline')}</p>
       </div>
 
@@ -65,31 +85,74 @@ export default function AboutPage() {
       {info.isPending ? (
         <LoadingRow label={t('common.loading')} />
       ) : !data ? (
-        <ErrorState error={info.error} onRetry={() => void info.refetch()} retrying={info.isFetching} compact />
+        <ErrorState
+          error={info.error}
+          onRetry={() => void info.refetch()}
+          retrying={info.isFetching}
+          compact
+        />
       ) : (
         <>
           {info.isError && <StaleNotice since={info.dataUpdatedAt} />}
           <List header={t('about.section.studio')}>
-            <ListRow title={t('about.version')} value={<span className="u-tabular">{data.version}</span>} />
+            <ListRow
+              title={t('about.version')}
+              value={<span className="u-tabular">{data.version}</span>}
+            />
             <ListRow
               title={t('about.build')}
-              subtitle={BUILD_TIME > 0 ? t('about.builtAt', { when: t.date(BUILD_TIME, 'dateTime') }) : t('about.build.devHint')}
-              value={<span className="u-mono">{BUILD_ID === 'dev' ? t('about.build.dev') : BUILD_ID}</span>}
+              subtitle={
+                BUILD_TIME > 0
+                  ? t('about.builtAt', { when: t.date(BUILD_TIME, 'dateTime') })
+                  : t('about.build.devHint')
+              }
+              value={
+                <span className="u-mono">
+                  {BUILD_ID === 'dev' ? t('about.build.dev') : BUILD_ID}
+                </span>
+              }
             />
-            <ListRow title={t('about.started')} subtitle={t.date(data.startedAt, 'dateTime')} value={t.relative(data.startedAt)} />
+            <ListRow
+              title={t('about.started')}
+              subtitle={t.date(data.startedAt, 'dateTime')}
+              value={t.relative(data.startedAt)}
+            />
             <ListRow
               title={t('about.sandbox')}
-              subtitle={data.sandbox.mode === 'bwrap' ? t('about.sandbox.on') : `${t('about.sandbox.off')}${data.sandbox.reason ? ` ${data.sandbox.reason}` : ''}`}
-              trailing={<Badge tone={data.sandbox.mode === 'bwrap' ? 'positive' : 'warning'}>{data.sandbox.mode === 'bwrap' ? t('common.on') : t('common.off')}</Badge>}
+              subtitle={
+                data.sandbox.mode === 'bwrap'
+                  ? t('about.sandbox.on')
+                  : `${t('about.sandbox.off')}${data.sandbox.reason ? ` ${data.sandbox.reason}` : ''}`
+              }
+              trailing={
+                <Badge tone={data.sandbox.mode === 'bwrap' ? 'positive' : 'warning'}>
+                  {data.sandbox.mode === 'bwrap' ? t('common.on') : t('common.off')}
+                </Badge>
+              }
             />
-            <ListRow title={t('about.terminal')} subtitle={data.terminalEnabled ? t('about.terminal.on') : t('about.terminal.off')} trailing={<Badge>{data.terminalEnabled ? t('common.on') : t('common.off')}</Badge>} />
+            <ListRow
+              title={t('about.terminal')}
+              subtitle={data.terminalEnabled ? t('about.terminal.on') : t('about.terminal.off')}
+              trailing={<Badge>{data.terminalEnabled ? t('common.on') : t('common.off')}</Badge>}
+            />
           </List>
 
           {isOwner && data.node && (
             <List header={t('about.section.host')} footer={t('about.host.hint')}>
-              <ListRow title={t('about.node')} value={<span className="u-mono">{data.node}</span>} />
-              <ListRow title={t('about.platform')} value={<span className="u-mono">{data.platform}</span>} />
-              {data.dataDir && <ListRow title={t('about.dataDir')} subtitle={<span className="u-mono">{data.dataDir}</span>} />}
+              <ListRow
+                title={t('about.node')}
+                value={<span className="u-mono">{data.node}</span>}
+              />
+              <ListRow
+                title={t('about.platform')}
+                value={<span className="u-mono">{data.platform}</span>}
+              />
+              {data.dataDir && (
+                <ListRow
+                  title={t('about.dataDir')}
+                  subtitle={<span className="u-mono">{data.dataDir}</span>}
+                />
+              )}
               <ListRow
                 title={t('about.workspaceRoots')}
                 subtitle={
@@ -124,7 +187,12 @@ export default function AboutPage() {
       )}
 
       <List header={t('about.section.maintenance')} footer={t('about.cache.hint')}>
-        <ListRow title={t('about.update.check')} onPress={() => void check()} disabled={checking} tone="accent" />
+        <ListRow
+          title={t('about.update.check')}
+          onPress={() => void check()}
+          disabled={checking}
+          tone="accent"
+        />
         <ListRow title={t('about.cache.clear')} onPress={() => void clear()} tone="accent" />
       </List>
 

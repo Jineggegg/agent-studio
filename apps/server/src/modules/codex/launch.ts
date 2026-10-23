@@ -91,7 +91,13 @@ const RULES_DIRECTORY = 'rules';
  * (`AGENTS.override.md` takes the place of `AGENTS.md` when it exists — seen
  * with codex-cli 0.160.0 in the `instructionSources` of a new thread.)
  */
-export const PERSONAL_SETTINGS = ['config.toml', 'hooks.json', RULES_DIRECTORY, 'AGENTS.md', 'AGENTS.override.md'] as const;
+export const PERSONAL_SETTINGS = [
+  'config.toml',
+  'hooks.json',
+  RULES_DIRECTORY,
+  'AGENTS.md',
+  'AGENTS.override.md',
+] as const;
 
 /** True when `inner` is `outer` or lies beneath it. */
 function isWithin(outer: string, inner: string): boolean {
@@ -152,7 +158,10 @@ export function appServerArguments(options: AppServerOptions): string[] {
   // looked up for the project root, which is the working directory or one of the folders above it.
   if (options.cwd !== null) {
     const untrusted = tomlInlineTable([['trust_level', tomlString('untrusted')]]);
-    set('projects', tomlInlineTable(withAncestors(options.cwd).map((dir) => [dir, untrusted] as const)));
+    set(
+      'projects',
+      tomlInlineTable(withAncestors(options.cwd).map((dir) => [dir, untrusted] as const)),
+    );
   }
 
   const bridge = options.bridge;
@@ -165,7 +174,8 @@ export function appServerArguments(options: AppServerOptions): string[] {
     set('mcp_servers', tomlInlineTable(disabled.map((name) => [name, off] as const)));
   }
   if (bridge) {
-    if (!BRIDGE_NAME.test(bridge.serverName)) throw new Error('The bridge has a name Codex cannot register.');
+    if (!BRIDGE_NAME.test(bridge.serverName))
+      throw new Error('The bridge has a name Codex cannot register.');
     const key = `mcp_servers.${bridge.serverName}`;
     set(`${key}.command`, tomlString(bridge.command));
     set(`${key}.args`, tomlArray(bridge.args));
@@ -211,6 +221,7 @@ export function savedRuleFiles(codexHome: string): string[] {
 }
 
 export interface CommandOptions {
+  readonly accountDirectory?: string;
   /** Variables to add to the process's environment. */
   readonly env?: Readonly<Record<string, string>>;
   /** Files inside the Studio's data directory the process must be able to read (attachments). */
@@ -228,7 +239,11 @@ export class CodexLauncher {
   readonly #sandbox: Sandbox;
   readonly #allowWithoutSandbox: boolean;
 
-  constructor(input: { processes: ProcessSupervisor; sandbox: Sandbox; allowWithoutSandbox: boolean }) {
+  constructor(input: {
+    processes: ProcessSupervisor;
+    sandbox: Sandbox;
+    allowWithoutSandbox: boolean;
+  }) {
     this.#processes = input.processes;
     this.#sandbox = input.sandbox;
     this.#allowWithoutSandbox = input.allowWithoutSandbox;
@@ -260,7 +275,8 @@ export class CodexLauncher {
       if (isModelCredentialVariable(name)) delete env[name];
     }
     for (const [name, value] of Object.entries(extra)) {
-      if (name.startsWith('AGENT_STUDIO_')) throw new Error(`${name} must not be given to a child process.`);
+      if (name.startsWith('AGENT_STUDIO_'))
+        throw new Error(`${name} must not be given to a child process.`);
       env[name] = value;
     }
     // The error stream is only ever read by a program.
@@ -283,7 +299,10 @@ export class CodexLauncher {
   /** What a process started with this environment is not shown (the kernel skips what does not exist). */
   static hidden(env: Readonly<Record<string, string>>, credentials: boolean): string[] {
     const codexHome = CodexLauncher.codexHome(env);
-    return [...PERSONAL_SETTINGS.map((name) => path.join(codexHome, name)), ...(credentials ? [] : hiddenCredentialPaths(env.HOME ?? os.homedir(), codexHome))];
+    return [
+      ...PERSONAL_SETTINGS.map((name) => path.join(codexHome, name)),
+      ...(credentials ? [] : hiddenCredentialPaths(env.HOME ?? os.homedir(), codexHome)),
+    ];
   }
 
   /** `codex <args>`, sandboxed and isolated as far as this machine allows. */
@@ -294,7 +313,14 @@ export class CodexLauncher {
       kind: 'mask',
       hide: CodexLauncher.hidden(env, options.credentials === true),
       expose: [...(options.expose ?? [])],
+      ...(options.accountDirectory ? { writableExpose: [options.accountDirectory] } : {}),
     });
-    return { file: wrapped.file, args: wrapped.args, env, isolation: wrapped.sandboxed ? 'hidden' : 'pinned', codexHome };
+    return {
+      file: wrapped.file,
+      args: wrapped.args,
+      env,
+      isolation: wrapped.sandboxed ? 'hidden' : 'pinned',
+      codexHome,
+    };
   }
 }

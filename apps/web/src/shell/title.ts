@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useScreen } from './ScreenStack';
 import { setEntryTitle } from './history';
 
-export const APP_NAME = 'Agent Studio';
+export const APP_NAME = 'Cloud Harness';
 
 interface TitleEntry {
   depth: number;
@@ -16,13 +16,14 @@ let order = 0;
 function apply(): void {
   let top: TitleEntry | null = null;
   for (const entry of titles) {
-    if (!top || entry.depth > top.depth || (entry.depth === top.depth && entry.order > top.order)) top = entry;
+    if (!top || entry.depth > top.depth || (entry.depth === top.depth && entry.order > top.order))
+      top = entry;
   }
   document.title = top && top.title ? `${top.title} · ${APP_NAME}` : APP_NAME;
 }
 
 /**
- * Names the current context in the tab title ("Settings · Agent Studio") and
+ * Names the current context in the tab title ("Settings · Cloud Harness") and
  * remembers it for the back control of whatever screen comes next. Pass an
  * empty string for the root (the title is then just the product name).
  */

@@ -36,6 +36,7 @@ const REQUIRED_OPTIONS = [
 const BASE_MODEL_ALIASES = ['opus', 'sonnet', 'haiku'] as const;
 
 export interface CliFeatures {
+  readonly settings?: boolean;
   /** Values `--effort` accepts, weakest first; empty when the option does not exist. */
   readonly efforts: readonly string[];
   /** Model aliases: those the help text names, then the long-standing ones. */
@@ -103,7 +104,9 @@ const escapeRegExp = (text: string): string => text.replace(/[\\^$.*+?()[\]{}|/-
 /** The help text of one option, from its name to the next option, on one line. */
 function optionText(help: string, option: string): string | null {
   const lines = help.split('\n');
-  const start = lines.findIndex((line) => new RegExp(`^\\s+(-\\w, )?${escapeRegExp(option)}(\\b|,|\\s|$)`).test(line));
+  const start = lines.findIndex((line) =>
+    new RegExp(`^\\s+(-\\w, )?${escapeRegExp(option)}(\\b|,|\\s|$)`).test(line),
+  );
   if (start === -1) return null;
   const collected = [lines[start]!];
   for (let at = start + 1; at < lines.length; at += 1) {
@@ -115,7 +118,8 @@ function optionText(help: string, option: string): string | null {
 }
 
 export function parseHelp(help: string): CliFeatures {
-  const has = (option: string): boolean => new RegExp(`(^|[\\s,])${option}(?![\\w-])`, 'm').test(help);
+  const has = (option: string): boolean =>
+    new RegExp(`(^|[\\s,])${option}(?![\\w-])`, 'm').test(help);
 
   const effortText = optionText(help, '--effort');
   const effortList = effortText ? /\(([a-z]+(?:,\s*[a-z]+)+)\)/.exec(effortText) : null;
@@ -127,11 +131,13 @@ export function parseHelp(help: string): CliFeatures {
 
   const modeText = optionText(help, '--permission-mode') ?? '';
   return {
+    ...(has('--settings') ? { settings: true } : {}),
     efforts,
     modelAliases,
     replayUserMessages: has('--replay-user-messages'),
     forwardSubagentText: has('--forward-subagent-text'),
-    askingMode: /"manual"|\bmanual\b/.test(modeText) && !/"default"/.test(modeText) ? 'manual' : 'default',
+    askingMode:
+      /"manual"|\bmanual\b/.test(modeText) && !/"default"/.test(modeText) ? 'manual' : 'default',
     missing: REQUIRED_OPTIONS.filter((option) => !has(option)),
   };
 }
@@ -148,7 +154,8 @@ export function parseAuthStatus(stdout: string): AuthState {
   const fields = parsed as Record<string, unknown>;
   if (typeof fields.loggedIn !== 'boolean') return { signedIn: null, account: null };
   if (!fields.loggedIn) return { signedIn: false, account: null };
-  const label = (value: unknown): string | null => (typeof value === 'string' && value.trim() !== '' ? presentable(value, 120) : null);
+  const label = (value: unknown): string | null =>
+    typeof value === 'string' && value.trim() !== '' ? presentable(value, 120) : null;
   const who = label(fields.email) ?? label(fields.orgName);
   const plan = label(fields.subscriptionType);
   const account = who ? (plan ? `${who} (${plan})` : who) : plan ? `Claude ${plan}` : null;
@@ -181,7 +188,11 @@ export class ClaudeCli {
   readonly #command: string;
   readonly #ttlMs: number;
   readonly #waitMs: number;
-  #installation: { key: string; value: Promise<CliInstallation>; known: CliInstallation | null } | null = null;
+  #installation: {
+    key: string;
+    value: Promise<CliInstallation>;
+    known: CliInstallation | null;
+  } | null = null;
   #status: { at: number; value: AgentStatus } | null = null;
   #statusInFlight: Promise<AgentStatus> | null = null;
 
@@ -211,7 +222,10 @@ export class ClaudeCli {
     return findExecutable(this.#command, this.env().PATH);
   }
 
-  async #run(executable: string, args: readonly string[]): Promise<{ code: number | null; stdout: string; stderr: string; timedOut: boolean }> {
+  async #run(
+    executable: string,
+    args: readonly string[],
+  ): Promise<{ code: number | null; stdout: string; stderr: string; timedOut: boolean }> {
     const wrapped = this.#context.sandbox.wrap(executable, args, { kind: 'mask' });
     return this.#context.processes.run(wrapped.file, wrapped.args, {
       cwd: os.homedir(),
@@ -243,10 +257,15 @@ export class ClaudeCli {
       return {
         executable,
         version: version.code === 0 ? parseVersion(version.stdout) : null,
-        features: help.code === 0 && help.stdout.trim() !== '' ? parseHelp(help.stdout) : DEFAULT_FEATURES,
+        features:
+          help.code === 0 && help.stdout.trim() !== '' ? parseHelp(help.stdout) : DEFAULT_FEATURES,
       };
     })();
-    const entry: { key: string; value: Promise<CliInstallation>; known: CliInstallation | null } = { key, value, known: null };
+    const entry: { key: string; value: Promise<CliInstallation>; known: CliInstallation | null } = {
+      key,
+      value,
+      known: null,
+    };
     this.#installation = entry;
     value.then(
       (installation) => {
@@ -262,12 +281,25 @@ export class ClaudeCli {
 
   async #probeStatus(): Promise<AgentStatus> {
     const pending = this.installation();
-    if (!pending) return { installed: false, version: null, signedIn: false, account: null, problem: NOT_INSTALLED_MESSAGE };
+    if (!pending)
+      return {
+        installed: false,
+        version: null,
+        signedIn: false,
+        account: null,
+        problem: NOT_INSTALLED_MESSAGE,
+      };
     let installation: CliInstallation;
     try {
       installation = await pending;
     } catch (error) {
-      return { installed: true, version: null, signedIn: false, account: null, problem: `Claude Code could not be started: ${presentable(describeError(error), 200)}` };
+      return {
+        installed: true,
+        version: null,
+        signedIn: false,
+        account: null,
+        problem: `Claude Code could not be started: ${presentable(describeError(error), 200)}`,
+      };
     }
     const { executable, version, features } = installation;
     if (features.missing.length > 0) {
@@ -285,9 +317,13 @@ export class ClaudeCli {
       const answer = await this.#run(executable, ['auth', 'status', '--json']);
       if (!answer.timedOut) auth = parseAuthStatus(answer.stdout);
     } catch (error) {
-      this.#context.log.debug({ err: presentable(describeError(error), 200) }, 'asking Claude Code for its sign-in status failed');
+      this.#context.log.debug(
+        { err: presentable(describeError(error), 200) },
+        'asking Claude Code for its sign-in status failed',
+      );
     }
-    if (auth.signedIn === true) return { installed: true, version, signedIn: true, account: auth.account, problem: null };
+    if (auth.signedIn === true)
+      return { installed: true, version, signedIn: true, account: auth.account, problem: null };
     if (auth.signedIn === false) {
       return {
         installed: true,

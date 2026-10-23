@@ -18,6 +18,24 @@ env:
   FORCE_COLOR: '1'
 
 jobs:
+  windows-companion:
+    name: Windows companion syntax and compilation
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Parse PowerShell and compile desktop primitives without executing actions
+        shell: powershell
+        run: |
+          $parseTokens = $null
+          $parseErrors = $null
+          [Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD 'companion/windows/Start-CloudHarness.ps1'), [ref]$parseTokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) { throw ($parseErrors | Out-String) }
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          Add-Type -Path (Join-Path $PWD 'companion/windows/DesktopActions.cs') -ReferencedAssemblies System.Windows.Forms, System.Drawing
+
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest
@@ -71,7 +89,7 @@ jobs:
       - run: npm ci
       - run: npm run test:unit
       - name: Release download security tests
-        run: node --test scripts/release-download.test.mjs
+        run: node --test scripts/release-download.test.mjs desktop/policy.test.mjs
 
   integration:
     name: Integration tests (Node ${{ matrix.node }})
@@ -156,6 +174,13 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Use the Ubuntu archive for browser system dependencies
+        # The hosted runner's Azure mirror can stall large font/media downloads.
+        # Keep the same signed Ubuntu packages and all browser tests.
+        run: |
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+          fi
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run build
       # Phone, tablet and desktop in Chromium, plus the phone in WebKit (the engine of Safari on iPhone).
@@ -233,7 +258,7 @@ jobs:
       - name: The shell scripts pass shellcheck
         run: |
           shellcheck -s bash packaging/install.sh scripts/test-install.sh scripts/gitleaks-canary.sh
-          shellcheck -s sh packaging/bin/agent-studio
+          shellcheck -s sh packaging/bin/agent-studio packaging/bin/cloud-harness
       - run: npm ci
       - run: npm run build
       - run: node scripts/package-release.mjs
@@ -255,8 +280,18 @@ jobs:
           - { name: Ubuntu x64, runner: ubuntu-latest }
           - { name: Ubuntu ARM64, runner: ubuntu-24.04-arm }
           - { name: macOS ARM64 with service, runner: macos-latest, service: true }
-          - { name: Debian 12, runner: ubuntu-latest, image: 'debian:12', prepare: 'apt-get update -qq && apt-get install -y -qq curl ca-certificates python3 >/dev/null' }
-          - { name: Fedora 42, runner: ubuntu-latest, image: 'fedora:42', prepare: 'dnf install -y -q curl python3 tar gzip gawk findutils procps-ng util-linux shadow-utils >/dev/null' }
+          - {
+              name: Debian 12,
+              runner: ubuntu-latest,
+              image: 'debian:12',
+              prepare: 'apt-get update -qq && apt-get install -y -qq curl ca-certificates python3 >/dev/null',
+            }
+          - {
+              name: Fedora 42,
+              runner: ubuntu-latest,
+              image: 'fedora:42',
+              prepare: 'dnf install -y -q curl python3 tar gzip gawk findutils procps-ng util-linux shadow-utils >/dev/null',
+            }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

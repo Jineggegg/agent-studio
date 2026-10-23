@@ -1,6 +1,6 @@
 {
-  "name": "Agent Studio",
-  "short_name": "Studio",
+  "name": "Cloud Harness",
+  "short_name": "Harness",
   "description": "A self-hosted work platform for AI coding agents, built for phone, tablet and desktop.",
   "id": "/",
   "start_url": "/",

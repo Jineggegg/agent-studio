@@ -6,6 +6,35 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [2.0.0-beta.4] — 2026-10-23
+
+### Added
+
+- Cloud Harness branding, bilingual introduction and a desktop connection wrapper.
+- Conversation groups, branches, edit-and-resend, isolated CLI account profiles,
+  external transcript imports and file checkpoint preview/restore.
+- Image annotation, voice dictation, read-aloud and background task activity.
+- Native Anthropic Messages API, user-scoped MCP connections, skills and slash commands.
+- Gmail/Outlook mail, encrypted drafts with explicit send confirmation, local-only
+  optional summaries, SMTP/Bark notifications and approved reminder proposals.
+- Sandboxed static project apps, an optional isolated Chromium browser and a Windows
+  companion with browser approval and local confirmation.
+- Opt-in monthly usage gates based on reported usage; unknown prices and concurrent
+  or in-flight work remain outside an exact spending cap.
+
+### Security
+
+- New integrations start empty. Credentials, personal financial values, deployment
+  settings, saved accounts and private history are not part of the distribution.
+- Precommit review hardens checkpoint credential exclusions, deleted-account cleanup,
+  cancellation of pending MCP calls and immutable app-build confirmations.
+- Browser subprocesses use a minimal environment and isolated network namespace.
+- Passkey challenges can only be consumed once after successful verification;
+  concurrent reuse and challenges that expire during verification are rejected.
+- Historical personal API cost observations were removed from the current guide;
+  existing public Git history was not rewritten.
+
+
 ## [2.0.0-beta.3] — 2026-10-15
 
 ### Added

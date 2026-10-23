@@ -1,3 +1,4 @@
+import { AccountProfiles } from './AccountProfiles';
 import type { Agent, TerminalLauncherInfo } from '@agent-studio/protocol';
 import { useQuery } from '@tanstack/react-query';
 import { Bot, KeyRound, LogIn, RefreshCw } from 'lucide-react';
@@ -6,7 +7,20 @@ import { useStaleness } from '@/data/connection';
 import { useIsOwner } from '@/data/session';
 import { useAgents } from '@/features/workbench/agents';
 import { useT } from '@/i18n';
-import { Badge, Button, DelayedSkeleton, EmptyState, ErrorState, Glyph, List, ListRow, Skeleton, StaleNotice, progress, tintFor } from '@/ui';
+import {
+  Badge,
+  Button,
+  DelayedSkeleton,
+  EmptyState,
+  ErrorState,
+  Glyph,
+  List,
+  ListRow,
+  Skeleton,
+  StaleNotice,
+  progress,
+  tintFor,
+} from '@/ui';
 import { terminalApi, terminalKeys } from './api';
 import { TerminalSheet } from './TerminalSheet';
 import { launcherTitleKey, signInLaunchers } from './launchers';
@@ -16,11 +30,16 @@ export function useAccountsSummary(): string | undefined {
   const t = useT();
   const agents = useAgents();
   if (!agents.data) return undefined;
-  const ready = agents.data.filter((agent) => agent.status.installed && agent.status.signedIn).length;
+  const ready = agents.data.filter(
+    (agent) => agent.status.installed && agent.status.signedIn,
+  ).length;
   return t('accounts.summary', { ready: t.number(ready), total: t.number(agents.data.length) });
 }
 
-function stateOf(agent: Agent): { tone: 'positive' | 'warning' | 'neutral'; key: 'accounts.state.ready' | 'accounts.state.signedOut' | 'accounts.state.missing' } {
+function stateOf(agent: Agent): {
+  tone: 'positive' | 'warning' | 'neutral';
+  key: 'accounts.state.ready' | 'accounts.state.signedOut' | 'accounts.state.missing';
+} {
   if (!agent.status.installed) return { tone: 'neutral', key: 'accounts.state.missing' };
   if (!agent.status.signedIn) return { tone: 'warning', key: 'accounts.state.signedOut' };
   return { tone: 'positive', key: 'accounts.state.ready' };
@@ -36,8 +55,16 @@ export default function AgentAccountsPage() {
   const isOwner = useIsOwner();
   const agents = useAgents();
   const staleness = useStaleness(agents);
-  const capability = useQuery({ queryKey: terminalKeys.capability, queryFn: ({ signal }) => terminalApi.capability(signal), staleTime: 20_000, enabled: isOwner });
-  const [signingIn, setSigningIn] = useState<{ agent: Agent; launcher: TerminalLauncherInfo } | null>(null);
+  const capability = useQuery({
+    queryKey: terminalKeys.capability,
+    queryFn: ({ signal }) => terminalApi.capability(signal),
+    staleTime: 20_000,
+    enabled: isOwner,
+  });
+  const [signingIn, setSigningIn] = useState<{
+    agent: Agent;
+    launcher: TerminalLauncherInfo;
+  } | null>(null);
   const [shown, setShown] = useState(signingIn);
   if (signingIn && signingIn !== shown) setShown(signingIn);
 
@@ -46,14 +73,33 @@ export default function AgentAccountsPage() {
       <DelayedSkeleton label={t('common.loading')}>
         <List>
           {[0, 1].map((index) => (
-            <ListRow key={index} leading={<Skeleton width={30} height={30} radius={9} />} title={<Skeleton width="40%" height={12} />} subtitle={<Skeleton width="65%" height={10} />} />
+            <ListRow
+              key={index}
+              leading={<Skeleton width={30} height={30} radius={9} />}
+              title={<Skeleton width="40%" height={12} />}
+              subtitle={<Skeleton width="65%" height={10} />}
+            />
           ))}
         </List>
       </DelayedSkeleton>
     );
   }
-  if (!agents.data) return <ErrorState error={agents.error} onRetry={() => void agents.refetch()} retrying={agents.isFetching} />;
-  if (agents.data.length === 0) return <EmptyState icon={<Bot size={28} />} title={t('accounts.empty.title')} description={t('accounts.empty.text')} />;
+  if (!agents.data)
+    return (
+      <ErrorState
+        error={agents.error}
+        onRetry={() => void agents.refetch()}
+        retrying={agents.isFetching}
+      />
+    );
+  if (agents.data.length === 0)
+    return (
+      <EmptyState
+        icon={<Bot size={28} />}
+        title={t('accounts.empty.title')}
+        description={t('accounts.empty.text')}
+      />
+    );
 
   const terminalOff = isOwner && capability.data !== undefined && !capability.data.available;
 
@@ -62,16 +108,26 @@ export default function AgentAccountsPage() {
       {staleness.stale && <StaleNotice since={staleness.since} />}
       <div className="accounts__bar">
         <p className="text-footnote text-secondary">{t('accounts.intro')}</p>
-        <Button size="sm" variant="neutral" icon={<RefreshCw size={16} />} loading={agents.isFetching} onClick={() => void progress.track(agents.refetch())}>
+        <Button
+          size="sm"
+          variant="neutral"
+          icon={<RefreshCw size={16} />}
+          loading={agents.isFetching}
+          onClick={() => void progress.track(agents.refetch())}
+        >
           {t('accounts.recheck')}
         </Button>
       </div>
       {agents.data.map((agent) => {
         const state = stateOf(agent);
-        const launchers = isOwner && agent.kind === 'cli' ? signInLaunchers(agent.id, capability.data?.launchers ?? []) : [];
+        const launchers =
+          isOwner && agent.kind === 'cli'
+            ? signInLaunchers(agent.id, capability.data?.launchers ?? [])
+            : [];
         // Signed out with a way in right above: the page's own words say what happens. Anything else the server
         // reports is its own sentence, said to be so.
-        const signInOffered = launchers.length > 0 && agent.status.installed && !agent.status.signedIn;
+        const signInOffered =
+          launchers.length > 0 && agent.status.installed && !agent.status.signedIn;
         const footer = signInOffered
           ? t('accounts.signInHint')
           : agent.status.problem
@@ -82,13 +138,34 @@ export default function AgentAccountsPage() {
                 ? t('accounts.memberNote')
                 : undefined;
         return (
-          <List key={agent.id} header={agent.displayName} headerAction={<Badge tone={state.tone}>{t(state.key)}</Badge>} footer={footer}>
+          <List
+            key={agent.id}
+            header={agent.displayName}
+            headerAction={<Badge tone={state.tone}>{t(state.key)}</Badge>}
+            footer={footer}
+          >
             <ListRow
-              leading={<Glyph icon={agent.kind === 'api' ? <KeyRound size={18} /> : <Bot size={18} />} tint={tintFor(agent.id)} />}
+              leading={
+                <Glyph
+                  icon={agent.kind === 'api' ? <KeyRound size={18} /> : <Bot size={18} />}
+                  tint={tintFor(agent.id)}
+                />
+              }
               title={agent.kind === 'api' ? t('accounts.kind.api') : t('accounts.kind.cli')}
-              value={agent.status.installed ? (agent.status.version ?? t('accounts.installed')) : t('accounts.notInstalled')}
+              value={
+                agent.status.installed
+                  ? (agent.status.version ?? t('accounts.installed'))
+                  : t('accounts.notInstalled')
+              }
             />
-            <ListRow title={t('accounts.account')} value={agent.status.signedIn ? (agent.status.account ?? t('accounts.signedIn')) : t('accounts.notSignedIn')} />
+            <ListRow
+              title={t('accounts.account')}
+              value={
+                agent.status.signedIn
+                  ? (agent.status.account ?? t('accounts.signedIn'))
+                  : t('accounts.notSignedIn')
+              }
+            />
             {launchers.map((launcher) => {
               const titleKey = launcherTitleKey(launcher.key);
               return (
@@ -96,7 +173,11 @@ export default function AgentAccountsPage() {
                   key={launcher.key}
                   leading={<LogIn size={20} />}
                   title={titleKey ? t(titleKey) : launcher.title}
-                  subtitle={launcher.available ? undefined : (launcher.unavailableReason ?? t('accounts.launcherUnavailable'))}
+                  subtitle={
+                    launcher.available
+                      ? undefined
+                      : (launcher.unavailableReason ?? t('accounts.launcherUnavailable'))
+                  }
                   tone="accent"
                   disabled={!launcher.available}
                   onPress={() => setSigningIn({ agent, launcher })}
@@ -108,6 +189,7 @@ export default function AgentAccountsPage() {
       })}
       {terminalOff && <p className="ui-list__footer">{t('accounts.terminalOff')}</p>}
 
+      <AccountProfiles />
       <TerminalSheet
         open={signingIn !== null}
         onClose={() => setSigningIn(null)}

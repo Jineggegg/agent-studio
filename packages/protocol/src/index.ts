@@ -19,3 +19,13 @@ export * from './usage.js';
 export * from './collab.js';
 export * from './plugins.js';
 export * from './system.js';
+export * from './voice.js';
+export * from './mailbox.js';
+export * from './notification-channels.js';
+export * from './reminders.js';
+
+export * from './tool-library.js';
+export * from './agent-imports.js';
+export * from './mini-apps.js';
+export * from './browser.js';
+export * from './computer.js';

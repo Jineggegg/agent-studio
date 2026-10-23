@@ -1,13 +1,29 @@
+import type { ImageUse } from '../media/AnnotationEditor';
 import type { Agent, AttachmentRef } from '@agent-studio/protocol';
 import { ArrowDown, TextQuote } from 'lucide-react';
-import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { describeError } from '@/data/errors';
 import { useT } from '@/i18n';
 import { useCanHover } from '@/platform/media';
 import { Button, DelayedSkeleton, Skeleton, SkeletonText, Spinner } from '@/ui';
 import type { Outgoing } from '../composer/delivery';
 import { ImageViewer } from './ImageViewer';
-import { type PendingUserRow, type RowContext, RowBoundary, type TranscriptRow, estimateRow, renderRow } from './Rows';
+import {
+  type PendingUserRow,
+  type RowContext,
+  RowBoundary,
+  type TranscriptRow,
+  estimateRow,
+  renderRow,
+} from './Rows';
 import { WindowedList, type WindowedListHandle } from './WindowedList';
 import type { ChannelState, SessionChannel } from './channel';
 import type { TranscriptItem } from './model';
@@ -28,6 +44,7 @@ export interface TranscriptProps {
   footer?: ReactNode;
   onReviewApproval: (approvalId: string) => void;
   /** Offered for selected text; absent where nothing can be sent. */
+  onUseImage?: ((value: ImageUse) => Promise<void>) | undefined;
   onQuote?: ((text: string) => void) | undefined;
   /** A row to bring into view once it is loaded (a search hit). */
   focusSeq?: number | null;
@@ -68,7 +85,9 @@ function TranscriptSkeleton() {
  */
 function useQuoteSelection(container: RefObject<HTMLElement | null>, enabled: boolean) {
   const canHover = useCanHover();
-  const [selection, setSelection] = useState<{ text: string; top: number; left: number } | null>(null);
+  const [selection, setSelection] = useState<{ text: string; top: number; left: number } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!enabled) return;
@@ -76,17 +95,25 @@ function useQuoteSelection(container: RefObject<HTMLElement | null>, enabled: bo
     const read = () => {
       const root = container.current;
       const current = window.getSelection();
-      if (!root || !current || current.isCollapsed || current.rangeCount === 0) return setSelection(null);
+      if (!root || !current || current.isCollapsed || current.rangeCount === 0)
+        return setSelection(null);
       const text = current.toString().trim();
-      const closest = (node: Node | null): Element | null => (node instanceof Element ? node : (node?.parentElement ?? null))?.closest('[data-quotable]') ?? null;
+      const closest = (node: Node | null): Element | null =>
+        (node instanceof Element ? node : (node?.parentElement ?? null))?.closest(
+          '[data-quotable]',
+        ) ?? null;
       const start = closest(current.anchorNode);
       const end = closest(current.focusNode);
       // Only a selection inside one message can be quoted.
-      if (text === '' || !start || start !== end || !root.contains(start)) return setSelection(null);
+      if (text === '' || !start || start !== end || !root.contains(start))
+        return setSelection(null);
       const rect = current.getRangeAt(0).getBoundingClientRect();
       const frame = root.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) return setSelection(null);
-      const left = Math.min(Math.max(rect.left + rect.width / 2 - frame.left, 60), frame.width - 60);
+      const left = Math.min(
+        Math.max(rect.left + rect.width / 2 - frame.left, 60),
+        frame.width - 60,
+      );
       const top = canHover ? rect.top - frame.top - 46 : rect.bottom - frame.top + 34;
       setSelection({ text, left, top: Math.min(Math.max(top, 6), frame.height - 50) });
     };
@@ -109,7 +136,22 @@ function useQuoteSelection(container: RefObject<HTMLElement | null>, enabled: bo
  * The conversation: the session's log folded into rows, the user's own
  * messages that are still on their way, and the run status line at the end.
  */
-export function Transcript({ state, channel, outgoing, starting, agents, sessionAgentId, userId, empty, footer, onReviewApproval, onQuote, focusSeq, listRef }: TranscriptProps) {
+export function Transcript({
+  state,
+  channel,
+  outgoing,
+  starting,
+  agents,
+  sessionAgentId,
+  userId,
+  empty,
+  footer,
+  onReviewApproval,
+  onQuote,
+  onUseImage,
+  focusSeq,
+  listRef,
+}: TranscriptProps) {
   const t = useT();
   const ownList = useRef<WindowedListHandle>(null);
   const list = listRef ?? ownList;
@@ -122,7 +164,8 @@ export function Transcript({ state, channel, outgoing, starting, agents, session
     const pending: PendingUserRow[] = [];
     for (const entry of outgoing) {
       // A message meant for the queue shows there; one already in the log is no longer pending.
-      if (entry.expected === 'queued' || transcript.requestIds.has(entry.payload.requestId)) continue;
+      if (entry.expected === 'queued' || transcript.requestIds.has(entry.payload.requestId))
+        continue;
       if (entry.phase === 'accepted' && entry.disposition === 'queued') continue;
       pending.push({
         kind: 'pending',
@@ -136,11 +179,19 @@ export function Transcript({ state, channel, outgoing, starting, agents, session
         createdAt: entry.createdAt,
       });
     }
-    if (starting && !transcript.requestIds.has(starting.requestId) && !pending.some((row) => row.requestId === starting.requestId)) pending.push(starting);
+    if (
+      starting &&
+      !transcript.requestIds.has(starting.requestId) &&
+      !pending.some((row) => row.requestId === starting.requestId)
+    )
+      pending.push(starting);
     return pending.length === 0 ? transcript.items : [...transcript.items, ...pending];
   }, [transcript.items, transcript.requestIds, outgoing, starting]);
 
-  const onOpenImage = useCallback((images: AttachmentRef[], index: number) => setViewer({ images, index }), []);
+  const onOpenImage = useCallback(
+    (images: AttachmentRef[], index: number) => setViewer({ images, index }),
+    [],
+  );
   const current = useRef(rows);
   current.current = rows;
   // The text of a whole reply: the block with `key` and the blocks of prose directly before it in the same run.
@@ -158,12 +209,17 @@ export function Transcript({ state, channel, outgoing, starting, agents, session
     return parts.join('\n\n');
   }, []);
   const sessionId = transcript.sessionId || null;
+  useEffect(() => setViewer(null), [sessionId]);
   const context = useMemo<RowContext>(
     () => ({ agents, sessionAgentId, onReviewApproval, onOpenImage, userId, proseOf, sessionId }),
     [agents, sessionAgentId, onReviewApproval, onOpenImage, userId, proseOf, sessionId],
   );
   const renderItem = useCallback(
-    (row: TranscriptRow, index: number) => <RowBoundary resetKey={row.kind === 'pending' ? row.phase : row.rev}>{renderRow(row, context, current.current[index + 1])}</RowBoundary>,
+    (row: TranscriptRow, index: number) => (
+      <RowBoundary resetKey={row.kind === 'pending' ? row.phase : row.rev}>
+        {renderRow(row, context, current.current[index + 1])}
+      </RowBoundary>
+    ),
     [context],
   );
 
@@ -186,7 +242,8 @@ export function Transcript({ state, channel, outgoing, starting, agents, session
   // A search hit: read back to it if need be, then bring it into view. Once per hit.
   const focused = useRef<number | null>(null);
   useEffect(() => {
-    if (focusSeq == null || focused.current === focusSeq || !channel || state.status !== 'ready') return;
+    if (focusSeq == null || focused.current === focusSeq || !channel || state.status !== 'ready')
+      return;
     focused.current = focusSeq;
     void channel.loadBackTo(focusSeq).then((reached) => {
       if (!reached) return;
@@ -197,7 +254,8 @@ export function Transcript({ state, channel, outgoing, starting, agents, session
   }, [focusSeq, channel, state.status, list]);
 
   const loadOlder = useCallback(() => {
-    if (channel && !state.loadingOlder && transcript.hasOlder && !state.olderError) void channel.loadOlder();
+    if (channel && !state.loadingOlder && transcript.hasOlder && !state.olderError)
+      void channel.loadOlder();
   }, [channel, state.loadingOlder, state.olderError, transcript.hasOlder]);
 
   const quote = useQuoteSelection(frame, onQuote !== undefined);
@@ -209,7 +267,11 @@ export function Transcript({ state, channel, outgoing, starting, agents, session
       <div className="wb-transcript__older" role="status">
         {state.olderError ? (
           <>
-            <span>{t('workbench.transcript.olderFailed', { reason: describeError(state.olderError, t) })}</span>
+            <span>
+              {t('workbench.transcript.olderFailed', {
+                reason: describeError(state.olderError, t),
+              })}
+            </span>
             <Button size="sm" variant="tinted" onClick={() => void channel?.loadOlder()}>
               {t('common.retry')}
             </Button>
@@ -245,7 +307,15 @@ export function Transcript({ state, channel, outgoing, starting, agents, session
         />
       )}
       {!following && rows.length > 0 && (
-        <button type="button" className="wb-jump" data-unread={unread || undefined} onClick={() => list.current?.scrollToEnd()} aria-label={unread ? t('workbench.transcript.jumpUnread') : t('workbench.transcript.jump')}>
+        <button
+          type="button"
+          className="wb-jump"
+          data-unread={unread || undefined}
+          onClick={() => list.current?.scrollToEnd()}
+          aria-label={
+            unread ? t('workbench.transcript.jumpUnread') : t('workbench.transcript.jump')
+          }
+        >
           <ArrowDown size={20} aria-hidden="true" />
           {unread && <span className="wb-jump__label">{t('workbench.transcript.new')}</span>}
         </button>
@@ -267,7 +337,16 @@ export function Transcript({ state, channel, outgoing, starting, agents, session
           {t('workbench.quote.action')}
         </button>
       )}
-      <ImageViewer images={viewer?.images ?? []} index={viewer?.index ?? 0} open={viewer !== null} onClose={() => setViewer(null)} onIndexChange={(index) => setViewer((current) => (current ? { ...current, index } : current))} />
+      <ImageViewer
+        onUseImage={onUseImage}
+        images={viewer?.images ?? []}
+        index={viewer?.index ?? 0}
+        open={viewer !== null}
+        onClose={() => setViewer(null)}
+        onIndexChange={(index) =>
+          setViewer((current) => (current ? { ...current, index } : current))
+        }
+      />
     </div>
   );
 }

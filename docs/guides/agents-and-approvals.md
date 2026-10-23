@@ -1,6 +1,6 @@
 # Agents and approvals
 
-An agent in Agent Cloud Studio can read your files, change them and run
+An agent in Cloud Harness can read your files, change them and run
 commands on your server. This guide explains how the Studio decides what an
 agent may do by itself, what it has to ask you about, and what it may never
 do — for each kind of agent. It also says plainly where those controls stop.
@@ -45,17 +45,17 @@ project. It answers in this order; the first step that applies wins.
 A request is **dangerous** when the classifier finds one of these. The app
 shows the reason in words on the approval:
 
-| Category | Shown as | Examples |
-|---|---|---|
-| destructive | "Deletes or overwrites work" | `rm -r`, `git reset --hard`, `git push --force`, `git clean`, disk tools |
-| privilege | "Changes who a command runs as" | `sudo`, `su`, `chown root`, set-user-id bits |
-| download-exec | "Downloads something and runs it" | `curl … \| sh` |
-| outside-project | "Reaches outside the project" | writing a file outside the project folder, running a command in another folder |
-| credentials | "Touches credentials" | `~/.ssh`, `~/.aws`, `.env` files, private keys, `~/.netrc`, the agents' own sign-in files |
-| recursive-permissions | "Changes permissions of whole folders" | `chmod -R`, `chown -R` |
-| obfuscated | "Hides what it really does" | `eval`, running code produced by another command, setting `PATH` or `LD_PRELOAD` |
-| studio-data | "Touches the Studio's own data" | anything in the data directory (always refused) |
-| catastrophic | "Could destroy the system" | wiping `/` or a home directory, overwriting a disk (always refused) |
+| Category              | Shown as                               | Examples                                                                                  |
+| --------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------- |
+| destructive           | "Deletes or overwrites work"           | `rm -r`, `git reset --hard`, `git push --force`, `git clean`, disk tools                  |
+| privilege             | "Changes who a command runs as"        | `sudo`, `su`, `chown root`, set-user-id bits                                              |
+| download-exec         | "Downloads something and runs it"      | `curl … \| sh`                                                                            |
+| outside-project       | "Reaches outside the project"          | writing a file outside the project folder, running a command in another folder            |
+| credentials           | "Touches credentials"                  | `~/.ssh`, `~/.aws`, `.env` files, private keys, `~/.netrc`, the agents' own sign-in files |
+| recursive-permissions | "Changes permissions of whole folders" | `chmod -R`, `chown -R`                                                                    |
+| obfuscated            | "Hides what it really does"            | `eval`, running code produced by another command, setting `PATH` or `LD_PRELOAD`          |
+| studio-data           | "Touches the Studio's own data"        | anything in the data directory (always refused)                                           |
+| catastrophic          | "Could destroy the system"             | wiping `/` or a home directory, overwriting a disk (always refused)                       |
 
 The classifier reads shell commands conservatively and asks when unsure. It is
 still a heuristic: see [The limits](#the-limits).
@@ -66,19 +66,19 @@ You choose the mode per conversation with the **Permissions** button in the
 title bar ("What the agent may do without asking"). Shift+Tab in the message
 field steps through the modes, never onto Auto.
 
-| | Plan | Ask | Accept edits | Auto |
-|---|---|---|---|---|
-| Read and search inside the project | yes | yes | yes | yes |
-| Read outside the project | asks | asks | asks | yes |
-| Change files inside the project | refused | asks | **yes** | yes |
-| Change files outside the project | refused | asks (dangerous) | asks (dangerous) | yes |
-| Run a command | refused | asks | asks | yes |
-| Use the network | refused | asks | asks | yes |
-| Start a sub-agent (Claude Code) | refused | asks | asks | yes |
-| Write to shared memory | refused | asks | asks | yes |
-| Dangerous requests | refused (a dangerous read asks) | ask, owner only | ask, owner only | yes |
-| Hard-deny list, deny rules | refused | refused | refused | refused |
-| Ask rules | ask (reads) | ask | ask | ask |
+|                                    | Plan                            | Ask              | Accept edits     | Auto    |
+| ---------------------------------- | ------------------------------- | ---------------- | ---------------- | ------- |
+| Read and search inside the project | yes                             | yes              | yes              | yes     |
+| Read outside the project           | asks                            | asks             | asks             | yes     |
+| Change files inside the project    | refused                         | asks             | **yes**          | yes     |
+| Change files outside the project   | refused                         | asks (dangerous) | asks (dangerous) | yes     |
+| Run a command                      | refused                         | asks             | asks             | yes     |
+| Use the network                    | refused                         | asks             | asks             | yes     |
+| Start a sub-agent (Claude Code)    | refused                         | asks             | asks             | yes     |
+| Write to shared memory             | refused                         | asks             | asks             | yes     |
+| Dangerous requests                 | refused (a dangerous read asks) | ask, owner only  | ask, owner only  | yes     |
+| Hard-deny list, deny rules         | refused                         | refused          | refused          | refused |
+| Ask rules                          | ask (reads)                     | ask              | ask              | ask     |
 
 "Asks" means: unless one of your allow rules covers it. A command is never
 allowed just because it only reads; in Ask and Accept edits a command needs a
@@ -264,8 +264,7 @@ Its limits:
 - **Only the person whose run is asking** can remember. When the owner answers
   a member's request, the owner can allow once but not save a rule for the
   member.
-- Rules apply to your own runs only. Each person has their own rules; at most
-  500.
+- Rules apply to your own runs only. Each person has their own rules; at most 500.
 - An allow rule never beats a deny rule, never stops a dangerous request from
   being asked, and covers a command part that writes to a file by redirection
   (`> out.txt`) only in Accept edits.
@@ -343,13 +342,13 @@ message typed at that moment and **wait** for approval like one. See
 The owner sets these on the project's page (**Settings and sharing**, under
 "What this project allows"). They apply to everyone who uses the project.
 
-| Switch | Default | What it does |
-|---|---|---|
-| Conversations with agents | on | Off: no conversation can be started or continued in the project; its files and Git stay reachable. |
-| Unattended runs | off | On: automations may run here, and messages can be scheduled with send later. |
-| Project instructions | on | On: Claude Code gets the project's `CLAUDE.md` at the start of each conversation. |
-| Agents may use this machine's credentials | off | On: agents can read and use the account's SSH and GPG keys, cloud and container sign-ins, the GitHub CLI's token, `.netrc`, `.npmrc` and Git credentials, and the other agent's sign-in. Needed for an agent to `git push` over SSH or to use `gh`. Asks for confirmation. Has an effect only where the sandbox is on. |
-| Auto permission mode | off | On: conversations here may really use Auto. Asks for confirmation. |
+| Switch                                    | Default | What it does                                                                                                                                                                                                                                                                                                           |
+| ----------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Conversations with agents                 | on      | Off: no conversation can be started or continued in the project; its files and Git stay reachable.                                                                                                                                                                                                                     |
+| Unattended runs                           | off     | On: automations may run here, and messages can be scheduled with send later.                                                                                                                                                                                                                                           |
+| Project instructions                      | on      | On: Claude Code gets the project's `CLAUDE.md` at the start of each conversation.                                                                                                                                                                                                                                      |
+| Agents may use this machine's credentials | off     | On: agents can read and use the account's SSH and GPG keys, cloud and container sign-ins, the GitHub CLI's token, `.netrc`, `.npmrc` and Git credentials, and the other agent's sign-in. Needed for an agent to `git push` over SSH or to use `gh`. Asks for confirmation. Has an effect only where the sandbox is on. |
+| Auto permission mode                      | off     | On: conversations here may really use Auto. Asks for confirmation.                                                                                                                                                                                                                                                     |
 
 Also on that page, **Agents offered here** switches agents on or off for the
 project. An agent switched off cannot start a conversation there.

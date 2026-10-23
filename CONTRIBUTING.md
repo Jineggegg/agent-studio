@@ -22,7 +22,7 @@ On Linux, install `bubblewrap` to run the sandbox tests for real (they skip
 themselves without it).
 
 ```
-git clone https://github.com/Jineggegg/agent-studio.git
+git clone https://github.com/Jineggegg/cloud-harness.git
 cd agent-studio
 npm ci
 npm run dev          # API on 127.0.0.1:7420, client on 127.0.0.1:5420

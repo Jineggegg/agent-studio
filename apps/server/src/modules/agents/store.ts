@@ -45,6 +45,10 @@ export interface SessionRow {
   hidden: number;
   /** Background the server puts in front of the first message the agent gets. Never sent to clients. */
   seed: string | null;
+  group_id: string | null;
+  account_profile_id: string | null;
+  fast_mode: number;
+  forked_at_seq: number | null;
 }
 
 export interface EventRow {
@@ -186,6 +190,10 @@ export interface Visibility {
 }
 
 const SESSION_COLUMNS = {
+  chainId: 'chain_id',
+  groupId: 'group_id',
+  fastMode: 'fast_mode',
+  forkedAtSeq: 'forked_at_seq',
   model: 'model',
   effort: 'effort',
   permissionMode: 'permission_mode',
@@ -238,7 +246,9 @@ export class AgentStore {
       if (visibility.projectIds.length === 0) {
         clauses.push(`${alias}.project_id IS NULL`);
       } else {
-        clauses.push(`(${alias}.project_id IS NULL OR ${alias}.project_id IN (${placeholders(visibility.projectIds.length)}))`);
+        clauses.push(
+          `(${alias}.project_id IS NULL OR ${alias}.project_id IN (${placeholders(visibility.projectIds.length)}))`,
+        );
         params.push(...visibility.projectIds);
       }
     }
@@ -251,8 +261,8 @@ export class AgentStore {
     this.#db.run(
       `INSERT INTO agent_sessions (id, project_id, user_id, agent_id, model, effort, permission_mode, title, title_source,
          native_session_id, pinned, archived_at, chain_id, parent_session_id, attention, draft, draft_updated_at,
-         last_seq, last_activity_at, last_user_message_at, created_at, updated_at, hidden, seed)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         last_seq, last_activity_at, last_user_message_at, created_at, updated_at, hidden, seed, group_id, account_profile_id, fast_mode, forked_at_seq)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       row.id,
       row.project_id,
       row.user_id,
@@ -277,6 +287,10 @@ export class AgentStore {
       row.updated_at,
       row.hidden,
       row.seed,
+      row.group_id,
+      row.account_profile_id,
+      row.fast_mode,
+      row.forked_at_seq,
     );
   }
 
@@ -287,7 +301,12 @@ export class AgentStore {
 
   /** The session if this user created it, or — for the instance owner — whoever did. */
   sessionFor(id: string, userId: string, isOwner: boolean): SessionRow | undefined {
-    return this.#db.get<SessionRow>('SELECT * FROM agent_sessions WHERE id = ? AND (user_id = ? OR ? = 1)', id, userId, toSql(isOwner));
+    return this.#db.get<SessionRow>(
+      'SELECT * FROM agent_sessions WHERE id = ? AND (user_id = ? OR ? = 1)',
+      id,
+      userId,
+      toSql(isOwner),
+    );
   }
 
   sessionByNativeId(nativeId: string, userId: string, isOwner: boolean): SessionRow | undefined {
@@ -302,6 +321,7 @@ export class AgentStore {
   listSessions(options: {
     visibility: Visibility;
     projectId?: string;
+    groupId?: string;
     archived: 'exclude' | 'only' | 'include';
     words: readonly string[];
     limit: number;
@@ -314,6 +334,11 @@ export class AgentStore {
     if (options.projectId !== undefined) {
       clauses.push('s.project_id = ?');
       params.push(options.projectId);
+    }
+    if (options.groupId === 'ungrouped') clauses.push('s.group_id IS NULL');
+    else if (options.groupId !== undefined) {
+      clauses.push('s.group_id = ?');
+      params.push(options.groupId);
     }
     if (options.archived === 'exclude') clauses.push('s.archived_at IS NULL');
     if (options.archived === 'only') clauses.push('s.archived_at IS NOT NULL');
@@ -337,12 +362,17 @@ export class AgentStore {
 
   /** Sessions of one user that carry an attention mark or are running. */
   activeSessions(userId: string): SessionRow[] {
-    return this.#db.all<SessionRow>("SELECT * FROM agent_sessions WHERE user_id = ? AND attention != 'none' AND archived_at IS NULL AND hidden = 0", userId);
+    return this.#db.all<SessionRow>(
+      "SELECT * FROM agent_sessions WHERE user_id = ? AND attention != 'none' AND archived_at IS NULL AND hidden = 0",
+      userId,
+    );
   }
 
   /** Ids of the helper sessions, which announce nothing. */
   hiddenSessionIds(): string[] {
-    return this.#db.all<{ id: string }>('SELECT id FROM agent_sessions WHERE hidden = 1').map((row) => row.id);
+    return this.#db
+      .all<{ id: string }>('SELECT id FROM agent_sessions WHERE hidden = 1')
+      .map((row) => row.id);
   }
 
   /**
@@ -381,21 +411,33 @@ export class AgentStore {
   }
 
   sessionIdsOfProject(projectId: string): string[] {
-    return this.#db.all<{ id: string }>('SELECT id FROM agent_sessions WHERE project_id = ?', projectId).map((row) => row.id);
+    return this.#db
+      .all<{ id: string }>('SELECT id FROM agent_sessions WHERE project_id = ?', projectId)
+      .map((row) => row.id);
   }
 
   sessionIdsOfUser(userId: string): string[] {
-    return this.#db.all<{ id: string }>('SELECT id FROM agent_sessions WHERE user_id = ?', userId).map((row) => row.id);
+    return this.#db
+      .all<{ id: string }>('SELECT id FROM agent_sessions WHERE user_id = ?', userId)
+      .map((row) => row.id);
   }
 
   allSessionIds(): Set<string> {
-    return new Set(this.#db.all<{ id: string }>('SELECT id FROM agent_sessions').map((row) => row.id));
+    return new Set(
+      this.#db.all<{ id: string }>('SELECT id FROM agent_sessions').map((row) => row.id),
+    );
   }
 
   // ---- event log -----------------------------------------------------------
 
   /** Appends one event and returns its sequence number. Must run inside a transaction with what it records. */
-  appendEvent(sessionId: string, runId: string | null, type: string, data: unknown, at: number): number {
+  appendEvent(
+    sessionId: string,
+    runId: string | null,
+    type: string,
+    data: unknown,
+    at: number,
+  ): number {
     const row = this.#db.get<{ last_seq: number }>(
       'UPDATE agent_sessions SET last_seq = last_seq + 1, last_activity_at = ? WHERE id = ? RETURNING last_seq',
       at,
@@ -415,7 +457,12 @@ export class AgentStore {
   }
 
   eventsAfter(sessionId: string, after: number, limit: number): EventRow[] {
-    return this.#db.all<EventRow>('SELECT * FROM agent_events WHERE session_id = ? AND seq > ? ORDER BY seq LIMIT ?', sessionId, after, limit);
+    return this.#db.all<EventRow>(
+      'SELECT * FROM agent_events WHERE session_id = ? AND seq > ? ORDER BY seq LIMIT ?',
+      sessionId,
+      after,
+      limit,
+    );
   }
 
   /** The page just before `before` (or the newest page), oldest first. */
@@ -434,12 +481,21 @@ export class AgentStore {
   /** The newest `limit` events after `after`, oldest first — what a reconnecting client is sent. */
   eventsTail(sessionId: string, after: number, limit: number): EventRow[] {
     return this.#db
-      .all<EventRow>('SELECT * FROM agent_events WHERE session_id = ? AND seq > ? ORDER BY seq DESC LIMIT ?', sessionId, after, limit)
+      .all<EventRow>(
+        'SELECT * FROM agent_events WHERE session_id = ? AND seq > ? ORDER BY seq DESC LIMIT ?',
+        sessionId,
+        after,
+        limit,
+      )
       .reverse();
   }
 
   /** User and assistant messages of a session, oldest first, for adapters that keep no conversation themselves. */
-  conversation(sessionId: string, beforeSeq: number, limit: number): Array<{ type: string; data: string }> {
+  conversation(
+    sessionId: string,
+    beforeSeq: number,
+    limit: number,
+  ): Array<{ type: string; data: string }> {
     return this.#db
       .all<{ type: string; data: string }>(
         `SELECT type, data FROM agent_events
@@ -454,18 +510,32 @@ export class AgentStore {
 
   indexMessage(sessionId: string, seq: number, role: 'user' | 'assistant', text: string): void {
     if (text.trim() === '') return;
-    this.#db.run('INSERT INTO agent_message_fts (text, session_id, seq, role) VALUES (?, ?, ?, ?)', text, sessionId, seq, role);
+    this.#db.run(
+      'INSERT INTO agent_message_fts (text, session_id, seq, role) VALUES (?, ?, ?, ?)',
+      text,
+      sessionId,
+      seq,
+      role,
+    );
   }
 
   removeOrphanedIndex(): void {
-    this.#db.run('DELETE FROM agent_message_fts WHERE session_id NOT IN (SELECT id FROM agent_sessions)');
+    this.#db.run(
+      'DELETE FROM agent_message_fts WHERE session_id NOT IN (SELECT id FROM agent_sessions)',
+    );
   }
 
   removeIndexOfSessions(sessionIds: readonly string[]): void {
-    for (const id of sessionIds) this.#db.run('DELETE FROM agent_message_fts WHERE session_id = ?', id);
+    for (const id of sessionIds)
+      this.#db.run('DELETE FROM agent_message_fts WHERE session_id = ?', id);
   }
 
-  searchMessages(options: { query: string; visibility: Visibility; projectId?: string; limit: number }): Array<{
+  searchMessages(options: {
+    query: string;
+    visibility: Visibility;
+    projectId?: string;
+    limit: number;
+  }): Array<{
     session_id: string;
     project_id: string | null;
     title: string;
@@ -484,7 +554,9 @@ export class AgentStore {
     // Three characters make a trigram; anything shorter cannot use the index and is matched by scanning.
     const useIndex = [...options.query].length >= 3;
     const match = useIndex ? 'agent_message_fts MATCH ?' : "f.text LIKE ? ESCAPE '\\'";
-    const needle = useIndex ? `"${options.query.replaceAll('"', '""')}"` : `%${escapeLike(options.query)}%`;
+    const needle = useIndex
+      ? `"${options.query.replaceAll('"', '""')}"`
+      : `%${escapeLike(options.query)}%`;
     return this.#db.all(
       `SELECT f.session_id, s.project_id, s.title, CAST(f.seq AS INTEGER) AS seq, f.role, f.text, e.at
        FROM agent_message_fts f
@@ -540,11 +612,17 @@ export class AgentStore {
   }
 
   activeRun(sessionId: string): RunRow | undefined {
-    return this.#db.get<RunRow>("SELECT * FROM agent_runs WHERE session_id = ? AND status IN ('accepted', 'running')", sessionId);
+    return this.#db.get<RunRow>(
+      "SELECT * FROM agent_runs WHERE session_id = ? AND status IN ('accepted', 'running')",
+      sessionId,
+    );
   }
 
   latestRun(sessionId: string): RunRow | undefined {
-    return this.#db.get<RunRow>('SELECT * FROM agent_runs WHERE session_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1', sessionId);
+    return this.#db.get<RunRow>(
+      'SELECT * FROM agent_runs WHERE session_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1',
+      sessionId,
+    );
   }
 
   /** Changes a run only if it is still in one of the `from` states. This is what makes the terminal event happen once. */
@@ -566,7 +644,9 @@ export class AgentStore {
   }
 
   runsInFlight(): RunRow[] {
-    return this.#db.all<RunRow>("SELECT * FROM agent_runs WHERE status IN ('accepted', 'running') ORDER BY created_at");
+    return this.#db.all<RunRow>(
+      "SELECT * FROM agent_runs WHERE status IN ('accepted', 'running') ORDER BY created_at",
+    );
   }
 
   listRuns(options: {
@@ -583,7 +663,9 @@ export class AgentStore {
       params.push(options.userId);
     }
     if (options.state === 'unresolved') {
-      clauses.push("status IN ('failed', 'interrupted') AND dismissed_at IS NULL AND continued_by_run_id IS NULL");
+      clauses.push(
+        "status IN ('failed', 'interrupted') AND dismissed_at IS NULL AND continued_by_run_id IS NULL",
+      );
     } else if (options.state === 'active') {
       clauses.push("status IN ('accepted', 'running')");
     }
@@ -615,16 +697,30 @@ export class AgentStore {
 
   /** Whether the agent has answered in this session at least once. */
   hasCompletedRun(sessionId: string): boolean {
-    return this.#db.get("SELECT 1 AS x FROM agent_runs WHERE session_id = ? AND status = 'completed' LIMIT 1", sessionId) !== undefined;
+    return (
+      this.#db.get(
+        "SELECT 1 AS x FROM agent_runs WHERE session_id = ? AND status = 'completed' LIMIT 1",
+        sessionId,
+      ) !== undefined
+    );
   }
 
   hasUnseenResult(sessionId: string): boolean {
-    return this.#db.get("SELECT 1 AS x FROM agent_runs WHERE session_id = ? AND status = 'completed' AND seen_at IS NULL LIMIT 1", sessionId) !== undefined;
+    return (
+      this.#db.get(
+        "SELECT 1 AS x FROM agent_runs WHERE session_id = ? AND status = 'completed' AND seen_at IS NULL LIMIT 1",
+        sessionId,
+      ) !== undefined
+    );
   }
 
   /** Marks the finished results of a session as seen. Failed and interrupted runs are never read this way. */
   markResultsSeen(sessionId: string, at: number): number {
-    return this.#db.run("UPDATE agent_runs SET seen_at = ? WHERE session_id = ? AND status IN ('completed', 'stopped') AND seen_at IS NULL", at, sessionId).changes;
+    return this.#db.run(
+      "UPDATE agent_runs SET seen_at = ? WHERE session_id = ? AND status IN ('completed', 'stopped') AND seen_at IS NULL",
+      at,
+      sessionId,
+    ).changes;
   }
 
   /** The atomic, single claim on a failed or interrupted run. */
@@ -653,7 +749,11 @@ export class AgentStore {
   // ---- receipts ------------------------------------------------------------
 
   receipt(userId: string, requestId: string): ReceiptRow | undefined {
-    return this.#db.get<ReceiptRow>('SELECT * FROM agent_receipts WHERE user_id = ? AND request_id = ?', userId, requestId);
+    return this.#db.get<ReceiptRow>(
+      'SELECT * FROM agent_receipts WHERE user_id = ? AND request_id = ?',
+      userId,
+      requestId,
+    );
   }
 
   insertReceipt(row: ReceiptRow): void {
@@ -671,7 +771,13 @@ export class AgentStore {
     );
   }
 
-  updateReceipt(userId: string, requestId: string, disposition: ReceiptRow['disposition'], runId: string | null, queueItemId: string | null): void {
+  updateReceipt(
+    userId: string,
+    requestId: string,
+    disposition: ReceiptRow['disposition'],
+    runId: string | null,
+    queueItemId: string | null,
+  ): void {
     this.#db.run(
       'UPDATE agent_receipts SET disposition = ?, run_id = ?, queue_item_id = ? WHERE user_id = ? AND request_id = ?',
       disposition,
@@ -683,25 +789,42 @@ export class AgentStore {
   }
 
   deleteReceipt(userId: string, requestId: string): void {
-    this.#db.run('DELETE FROM agent_receipts WHERE user_id = ? AND request_id = ?', userId, requestId);
+    this.#db.run(
+      'DELETE FROM agent_receipts WHERE user_id = ? AND request_id = ?',
+      userId,
+      requestId,
+    );
   }
 
   // ---- queue ---------------------------------------------------------------
 
   queue(sessionId: string): QueueRow[] {
-    return this.#db.all<QueueRow>('SELECT * FROM agent_queue WHERE session_id = ? ORDER BY position, created_at, id', sessionId);
+    return this.#db.all<QueueRow>(
+      'SELECT * FROM agent_queue WHERE session_id = ? ORDER BY position, created_at, id',
+      sessionId,
+    );
   }
 
   queueItem(sessionId: string, id: string): QueueRow | undefined {
-    return this.#db.get<QueueRow>('SELECT * FROM agent_queue WHERE id = ? AND session_id = ?', id, sessionId);
+    return this.#db.get<QueueRow>(
+      'SELECT * FROM agent_queue WHERE id = ? AND session_id = ?',
+      id,
+      sessionId,
+    );
   }
 
   queueLength(sessionId: string): number {
-    return this.#db.get<{ n: number }>('SELECT COUNT(*) AS n FROM agent_queue WHERE session_id = ?', sessionId)!.n;
+    return this.#db.get<{ n: number }>(
+      'SELECT COUNT(*) AS n FROM agent_queue WHERE session_id = ?',
+      sessionId,
+    )!.n;
   }
 
   insertQueueItem(row: Omit<QueueRow, 'position'>): QueueRow {
-    const last = this.#db.get<{ p: number | null }>('SELECT MAX(position) AS p FROM agent_queue WHERE session_id = ?', row.session_id)!.p;
+    const last = this.#db.get<{ p: number | null }>(
+      'SELECT MAX(position) AS p FROM agent_queue WHERE session_id = ?',
+      row.session_id,
+    )!.p;
     const position = (last ?? 0) + 1;
     this.#db.run(
       `INSERT INTO agent_queue (id, session_id, user_id, request_id, position, text, attachment_ids, quote, created_at, updated_at)
@@ -721,20 +844,41 @@ export class AgentStore {
   }
 
   updateQueueText(sessionId: string, id: string, text: string, at: number): boolean {
-    return this.#db.run('UPDATE agent_queue SET text = ?, updated_at = ? WHERE id = ? AND session_id = ?', text, at, id, sessionId).changes === 1;
+    return (
+      this.#db.run(
+        'UPDATE agent_queue SET text = ?, updated_at = ? WHERE id = ? AND session_id = ?',
+        text,
+        at,
+        id,
+        sessionId,
+      ).changes === 1
+    );
   }
 
   deleteQueueItem(sessionId: string, id: string): boolean {
-    return this.#db.run('DELETE FROM agent_queue WHERE id = ? AND session_id = ?', id, sessionId).changes === 1;
+    return (
+      this.#db.run('DELETE FROM agent_queue WHERE id = ? AND session_id = ?', id, sessionId)
+        .changes === 1
+    );
   }
 
   moveQueueItemToFront(sessionId: string, id: string): void {
-    const first = this.#db.get<{ p: number | null }>('SELECT MIN(position) AS p FROM agent_queue WHERE session_id = ?', sessionId)!.p;
-    this.#db.run('UPDATE agent_queue SET position = ? WHERE id = ? AND session_id = ?', (first ?? 1) - 1, id, sessionId);
+    const first = this.#db.get<{ p: number | null }>(
+      'SELECT MIN(position) AS p FROM agent_queue WHERE session_id = ?',
+      sessionId,
+    )!.p;
+    this.#db.run(
+      'UPDATE agent_queue SET position = ? WHERE id = ? AND session_id = ?',
+      (first ?? 1) - 1,
+      id,
+      sessionId,
+    );
   }
 
   sessionsWithQueue(): string[] {
-    return this.#db.all<{ session_id: string }>('SELECT DISTINCT session_id FROM agent_queue').map((row) => row.session_id);
+    return this.#db
+      .all<{ session_id: string }>('SELECT DISTINCT session_id FROM agent_queue')
+      .map((row) => row.session_id);
   }
 
   // ---- approvals -----------------------------------------------------------
@@ -773,7 +917,14 @@ export class AgentStore {
   }
 
   /** Resolves an approval if — and only if — it is still pending. The first caller wins. */
-  resolveApproval(id: string, status: Exclude<ApprovalStatus, 'pending'>, decidedBy: string | null, at: number, note: string | null, answers: string | null): boolean {
+  resolveApproval(
+    id: string,
+    status: Exclude<ApprovalStatus, 'pending'>,
+    decidedBy: string | null,
+    at: number,
+    note: string | null,
+    answers: string | null,
+  ): boolean {
     return (
       this.#db.run(
         "UPDATE agent_approvals SET status = ?, decided_by = ?, decided_at = ?, note = ?, answers = ? WHERE id = ? AND status = 'pending'",
@@ -788,22 +939,36 @@ export class AgentStore {
   }
 
   pendingApprovalsOfSession(sessionId: string): ApprovalRow[] {
-    return this.#db.all<ApprovalRow>("SELECT * FROM agent_approvals WHERE session_id = ? AND status = 'pending' ORDER BY created_at, rowid", sessionId);
+    return this.#db.all<ApprovalRow>(
+      "SELECT * FROM agent_approvals WHERE session_id = ? AND status = 'pending' ORDER BY created_at, rowid",
+      sessionId,
+    );
   }
 
   pendingApprovalsOfRun(runId: string): ApprovalRow[] {
-    return this.#db.all<ApprovalRow>("SELECT * FROM agent_approvals WHERE run_id = ? AND status = 'pending' ORDER BY created_at, rowid", runId);
+    return this.#db.all<ApprovalRow>(
+      "SELECT * FROM agent_approvals WHERE run_id = ? AND status = 'pending' ORDER BY created_at, rowid",
+      runId,
+    );
   }
 
   allPendingApprovals(): ApprovalRow[] {
-    return this.#db.all<ApprovalRow>("SELECT * FROM agent_approvals WHERE status = 'pending' ORDER BY created_at, rowid");
+    return this.#db.all<ApprovalRow>(
+      "SELECT * FROM agent_approvals WHERE status = 'pending' ORDER BY created_at, rowid",
+    );
   }
 
   /**
    * Approvals a caller may answer or see: those of their own runs and — for
    * the instance owner — everyone's.
    */
-  listApprovals(options: { userId: string; isOwner: boolean; status: 'pending' | 'all'; sessionId?: string; limit: number }): ApprovalRow[] {
+  listApprovals(options: {
+    userId: string;
+    isOwner: boolean;
+    status: 'pending' | 'all';
+    sessionId?: string;
+    limit: number;
+  }): ApprovalRow[] {
     return this.#db.all<ApprovalRow>(
       `SELECT * FROM agent_approvals
        WHERE (user_id = ? OR ? = 1) AND (? = 'all' OR status = 'pending') AND (? IS NULL OR session_id = ?)
@@ -840,7 +1005,12 @@ export class AgentStore {
     return this.#db.get<RuleRow>('SELECT * FROM agent_permission_rules WHERE id = ?', id);
   }
 
-  findRule(row: Pick<RuleRow, 'scope' | 'user_id' | 'project_id' | 'session_id' | 'effect' | 'tool' | 'pattern'>): RuleRow | undefined {
+  findRule(
+    row: Pick<
+      RuleRow,
+      'scope' | 'user_id' | 'project_id' | 'session_id' | 'effect' | 'tool' | 'pattern'
+    >,
+  ): RuleRow | undefined {
     return this.#db.get<RuleRow>(
       `SELECT * FROM agent_permission_rules
        WHERE scope = ? AND user_id = ? AND project_id IS ? AND session_id IS ? AND effect = ? AND tool = ? AND pattern IS ?`,
@@ -859,17 +1029,29 @@ export class AgentStore {
   }
 
   countRules(userId: string): number {
-    return this.#db.get<{ n: number }>('SELECT COUNT(*) AS n FROM agent_permission_rules WHERE user_id = ?', userId)!.n;
+    return this.#db.get<{ n: number }>(
+      'SELECT COUNT(*) AS n FROM agent_permission_rules WHERE user_id = ?',
+      userId,
+    )!.n;
   }
 
   /** A user's own rules, plus the shared rules of the projects in `projectIds` (null: every project). */
-  listRules(options: { userId: string; scope?: RuleScope; projectId?: string; sessionId?: string; sharedProjectIds: readonly string[] | null }): RuleRow[] {
+  listRules(options: {
+    userId: string;
+    scope?: RuleScope;
+    projectId?: string;
+    sessionId?: string;
+    sharedProjectIds: readonly string[] | null;
+  }): RuleRow[] {
     const shared =
       options.sharedProjectIds === null
         ? { sql: 'shared = 1', params: [] as SqlValue[] }
         : options.sharedProjectIds.length === 0
           ? { sql: '0 = 1', params: [] as SqlValue[] }
-          : { sql: `shared = 1 AND project_id IN (${placeholders(options.sharedProjectIds.length)})`, params: [...options.sharedProjectIds] as SqlValue[] };
+          : {
+              sql: `shared = 1 AND project_id IN (${placeholders(options.sharedProjectIds.length)})`,
+              params: [...options.sharedProjectIds] as SqlValue[],
+            };
     return this.#db.all<RuleRow>(
       `SELECT * FROM agent_permission_rules
        WHERE (user_id = ? OR (${shared.sql}))
@@ -920,7 +1102,11 @@ export class AgentStore {
   }
 
   attachment(sessionId: string, id: string): AttachmentRow | undefined {
-    return this.#db.get<AttachmentRow>('SELECT * FROM agent_attachments WHERE id = ? AND session_id = ?', id, sessionId);
+    return this.#db.get<AttachmentRow>(
+      'SELECT * FROM agent_attachments WHERE id = ? AND session_id = ?',
+      id,
+      sessionId,
+    );
   }
 
   /** Lookup by id alone, with no access check: the caller decides who may use what it finds. */
@@ -937,7 +1123,13 @@ export class AgentStore {
   }
 
   markAttachmentsSent(sessionId: string, ids: readonly string[], at: number): void {
-    for (const id of ids) this.#db.run('UPDATE agent_attachments SET sent_at = COALESCE(sent_at, ?) WHERE id = ? AND session_id = ?', at, id, sessionId);
+    for (const id of ids)
+      this.#db.run(
+        'UPDATE agent_attachments SET sent_at = COALESCE(sent_at, ?) WHERE id = ? AND session_id = ?',
+        at,
+        id,
+        sessionId,
+      );
   }
 
   deleteAttachment(sessionId: string, id: string): void {
@@ -947,7 +1139,11 @@ export class AgentStore {
   // ---- usage ---------------------------------------------------------------
 
   usageRow(runId: string, model: string): UsageRow | undefined {
-    return this.#db.get<UsageRow>('SELECT * FROM agent_usage WHERE run_id = ? AND model = ?', runId, model);
+    return this.#db.get<UsageRow>(
+      'SELECT * FROM agent_usage WHERE run_id = ? AND model = ?',
+      runId,
+      model,
+    );
   }
 
   upsertUsage(row: UsageRow): void {
@@ -977,7 +1173,16 @@ export class AgentStore {
     );
   }
 
-  usageTotals(sessionId: string): Array<{ model: string; input_tokens: number; output_tokens: number; cache_read_tokens: number; cache_write_tokens: number; cost_usd: number | null }> {
+  usageTotals(
+    sessionId: string,
+  ): Array<{
+    model: string;
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_tokens: number;
+    cache_write_tokens: number;
+    cost_usd: number | null;
+  }> {
     return this.#db.all(
       `SELECT model, SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens,
               SUM(cache_read_tokens) AS cache_read_tokens, SUM(cache_write_tokens) AS cache_write_tokens,

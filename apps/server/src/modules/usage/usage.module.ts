@@ -38,7 +38,7 @@ import { USAGE_MIGRATIONS, UsageStore } from './store.js';
  * | `DELETE /api/usage/providers/:providerId/note` | clears it, and with it the estimate |
  * | `GET /api/usage/budgets` | the caller's budgets with this month's progress |
  * | `POST /api/usage/budgets` | create (201); 409 `budget_exists`, `too_many_budgets`; 422 `agent_unavailable` |
- * | `PATCH /api/usage/budgets/:budgetId` | change the amount or the time zone; 404 `budget_not_found` for anybody else's |
+ * | `PATCH /api/usage/budgets/:budgetId` | change amount, time zone or opt-in request gate; 404 `budget_not_found` for anybody else's |
  * | `DELETE /api/usage/budgets/:budgetId` | |
  *
  * ## Events
@@ -65,8 +65,9 @@ import { USAGE_MIGRATIONS, UsageStore } from './store.js';
  *   at }
  * ```
  *
- * A budget never blocks a run. It is looked at when one of the user's runs
- * ends, so a threshold passed in the middle of a run is announced at its end.
+ * Announcements happen when a run ends. `assertRequestAllowed(userId, agentId)`
+ * separately rejects new runs/provider requests at an enabled budget's recorded
+ * threshold. It never interrupts inflight work or predicts unreported costs.
  */
 export interface UsageModuleOptions {
   /** The clock (tests move it). */
@@ -108,12 +109,14 @@ export function createUsageModule(options: UsageModuleOptions = {}): StudioModul
         }
       };
       bus.onTopic('internal:usage', (event) => {
-        if (event.type === 'rate-limit.observed') guarded('recording a plan-window reading failed', () => service.observe(event.data));
+        if (event.type === 'rate-limit.observed')
+          guarded('recording a plan-window reading failed', () => service.observe(event.data));
       });
       bus.onTopic('internal:runs', (event) => {
         if (event.type !== 'run.finished') return;
         const userId = (event.data as { userId?: unknown }).userId;
-        if (typeof userId === 'string') guarded('checking budgets failed', () => service.checkBudgets(userId));
+        if (typeof userId === 'string')
+          guarded('checking budgets failed', () => service.checkBudgets(userId));
       });
 
       // ---- what was used ---------------------------------------------------------
@@ -151,7 +154,10 @@ export function createUsageModule(options: UsageModuleOptions = {}): StudioModul
         url: '/api/usage/providers/:providerId',
         access: 'user',
         params: providerParams,
-        rateLimit: options.balanceRateLimit ?? { max: config.env === 'test' ? 10_000 : 20, windowMs: 60_000 },
+        rateLimit: options.balanceRateLimit ?? {
+          max: config.env === 'test' ? 10_000 : 20,
+          windowMs: 60_000,
+        },
         handler: ({ user, params }) => service.provider(user, params.providerId),
       });
       http.route({

@@ -15,7 +15,14 @@ import {
 } from '@agent-studio/protocol';
 import type { WebSocket } from 'ws';
 import { newId } from '../../kernel/crypto.js';
-import { badRequest, conflict, describeError, forbidden, notFound, unavailable } from '../../kernel/errors.js';
+import {
+  badRequest,
+  conflict,
+  describeError,
+  forbidden,
+  notFound,
+  unavailable,
+} from '../../kernel/errors.js';
 import { RECENT_AUTH_WINDOW_MS } from '../../kernel/http.js';
 import type { ModuleContext } from '../../kernel/module.js';
 import type { Principal } from '../../kernel/principal.js';
@@ -88,7 +95,8 @@ export class TerminalService {
     });
     bus.on('project.deleting', (event) => {
       const { projectId } = event.data as { projectId: string };
-      for (const session of this.#all()) if (session.projectId === projectId) void session.terminate('project_removed');
+      for (const session of this.#all())
+        if (session.projectId === projectId) void session.terminate('project_removed');
     });
   }
 
@@ -115,7 +123,10 @@ export class TerminalService {
       maxInputFrameBytes: this.limits.maxInputFrameBytes,
       typedTextMaxChars: TYPED_TEXT_MAX_CHARS,
     };
-    const no = (code: NonNullable<TerminalCapability['reason']>['code'], message: string): TerminalCapability => ({
+    const no = (
+      code: NonNullable<TerminalCapability['reason']>['code'],
+      message: string,
+    ): TerminalCapability => ({
       available: false,
       reason: { code, message },
       needsReauth: false,
@@ -123,9 +134,12 @@ export class TerminalService {
       launchers: [],
       limits,
     });
-    if (!this.#context.config.terminalEnabled) return no('disabled', 'Terminals are turned off on this server.');
-    if (principal.role !== 'owner') return no('owner_only', 'Only the owner of this Studio can use a terminal.');
-    if (principal.via !== 'session') return no('session_required', 'A terminal can only be used from a signed-in browser.');
+    if (!this.#context.config.terminalEnabled)
+      return no('disabled', 'Terminals are turned off on this server.');
+    if (principal.role !== 'owner')
+      return no('owner_only', 'Only the owner of this Studio can use a terminal.');
+    if (principal.via !== 'session')
+      return no('session_required', 'A terminal can only be used from a signed-in browser.');
     const pty = await this.#loadPty();
     if (!pty.available) return no('pty_unavailable', pty.reason.slice(0, 300));
 
@@ -167,22 +181,40 @@ export class TerminalService {
 
   // ---- changes ----------------------------------------------------------------
 
-  async create(principal: Principal, request: CreateTerminalSessionRequest, meta: { ip: string }): Promise<TerminalSessionInfo> {
+  async create(
+    principal: Principal,
+    request: CreateTerminalSessionRequest,
+    meta: { ip: string },
+  ): Promise<TerminalSessionInfo> {
     this.#requireEnabled();
     const pty = await this.#loadPty();
-    if (!pty.available) throw unavailable('Terminals cannot run on this server.', 'terminal_unavailable', { reason: pty.reason.slice(0, 300) });
+    if (!pty.available)
+      throw unavailable('Terminals cannot run on this server.', 'terminal_unavailable', {
+        reason: pty.reason.slice(0, 300),
+      });
 
     const launcher = request.launcher === undefined ? null : this.#launchers.get(request.launcher);
-    if (request.launcher !== undefined && !launcher) throw badRequest('There is no such launcher.', undefined, 'unknown_launcher');
-    if (request.remote && !launcher?.remote) throw badRequest('Only a remote launcher takes a remote host.', undefined, 'remote_not_expected');
-    if (launcher?.remote && !request.remote) throw badRequest('Choose the remote host to open.', undefined, 'remote_required');
+    if (request.launcher !== undefined && !launcher)
+      throw badRequest('There is no such launcher.', undefined, 'unknown_launcher');
+    if (request.remote && !launcher?.remote)
+      throw badRequest(
+        'Only a remote launcher takes a remote host.',
+        undefined,
+        'remote_not_expected',
+      );
+    if (launcher?.remote && !request.remote)
+      throw badRequest('Choose the remote host to open.', undefined, 'remote_required');
     if (request.projectId === undefined && !launcher?.projectOptional) {
       throw badRequest('Choose the project to open a terminal in.', undefined, 'project_required');
     }
     // The folder comes from the project record. A shell can write, so write access is what is asked for.
-    const project = request.projectId === undefined ? null : this.#context.services.projects.requireAccess(principal, request.projectId, 'write');
+    const project =
+      request.projectId === undefined
+        ? null
+        : this.#context.services.projects.requireAccess(principal, request.projectId, 'write');
 
-    if (!this.#mayCreate(principal)) throw forbidden('Confirm your identity to open a terminal.', 'reauth_required');
+    if (!this.#mayCreate(principal))
+      throw forbidden('Confirm your identity to open a terminal.', 'reauth_required');
     this.#requireRoom(principal.userId);
 
     const shell = this.#loginShell();
@@ -190,22 +222,45 @@ export class TerminalService {
       ? await launcher.plan({
           user: principal,
           project,
-          remote: request.remote ? { hostId: request.remote.hostId, directory: request.remote.directory ?? null } : null,
+          remote: request.remote
+            ? { hostId: request.remote.hostId, directory: request.remote.directory ?? null }
+            : null,
         })
       : { file: shell.file, args: shell.args };
-    const environment = this.#environment({ SHELL: shell.file, ...plan.env });
+    const account =
+      request.accountProfileId === undefined
+        ? null
+        : await this.#context.services.agents.accounts.login(
+            principal,
+            request.accountProfileId,
+            launcher?.key ?? '',
+          );
+    const environment = this.#environment({ SHELL: shell.file, ...plan.env, ...account?.env });
     const cwd = await this.#workingDirectory(plan, project);
 
     let file = findExecutable(plan.file, environment.PATH);
     if (!file) {
-      throw unavailable(`The ${path.basename(plan.file)} command is not installed on this computer.`, 'launcher_unavailable');
+      throw unavailable(
+        `The ${path.basename(plan.file)} command is not installed on this computer.`,
+        'launcher_unavailable',
+      );
     }
     let args = [...plan.args];
     if (plan.sandbox) {
-      const wrapped = this.#context.sandbox.wrap(file, args, plan.sandbox);
+      const wrapped = this.#context.sandbox.wrap(
+        file,
+        args,
+        plan.sandbox.kind === 'mask' && account
+          ? { ...plan.sandbox, writableExpose: [account.directory] }
+          : plan.sandbox,
+      );
       if (wrapped.sandboxed) {
         const outer = findExecutable(wrapped.file, environment.PATH);
-        if (!outer) throw unavailable('The sandbox this launcher needs is not available.', 'launcher_unavailable');
+        if (!outer)
+          throw unavailable(
+            'The sandbox this launcher needs is not available.',
+            'launcher_unavailable',
+          );
         file = outer;
         args = wrapped.args;
       }
@@ -214,12 +269,23 @@ export class TerminalService {
     // No awaits from here until the session is registered: the room check and
     // the start cannot be interleaved with another request.
     if (this.#stopped) throw unavailable('The server is shutting down.', 'terminal_unavailable');
+    const currentUser = this.#context.services.auth.findUser(principal.userId);
+    if (!currentUser || currentUser.disabled || currentUser.role !== 'owner')
+      throw forbidden('This account can no longer open a terminal.', 'terminal_revoked');
     this.#requireRoom(principal.userId);
     let process: PtyProcess;
     try {
-      process = pty.backend.spawn(file, args, { cwd, env: environment, cols: request.cols, rows: request.rows });
+      process = pty.backend.spawn(file, args, {
+        cwd,
+        env: environment,
+        cols: request.cols,
+        rows: request.rows,
+      });
     } catch (error) {
-      this.#context.log.error({ err: describeError(error), launcher: launcher?.key ?? 'shell' }, 'terminal could not be started');
+      this.#context.log.error(
+        { err: describeError(error), launcher: launcher?.key ?? 'shell' },
+        'terminal could not be started',
+      );
       throw unavailable('The terminal could not be started.', 'terminal_start_failed');
     }
 
@@ -229,10 +295,17 @@ export class TerminalService {
       userId: principal.userId,
       createdBy: principal.credentialId,
       projectId: project?.id ?? null,
-      title: request.title ?? (launcher ? (plan.title ?? launcher.title) : (project?.name ?? path.basename(shell.file))),
+      title:
+        request.title ??
+        (launcher ? (plan.title ?? launcher.title) : (project?.name ?? path.basename(shell.file))),
       launcher: launcher?.key ?? null,
       remoteHostId,
-      directory: remoteHostId !== null ? (plan.remoteDirectory ?? null) : plan.cwd === 'neutral' ? null : (project?.rootDir ?? null),
+      directory:
+        remoteHostId !== null
+          ? (plan.remoteDirectory ?? null)
+          : plan.cwd === 'neutral'
+            ? null
+            : (project?.rootDir ?? null),
       cols: request.cols,
       rows: request.rows,
       pty: process,
@@ -240,7 +313,11 @@ export class TerminalService {
       limits: this.limits,
       listProcesses: this.#listProcesses,
       onChange: (changed, what) => this.#onChange(changed, what),
-      reportProblem: (error) => this.#context.log.warn({ err: describeError(error) }, 'terminal process table could not be read'),
+      reportProblem: (error) =>
+        this.#context.log.warn(
+          { err: describeError(error) },
+          'terminal process table could not be read',
+        ),
     });
     let mine = this.#byUser.get(principal.userId);
     if (!mine) this.#byUser.set(principal.userId, (mine = new Map()));
@@ -255,7 +332,12 @@ export class TerminalService {
       detail: [
         `launcher: ${launcher?.key ?? 'shell'}`,
         `project: ${project?.id ?? 'none'}`,
-        ...(remoteHostId === null ? [] : [`remote host: ${remoteHostId}`, `remote directory: ${plan.remoteDirectory ?? 'default'}`]),
+        ...(remoteHostId === null
+          ? []
+          : [
+              `remote host: ${remoteHostId}`,
+              `remote directory: ${plan.remoteDirectory ?? 'default'}`,
+            ]),
       ].join('; '),
       address: meta.ip,
     });
@@ -275,7 +357,10 @@ export class TerminalService {
     const remaining = await session.terminate('closed');
     this.#remove(session);
     if (remaining.length > 0) {
-      this.#context.log.warn({ sessionId: session.id, remaining: remaining.length }, 'terminal processes survived termination');
+      this.#context.log.warn(
+        { sessionId: session.id, remaining: remaining.length },
+        'terminal processes survived termination',
+      );
     }
     return { closed: true, remainingProcesses: remaining.length };
   }
@@ -283,13 +368,19 @@ export class TerminalService {
   /** Types text into a session without pressing Enter. See `typed-text.ts` for what is removed and why. */
   typeText(principal: Principal, sessionId: string, input: string): TypeTextResponse {
     const session = this.#require(principal, sessionId);
-    if (!this.#admit(session, principal)) throw forbidden('Confirm your identity to use this terminal.', 'reauth_required');
+    if (!this.#admit(session, principal))
+      throw forbidden('Confirm your identity to use this terminal.', 'reauth_required');
     if (!session.alive) throw conflict('That terminal has ended.', 'terminal_ended');
     const typed = sanitizeTypedText(input);
     if (typed.multiline) {
-      throw badRequest('Only one line can be typed into the terminal at a time.', undefined, 'multiline_text');
+      throw badRequest(
+        'Only one line can be typed into the terminal at a time.',
+        undefined,
+        'multiline_text',
+      );
     }
-    if (typed.text.length === 0) throw badRequest('There is nothing to type.', undefined, 'nothing_to_type');
+    if (typed.text.length === 0)
+      throw badRequest('There is nothing to type.', undefined, 'nothing_to_type');
     session.write(Buffer.from(typed.text, 'utf8'));
     return { typed: typed.text, removed: typed.removed };
   }
@@ -303,12 +394,25 @@ export class TerminalService {
       socket.close(closeCode, code);
     };
     if (!this.#context.config.terminalEnabled || this.#stopped) {
-      return refuse('terminal_disabled', 'Terminals are turned off on this server.', TERMINAL_CLOSE_CODES.unavailable);
+      return refuse(
+        'terminal_disabled',
+        'Terminals are turned off on this server.',
+        TERMINAL_CLOSE_CODES.unavailable,
+      );
     }
     const session = this.#of(principal.userId).get(sessionId);
-    if (!session) return refuse('session_not_found', 'There is no such terminal.', TERMINAL_CLOSE_CODES.notFound);
+    if (!session)
+      return refuse(
+        'session_not_found',
+        'There is no such terminal.',
+        TERMINAL_CLOSE_CODES.notFound,
+      );
     if (!this.#admit(session, principal)) {
-      return refuse('reauth_required', 'Confirm your identity to attach to this terminal.', TERMINAL_CLOSE_CODES.reauthRequired);
+      return refuse(
+        'reauth_required',
+        'Confirm your identity to attach to this terminal.',
+        TERMINAL_CLOSE_CODES.reauthRequired,
+      );
     }
     session.accept(socket, principal);
   }
@@ -319,7 +423,8 @@ export class TerminalService {
   heartbeat(): void {
     this.#endSessionsOfIneligibleUsers();
     const authenticator = this.#context.http.authenticator;
-    for (const session of this.#all()) session.heartbeat((principal) => authenticator.isCredentialLive(principal));
+    for (const session of this.#all())
+      session.heartbeat((principal) => authenticator.isCredentialLive(principal));
   }
 
   get liveSessionCount(): number {
@@ -333,6 +438,15 @@ export class TerminalService {
     return this.#of(userId).get(sessionId)?.pid ?? null;
   }
 
+  /** Resolve only after this account's login shells and their descendants have stopped. */
+  async stopUser(userId: string): Promise<void> {
+    const results = await Promise.all(
+      [...this.#of(userId).values()].map((session) => session.terminate('revoked')),
+    );
+    if (results.some((remaining) => remaining.length > 0))
+      throw conflict('Account terminal processes have not stopped.', 'terminal_stop_incomplete');
+  }
+
   /** Ends every terminal. Called when the server stops; afterwards nothing can be opened. */
   async shutdown(): Promise<void> {
     this.#stopped = true;
@@ -342,7 +456,8 @@ export class TerminalService {
     const sessions = this.#all();
     const results = await Promise.all(sessions.map((session) => session.terminate('shutdown')));
     const remaining = results.reduce((sum, pids) => sum + pids.length, 0);
-    if (remaining > 0) this.#context.log.warn({ remaining }, 'terminal processes survived shutdown');
+    if (remaining > 0)
+      this.#context.log.warn({ remaining }, 'terminal processes survived shutdown');
     this.#byUser.clear();
   }
 
@@ -357,7 +472,8 @@ export class TerminalService {
   }
 
   #requireEnabled(): void {
-    if (!this.#context.config.terminalEnabled) throw forbidden('Terminals are turned off on this server.', 'terminal_disabled');
+    if (!this.#context.config.terminalEnabled)
+      throw forbidden('Terminals are turned off on this server.', 'terminal_disabled');
   }
 
   /** The caller's own session, or "not found" — which is also the answer for somebody else's. */
@@ -398,16 +514,24 @@ export class TerminalService {
     let mine = 0;
     for (const session of this.#of(userId).values()) if (session.alive) mine += 1;
     if (mine >= this.limits.maxSessionsPerUser) {
-      throw conflict('You have too many terminals open. Close one and try again.', 'terminal_limit_reached', {
-        scope: 'user',
-        limit: this.limits.maxSessionsPerUser,
-      });
+      throw conflict(
+        'You have too many terminals open. Close one and try again.',
+        'terminal_limit_reached',
+        {
+          scope: 'user',
+          limit: this.limits.maxSessionsPerUser,
+        },
+      );
     }
     if (this.liveSessionCount >= this.limits.maxSessions) {
-      throw conflict('Too many terminals are open on this server. Close one and try again.', 'terminal_limit_reached', {
-        scope: 'server',
-        limit: this.limits.maxSessions,
-      });
+      throw conflict(
+        'Too many terminals are open on this server. Close one and try again.',
+        'terminal_limit_reached',
+        {
+          scope: 'server',
+          limit: this.limits.maxSessions,
+        },
+      );
     }
   }
 
@@ -415,7 +539,11 @@ export class TerminalService {
     if (this.#shellOverride) return this.#shellOverride;
     if (!this.#shell) {
       const chosen = chooseLoginShell(probeHostShell(this.#context.processes.env().SHELL));
-      if (chosen.source === 'fallback') this.#context.log.warn({ shell: chosen.file }, 'no usable login shell for the account; terminals use the fallback');
+      if (chosen.source === 'fallback')
+        this.#context.log.warn(
+          { shell: chosen.file },
+          'no usable login shell for the account; terminals use the fallback',
+        );
       this.#shell = { file: chosen.file, args: ['-l'] };
     }
     return this.#shell;
@@ -440,7 +568,8 @@ export class TerminalService {
   }
 
   async #workingDirectory(plan: LaunchPlan, project: ProjectRecord | null): Promise<string> {
-    const isDirectory = async (candidate: string) => (await fs.stat(candidate).catch(() => null))?.isDirectory() === true;
+    const isDirectory = async (candidate: string) =>
+      (await fs.stat(candidate).catch(() => null))?.isDirectory() === true;
     if (project && plan.cwd !== 'neutral') {
       if (!(await isDirectory(project.rootDir))) {
         throw conflict("The project's folder no longer exists.", 'project_folder_missing');
@@ -468,8 +597,14 @@ export class TerminalService {
     const timer = setTimeout(() => this.#remove(session), this.limits.endedRetentionMs);
     timer.unref();
     this.#removals.set(session.id, timer);
-    const ended = [...this.#of(session.userId).values()].filter((other) => !other.alive).sort((a, b) => (a.exit?.at ?? 0) - (b.exit?.at ?? 0));
-    for (const oldest of ended.slice(0, Math.max(0, ended.length - this.limits.maxEndedSessionsPerUser))) this.#remove(oldest);
+    const ended = [...this.#of(session.userId).values()]
+      .filter((other) => !other.alive)
+      .sort((a, b) => (a.exit?.at ?? 0) - (b.exit?.at ?? 0));
+    for (const oldest of ended.slice(
+      0,
+      Math.max(0, ended.length - this.limits.maxEndedSessionsPerUser),
+    ))
+      this.#remove(oldest);
   }
 
   #remove(session: TerminalSession): void {
@@ -483,6 +618,9 @@ export class TerminalService {
   }
 
   #publish(session: TerminalSession, type: string): void {
-    this.#context.bus.publish(`user:${session.userId}`, type, { sessionId: session.id, projectId: session.projectId });
+    this.#context.bus.publish(`user:${session.userId}`, type, {
+      sessionId: session.id,
+      projectId: session.projectId,
+    });
   }
 }

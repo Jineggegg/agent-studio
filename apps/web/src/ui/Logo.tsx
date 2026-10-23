@@ -11,7 +11,7 @@ export interface LogoMarkProps {
 }
 
 /**
- * The Agent Studio mark: an open ring with a spark where it closes — an agent
+ * The Cloud Harness mark: an open ring with a spark where it closes — an agent
  * working its way round a loop. Bare, it takes the text colour.
  */
 export function LogoMark({ size = 32, plated, label, className }: LogoMarkProps) {
@@ -27,7 +27,13 @@ export function LogoMark({ size = 32, plated, label, className }: LogoMarkProps)
     >
       {plated && <rect className="ui-logo__plate" width="512" height="512" rx="118" />}
       <g transform={plated ? 'translate(256 256) scale(0.82) translate(-256 -256)' : undefined}>
-        <path className="ui-logo__ring" d="M374.18 235.16A120 120 0 1 1 276.84 137.82" fill="none" strokeWidth="44" strokeLinecap="round" />
+        <path
+          className="ui-logo__ring"
+          d="M374.18 235.16A120 120 0 1 1 276.84 137.82"
+          fill="none"
+          strokeWidth="44"
+          strokeLinecap="round"
+        />
         <circle className="ui-logo__spark" cx="340.85" cy="171.15" r="31" />
       </g>
     </svg>

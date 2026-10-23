@@ -1,4 +1,4 @@
-import { FolderOpen, Info, Palette, Settings, ShieldCheck, Users } from 'lucide-react';
+import { FolderOpen, Info, Mic, Palette, Settings, ShieldCheck, Users } from 'lucide-react';
 import { registerSettingsPage, registerSettingsQuickControl, registerSystemTile } from '@/registry';
 import { BUILD_ID } from '@/pwa/update';
 import { useSession } from '@/data/session';
@@ -14,7 +14,25 @@ function useVersionSummary(): string | undefined {
  * same way, from their own `index.ts`.
  */
 registerSettingsPage(
-  { id: 'account', title: 'settings.account.title', icon: ShieldCheck, tint: 'blue', group: 'account', order: 10, load: () => import('./pages/AccountPage') },
+  {
+    id: 'voice',
+    title: 'voice.title',
+    icon: Mic,
+    tint: 'blue',
+    group: 'general',
+    order: 30,
+    access: 'owner',
+    load: () => import('../workbench/voice/VoiceSettings'),
+  },
+  {
+    id: 'account',
+    title: 'settings.account.title',
+    icon: ShieldCheck,
+    tint: 'blue',
+    group: 'account',
+    order: 10,
+    load: () => import('./pages/AccountPage'),
+  },
   {
     id: 'people',
     title: 'settings.people.title',
@@ -25,8 +43,25 @@ registerSettingsPage(
     access: 'owner',
     load: () => import('./pages/PeoplePage'),
   },
-  { id: 'appearance', title: 'settings.appearance.title', icon: Palette, tint: 'pink', group: 'general', order: 10, load: () => import('./pages/AppearancePage'), useSummary: useThemeSummary },
-  { id: 'projects', title: 'settings.projects.title', icon: FolderOpen, tint: 'amber', group: 'general', order: 20, load: () => import('./pages/ProjectsPage') },
+  {
+    id: 'appearance',
+    title: 'settings.appearance.title',
+    icon: Palette,
+    tint: 'pink',
+    group: 'general',
+    order: 10,
+    load: () => import('./pages/AppearancePage'),
+    useSummary: useThemeSummary,
+  },
+  {
+    id: 'projects',
+    title: 'settings.projects.title',
+    icon: FolderOpen,
+    tint: 'amber',
+    group: 'general',
+    order: 20,
+    load: () => import('./pages/ProjectsPage'),
+  },
   {
     id: 'about',
     title: 'settings.about.title',
@@ -41,4 +76,11 @@ registerSettingsPage(
 
 registerSettingsQuickControl({ id: 'appearance', order: 10, Component: ThemeQuickControl });
 
-registerSystemTile({ id: 'settings', title: 'settings.title', icon: Settings, tint: 'slate', to: '/settings', order: 900 });
+registerSystemTile({
+  id: 'settings',
+  title: 'settings.title',
+  icon: Settings,
+  tint: 'slate',
+  to: '/settings',
+  order: 900,
+});

@@ -1,4 +1,9 @@
-import type { AgentCapabilities, AgentModelOption, AgentStatus, Question } from '@agent-studio/protocol';
+import type {
+  AgentCapabilities,
+  AgentModelOption,
+  AgentStatus,
+  Question,
+} from '@agent-studio/protocol';
 import type { ModuleContext, Services } from '../../kernel/module.js';
 import type {
   AgentAdapter,
@@ -13,7 +18,13 @@ import { ClaudeCli, type ClaudeCliOptions, DEFAULT_FEATURES } from './cli.js';
 import { type ProjectInstructions, readProjectInstructions } from './instructions.js';
 import { DEFAULT_MODEL } from './invocation.js';
 import { ClaudeRun, type Tap } from './run.js';
-import { ASK_USER_TOOL, EXIT_PLAN_TOOL, describeTool, isRecord, parseMcpToolName } from './tools.js';
+import {
+  ASK_USER_TOOL,
+  EXIT_PLAN_TOOL,
+  describeTool,
+  isRecord,
+  parseMcpToolName,
+} from './tools.js';
 import type { ModelTotals, UsageLedger } from './translate.js';
 
 export const CLAUDE_CODE_AGENT_ID = 'claude-code';
@@ -38,8 +49,14 @@ export interface RateLimitObserved {
 
 const MODEL_LABELS: Record<string, { label: string; description: string }> = {
   fable: { label: 'Fable', description: 'The newest Fable model.' },
-  opus: { label: 'Opus', description: 'The newest Opus model: the most capable, and the most expensive.' },
-  sonnet: { label: 'Sonnet', description: 'The newest Sonnet model: a balance of capability and speed.' },
+  opus: {
+    label: 'Opus',
+    description: 'The newest Opus model: the most capable, and the most expensive.',
+  },
+  sonnet: {
+    label: 'Sonnet',
+    description: 'The newest Sonnet model: a balance of capability and speed.',
+  },
   haiku: { label: 'Haiku', description: 'The newest Haiku model: the fastest and cheapest.' },
 };
 
@@ -48,7 +65,8 @@ function modelOption(alias: string, efforts: readonly string[]): AgentModelOptio
   return {
     id: alias,
     label: known?.label ?? alias.charAt(0).toUpperCase() + alias.slice(1),
-    description: known?.description ?? `The newest "${alias}" model, as Claude Code resolves the name.`,
+    description:
+      known?.description ?? `The newest "${alias}" model, as Claude Code resolves the name.`,
     ...(efforts.length > 0 ? { efforts: [...efforts] } : {}),
   };
 }
@@ -87,7 +105,10 @@ class ConversationLedger implements UsageLedger {
   }
 }
 
-const allow = (input: unknown): PermissionPromptResult => ({ behavior: 'allow', updatedInput: isRecord(input) ? input : {} });
+const allow = (input: unknown): PermissionPromptResult => ({
+  behavior: 'allow',
+  updatedInput: isRecord(input) ? input : {},
+});
 
 /** The CLI's question format → the Studio's. Ids are positions: the CLI has none. */
 function toQuestions(input: Record<string, unknown>): Question[] {
@@ -101,8 +122,14 @@ function toQuestions(input: Record<string, unknown>): Question[] {
       ...(typeof entry.header === 'string' && entry.header !== '' ? { header: entry.header } : {}),
       question: entry.question,
       options: options
-        .filter((option): option is Record<string, unknown> => isRecord(option) && typeof option.label === 'string')
-        .map((option) => ({ label: option.label as string, ...(typeof option.description === 'string' ? { description: option.description } : {}) })),
+        .filter(
+          (option): option is Record<string, unknown> =>
+            isRecord(option) && typeof option.label === 'string',
+        )
+        .map((option) => ({
+          label: option.label as string,
+          ...(typeof option.description === 'string' ? { description: option.description } : {}),
+        })),
       multiSelect: entry.multiSelect === true,
     });
   });
@@ -114,12 +141,18 @@ function toQuestions(input: Record<string, unknown>): Question[] {
  * `answers`, an object from each question's text to the chosen label (several
  * labels, and free text, joined with ", ").
  */
-function toCliAnswers(questions: readonly Question[], answer: UserQuestionAnswer): Record<string, string> {
+function toCliAnswers(
+  questions: readonly Question[],
+  answer: UserQuestionAnswer,
+): Record<string, string> {
   const answers: Record<string, string> = {};
   for (const given of answer.answers) {
     const question = questions.find((candidate) => candidate.id === given.questionId);
     if (!question) continue;
-    const parts = [...(given.selected ?? []), ...(given.other !== undefined && given.other.trim() !== '' ? [given.other.trim()] : [])];
+    const parts = [
+      ...(given.selected ?? []),
+      ...(given.other !== undefined && given.other.trim() !== '' ? [given.other.trim()] : []),
+    ];
     if (parts.length > 0) answers[question.question] = parts.join(', ');
   }
   return answers;
@@ -156,13 +189,30 @@ export class ClaudeCodeAdapter implements AgentAdapter {
 
   async capabilities(): Promise<AgentCapabilities> {
     // What the installed CLI's own help says it accepts; sensible defaults while it is not installed.
-    const features = (await this.cli.installation()?.catch(() => null))?.features ?? DEFAULT_FEATURES;
+    const installation = await this.cli.installation()?.catch(() => null);
+    const features = installation?.features ?? DEFAULT_FEATURES;
+    const version = (installation?.version ?? '')
+      .split('.')
+      .map((part) => Number.parseInt(part, 10));
+    const fast =
+      features.settings === true &&
+      ((version[0] ?? 0) > 2 ||
+        (version[0] === 2 &&
+          ((version[1] ?? 0) > 1 || (version[1] === 1 && (version[2] ?? 0) >= 205))));
     return {
       models: [
         // The CLI's choice for the signed-in account: no model is named when it is started.
-        { id: DEFAULT_MODEL, label: 'Default', description: 'Whichever model Claude Code picks for the signed-in account.', recommended: true, ...(features.efforts.length > 0 ? { efforts: [...features.efforts] } : {}) },
+        {
+          id: DEFAULT_MODEL,
+          label: 'Default',
+          description: 'Whichever model Claude Code picks for the signed-in account.',
+          recommended: true,
+          ...(features.efforts.length > 0 ? { efforts: [...features.efforts] } : {}),
+        },
         // Aliases, which the CLI resolves to the newest model of each family. Any full model id may be given instead.
-        ...features.modelAliases.filter((alias) => alias !== DEFAULT_MODEL).map((alias) => modelOption(alias, features.efforts)),
+        ...features.modelAliases
+          .filter((alias) => alias !== DEFAULT_MODEL)
+          .map((alias) => modelOption(alias, features.efforts)),
       ],
       defaultModel: DEFAULT_MODEL,
       // The engine implements all four; the CLI itself only ever runs in its plan mode or its asking mode.
@@ -172,6 +222,20 @@ export class ClaudeCodeAdapter implements AgentAdapter {
       resume: true,
       planMode: true,
       usage: true,
+      fastMode: {
+        supported: fast,
+        reason: fast
+          ? 'Requires a supported Opus model and account access; higher usage charges apply.'
+          : 'Requires Claude Code 2.1.205 or later with --settings support.',
+      },
+      mcp: [
+        {
+          name: 'Cloud Harness tools',
+          status: 'configured',
+          detail:
+            'Only the managed tool bridge is enabled. Connection is established when a run starts.',
+        },
+      ],
     };
   }
 
@@ -183,7 +247,8 @@ export class ClaudeCodeAdapter implements AgentAdapter {
   #projectInstructions(request: AgentRunRequest): Promise<ProjectInstructions> {
     const projects = this.#context.services.projects;
     const project = request.projectId === null ? null : projects.find(request.projectId);
-    if (!project || !projects.isFeatureEnabled(project, 'instructions')) return Promise.resolve({ kind: 'none' });
+    if (!project || !projects.isFeatureEnabled(project, 'instructions'))
+      return Promise.resolve({ kind: 'none' });
     return readProjectInstructions(project.rootDir);
   }
 
@@ -211,9 +276,15 @@ export class ClaudeCodeAdapter implements AgentAdapter {
       // conventions (when the memory module is there and assistants may use it) and the project's CLAUDE.md.
       memoryGuide: () => (this.#context.services as Partial<Services>).memory?.agentGuide() ?? null,
       projectInstructions: () => this.#projectInstructions(request),
-      instructionsProblemIsNews: (problem) => this.#instructionsProblemIsNews(request.sessionId, problem),
+      instructionsProblemIsNews: (problem) =>
+        this.#instructionsProblemIsNews(request.sessionId, problem),
       onRateLimit: (info) => {
-        const observed: RateLimitObserved = { agentId: this.id, userId: request.userId, observedAt: Date.now(), info };
+        const observed: RateLimitObserved = {
+          agentId: this.id,
+          userId: request.userId,
+          observedAt: Date.now(),
+          info,
+        };
         this.#context.bus.publish(USAGE_TOPIC, RATE_LIMIT_OBSERVED, observed);
       },
       ledger: this.#ledger,
@@ -230,7 +301,11 @@ export class ClaudeCodeAdapter implements AgentAdapter {
    * A permission prompt of the CLI, arriving through the bridge. The adapter
    * only describes the request; the answer is the engine's or a person's.
    */
-  async onPermissionPrompt(prompt: PermissionPrompt, host: AgentRunHost, request: AgentRunRequest): Promise<PermissionPromptResult> {
+  async onPermissionPrompt(
+    prompt: PermissionPrompt,
+    host: AgentRunHost,
+    request: AgentRunRequest,
+  ): Promise<PermissionPromptResult> {
     const run = this.#runs.get(request.runId);
     const input = isRecord(prompt.input) ? prompt.input : {};
     const toolCallId = prompt.toolCallId;
@@ -238,7 +313,8 @@ export class ClaudeCodeAdapter implements AgentAdapter {
 
     // The Studio's own tools are decided where they are carried out: the bridge applies the
     // permission engine to each call. Asking here as well would ask twice.
-    if (parseMcpToolName(prompt.toolName)?.server === request.bridge.serverName) return allow(input);
+    if (parseMcpToolName(prompt.toolName)?.server === request.bridge.serverName)
+      return allow(input);
 
     if (run && toolCallId !== null) await run.ensureToolStarted(toolCallId, prompt.toolName, input);
     const refuse = (message: string): PermissionPromptResult => {
@@ -248,7 +324,8 @@ export class ClaudeCodeAdapter implements AgentAdapter {
 
     if (prompt.toolName === ASK_USER_TOOL) {
       const questions = toQuestions(input);
-      if (questions.length === 0) return refuse('The question could not be read. Ask it in your reply instead.');
+      if (questions.length === 0)
+        return refuse('The question could not be read. Ask it in your reply instead.');
       const answer = await host.askUser({ questions, ...callId });
       const answers = toCliAnswers(questions, answer);
       if (Object.keys(answers).length > 0) return allow({ ...input, answers });
@@ -256,18 +333,34 @@ export class ClaudeCodeAdapter implements AgentAdapter {
         case 'cancelled':
           return refuse('The run was stopped.');
         case 'unattended':
-          return refuse('Nobody is watching this run, so the question was not asked. Use your own judgement and say which choice you made.');
+          return refuse(
+            'Nobody is watching this run, so the question was not asked. Use your own judgement and say which choice you made.',
+          );
         case 'expired':
-          return refuse('Nobody answered in time. Use your own judgement and say which choice you made.');
+          return refuse(
+            'Nobody answered in time. Use your own judgement and say which choice you made.',
+          );
         default:
-          return refuse('The user chose not to answer. Use your own judgement and say which choice you made.');
+          return refuse(
+            'The user chose not to answer. Use your own judgement and say which choice you made.',
+          );
       }
     }
 
     if (prompt.toolName === EXIT_PLAN_TOOL) {
       const plan = typeof input.plan === 'string' ? input.plan : '';
-      const decision = await host.requestPermission({ approval: 'plan', toolName: prompt.toolName, kind: 'other', title: 'Approve the plan', input, plan, ...callId });
-      return decision.behavior === 'allow' ? allow(decision.updatedInput ?? input) : refuse(decision.message);
+      const decision = await host.requestPermission({
+        approval: 'plan',
+        toolName: prompt.toolName,
+        kind: 'other',
+        title: 'Approve the plan',
+        input,
+        plan,
+        ...callId,
+      });
+      return decision.behavior === 'allow'
+        ? allow(decision.updatedInput ?? input)
+        : refuse(decision.message);
     }
 
     const described = describeTool(prompt.toolName, input, request.cwd);
@@ -282,6 +375,8 @@ export class ClaudeCodeAdapter implements AgentAdapter {
       ...(described.url === undefined ? {} : { url: described.url }),
       ...(described.diff === undefined ? {} : { diff: described.diff }),
     });
-    return decision.behavior === 'allow' ? allow(decision.updatedInput ?? input) : refuse(decision.message);
+    return decision.behavior === 'allow'
+      ? allow(decision.updatedInput ?? input)
+      : refuse(decision.message);
   }
 }

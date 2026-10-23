@@ -1,8 +1,8 @@
 {
-  "name": "agent-studio",
-  "version": "2.0.0-beta.3",
+  "name": "cloud-harness",
+  "version": "2.0.0-beta.4",
   "private": true,
-  "description": "Agent Cloud Studio 2.0 — a self-hosted work platform for AI coding agents, built for phone, tablet and desktop.",
+  "description": "Self-hosted workspace for AI coding agents, projects, tools and automation across phone, tablet and desktop.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -26,13 +26,18 @@
     "test:acceptance": "vitest run --project acceptance",
     "test:e2e": "playwright test -c tests/e2e/playwright.config.ts",
     "licenses": "node scripts/check-licenses.mjs",
-    "audit:deps": "npm audit --audit-level=high"
+    "audit:deps": "npm audit --audit-level=high",
+    "desktop": "electron desktop/main.mjs",
+    "desktop:prepare": "node node_modules/electron/install.js",
+    "desktop:package": "electron-builder --config desktop/builder.cjs --publish never"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.64.0",
     "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "^5.0.4",
+    "electron": "45.0.0",
+    "electron-builder": "26.15.3",
     "eslint": "^10.12.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",

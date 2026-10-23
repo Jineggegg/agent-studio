@@ -11,7 +11,14 @@ import { TerminalView } from './TerminalView';
 import { clampFontSize, readFontSize, saveFontSize } from './keys';
 
 /** What the sheet runs: something new, chosen from the server's list by key — or a session that is already running. */
-export type TerminalSheetTarget = { start: Pick<CreateTerminalSessionRequest, 'launcher' | 'remote' | 'projectId'> } | { attach: string };
+export type TerminalSheetTarget =
+  | {
+      start: Pick<
+        CreateTerminalSessionRequest,
+        'launcher' | 'remote' | 'projectId' | 'accountProfileId'
+      >;
+    }
+  | { attach: string };
 
 export interface TerminalSheetProps {
   open: boolean;
@@ -35,7 +42,15 @@ export interface TerminalSheetProps {
  * tools: an agent's own sign-in, a shell on a remote machine. What runs is
  * never typed by the browser — it is a launcher the server knows by key.
  */
-export function TerminalSheet({ open, onClose, title, note, target, onDone, onFinished }: TerminalSheetProps) {
+export function TerminalSheet({
+  open,
+  onClose,
+  title,
+  note,
+  target,
+  onDone,
+  onFinished,
+}: TerminalSheetProps) {
   const t = useT();
   const layout = useLayoutClass();
   const canHover = useCanHover();
@@ -55,10 +70,14 @@ export function TerminalSheet({ open, onClose, title, note, target, onDone, onFi
     latest.current = null;
     setStarting(true);
     try {
-      const created = 'attach' in target ? await terminalApi.session(target.attach) : await terminalApi.create(target.start);
+      const created =
+        'attach' in target
+          ? await terminalApi.session(target.attach)
+          : await terminalApi.create(target.start);
       if (mine !== attempt.current) {
         // The sheet was closed while the server was still starting it: nothing may be left behind.
-        if ('start' in target && onDone === 'end') void terminalApi.close(created.id).catch(() => undefined);
+        if ('start' in target && onDone === 'end')
+          void terminalApi.close(created.id).catch(() => undefined);
         return;
       }
       latest.current = created;
@@ -82,7 +101,12 @@ export function TerminalSheet({ open, onClose, title, note, target, onDone, onFi
   const finish = async () => {
     const shown = latest.current;
     if (shown && onDone === 'end' && shown.alive) {
-      const agreed = await confirm({ title: t('terminal.sheet.end.title'), message: t('terminal.sheet.end.message'), confirmLabel: t('terminal.sheet.end.confirm'), tone: 'danger' });
+      const agreed = await confirm({
+        title: t('terminal.sheet.end.title'),
+        message: t('terminal.sheet.end.message'),
+        confirmLabel: t('terminal.sheet.end.confirm'),
+        tone: 'danger',
+      });
       if (!agreed) return;
     }
     onClose();

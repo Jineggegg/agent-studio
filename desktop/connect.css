@@ -1,0 +1,53 @@
+:root {
+  color-scheme: light dark;
+  font:
+    16px/1.6 system-ui,
+    sans-serif;
+  --space: 1rem;
+  --radius: 0.75rem;
+}
+body {
+  margin: 0;
+  min-width: 320px;
+}
+main {
+  max-width: 40rem;
+  margin: 8vh auto;
+  padding: calc(var(--space) * 2);
+}
+h1 {
+  font-weight: 650;
+  letter-spacing: -0.04em;
+}
+form {
+  display: grid;
+  gap: var(--space);
+}
+input,
+button {
+  box-sizing: border-box;
+  min-height: 48px;
+  font: inherit;
+  border: 1px solid GrayText;
+  border-radius: var(--radius);
+  padding: 0.6rem 0.8rem;
+}
+input {
+  width: 100%;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+:focus-visible {
+  outline: 3px solid Highlight;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto;
+  }
+}

@@ -21,9 +21,14 @@ function boot() {
     let store = stores.get(name);
     if (!store) stores.set(name, (store = new Map()));
     const cache = {
-      match: async (request: Request | string) => store!.get(typeof request === 'string' ? new URL(request, ORIGIN).href : request.url),
+      match: async (request: Request | string) =>
+        store!.get(typeof request === 'string' ? new URL(request, ORIGIN).href : request.url),
       put: async (request: Request, response: Response) => void store!.set(request.url, response),
-      add: async (request: Request) => void store!.set(request.url, new Response('offline page', { headers: { 'content-type': 'text/html' } })),
+      add: async (request: Request) =>
+        void store!.set(
+          request.url,
+          new Response('offline page', { headers: { 'content-type': 'text/html' } }),
+        ),
       keys: async () => [...store!.keys()].map((url) => new Request(url)),
       delete: async (request: Request) => store!.delete(request.url),
     };
@@ -32,7 +37,13 @@ function boot() {
   const fetchMock = vi.fn<(request: Request) => Promise<Response>>();
   const showNotification = vi.fn(async () => undefined);
   const openWindow = vi.fn(async () => undefined);
-  const windows: { url: string; focused: boolean; visibilityState: string; focus: () => Promise<void>; postMessage: (message: unknown) => void }[] = [];
+  const windows: {
+    url: string;
+    focused: boolean;
+    visibilityState: string;
+    focus: () => Promise<void>;
+    postMessage: (message: unknown) => void;
+  }[] = [];
 
   const self = {
     location: new URL(`${ORIGIN}/sw.js`),
@@ -52,7 +63,16 @@ function boot() {
       super(typeof input === 'string' ? new URL(input, ORIGIN).href : input, init);
     }
   }
-  vm.runInNewContext(SOURCE, { self, caches, fetch: fetchMock, URL, Request: WorkerRequest, Response, Promise, console });
+  vm.runInNewContext(SOURCE, {
+    self,
+    caches,
+    fetch: fetchMock,
+    URL,
+    Request: WorkerRequest,
+    Response,
+    Promise,
+    console,
+  });
 
   const dispatch = async (type: string, event: Record<string, unknown>) => {
     const waits: Promise<unknown>[] = [];
@@ -68,7 +88,14 @@ function boot() {
     return responded as Promise<Response> | null;
   };
   const fetchEvent = (path: string, init: { method?: string; mode?: string } = {}) =>
-    dispatch('fetch', { request: { url: path.startsWith('http') ? path : ORIGIN + path, method: init.method ?? 'GET', mode: init.mode ?? 'cors', clone: () => ({}) } });
+    dispatch('fetch', {
+      request: {
+        url: path.startsWith('http') ? path : ORIGIN + path,
+        method: init.method ?? 'GET',
+        mode: init.mode ?? 'cors',
+        clone: () => ({}),
+      },
+    });
 
   return { dispatch, fetchEvent, fetchMock, stores, showNotification, openWindow, windows, self };
 }
@@ -89,13 +116,21 @@ describe('the service worker: caching', () => {
   it('leaves writes, other origins and unversioned files to the network', async () => {
     expect(await worker.fetchEvent('/assets/app-abc123.js', { method: 'POST' })).toBeNull();
     expect(await worker.fetchEvent('https://elsewhere.example/assets/x.js')).toBeNull();
-    for (const path of ['/version.json', '/manifest.webmanifest', '/sw.js', '/boot.js', '/icons/icon-192.png']) {
+    for (const path of [
+      '/version.json',
+      '/manifest.webmanifest',
+      '/sw.js',
+      '/boot.js',
+      '/icons/icon-192.png',
+    ]) {
       expect(await worker.fetchEvent(path), path).toBeNull();
     }
   });
 
   it('always takes pages from the network, so a new build is seen at once', async () => {
-    worker.fetchMock.mockResolvedValueOnce(new Response('build 1')).mockResolvedValueOnce(new Response('build 2'));
+    worker.fetchMock
+      .mockResolvedValueOnce(new Response('build 1'))
+      .mockResolvedValueOnce(new Response('build 2'));
     const first = await (await worker.fetchEvent('/', { mode: 'navigate' }))!;
     const second = await (await worker.fetchEvent('/', { mode: 'navigate' }))!;
     expect(await first.text()).toBe('build 1');
@@ -145,9 +180,17 @@ describe('the service worker: caching', () => {
     expect([...worker.stores.keys()].sort()).toEqual(['studio-offline-v1', 'unrelated-cache']);
 
     const reply = vi.fn();
-    await worker.dispatch('message', { origin: 'https://elsewhere.example', data: { type: 'clear-caches' }, ports: [{ postMessage: reply }] });
+    await worker.dispatch('message', {
+      origin: 'https://elsewhere.example',
+      data: { type: 'clear-caches' },
+      ports: [{ postMessage: reply }],
+    });
     expect(worker.stores.size).toBe(2); // not from one of our pages: ignored
-    await worker.dispatch('message', { origin: ORIGIN, data: { type: 'clear-caches' }, ports: [{ postMessage: reply }] });
+    await worker.dispatch('message', {
+      origin: ORIGIN,
+      data: { type: 'clear-caches' },
+      ports: [{ postMessage: reply }],
+    });
     expect([...worker.stores.keys()]).toEqual([]);
     expect(reply).toHaveBeenCalledTimes(1);
     expect(reply).toHaveBeenCalledWith({ type: 'caches-cleared', removed: 2 });
@@ -155,20 +198,35 @@ describe('the service worker: caching', () => {
 });
 
 describe('the service worker: notifications', () => {
-  const push = (payload: unknown) => worker.dispatch('push', { data: { json: () => payload, text: () => String(payload) } });
-  const click = (url: unknown) => worker.dispatch('notificationclick', { notification: { close: vi.fn(), data: { url } } });
+  const push = (payload: unknown) =>
+    worker.dispatch('push', { data: { json: () => payload, text: () => String(payload) } });
+  const click = (url: unknown) =>
+    worker.dispatch('notificationclick', { notification: { close: vi.fn(), data: { url } } });
 
   it('shows a notification from the JSON payload; the same tag replaces the earlier one', async () => {
-    await push({ title: 'Run finished', body: 'agent-studio · tests pass', tag: 'session:abc', url: '/workbench/abc' });
+    await push({
+      title: 'Run finished',
+      body: 'agent-studio · tests pass',
+      tag: 'session:abc',
+      url: '/workbench/abc',
+    });
     expect(worker.showNotification).toHaveBeenCalledWith(
       'Run finished',
-      expect.objectContaining({ body: 'agent-studio · tests pass', tag: 'session:abc', renotify: true, data: { url: '/workbench/abc' } }),
+      expect.objectContaining({
+        body: 'agent-studio · tests pass',
+        tag: 'session:abc',
+        renotify: true,
+        data: { url: '/workbench/abc' },
+      }),
     );
   });
 
   it('copes with a payload that is missing, malformed or hostile', async () => {
     await worker.dispatch('push', { data: null });
-    expect(worker.showNotification).toHaveBeenLastCalledWith('Agent Studio', expect.objectContaining({ body: '', data: { url: '/' } }));
+    expect(worker.showNotification).toHaveBeenLastCalledWith(
+      'Cloud Harness',
+      expect.objectContaining({ body: '', data: { url: '/' } }),
+    );
 
     await worker.dispatch('push', {
       data: {
@@ -178,10 +236,16 @@ describe('the service worker: notifications', () => {
         text: () => 'plain text',
       },
     });
-    expect(worker.showNotification).toHaveBeenLastCalledWith('Agent Studio', expect.objectContaining({ body: 'plain text' }));
+    expect(worker.showNotification).toHaveBeenLastCalledWith(
+      'Cloud Harness',
+      expect.objectContaining({ body: 'plain text' }),
+    );
 
     await push({ title: 'a\u0000b\nc', body: 42, url: 'https://evil.example/phish' });
-    expect(worker.showNotification).toHaveBeenLastCalledWith('a b c', expect.objectContaining({ body: '', data: { url: '/' } }));
+    expect(worker.showNotification).toHaveBeenLastCalledWith(
+      'a b c',
+      expect.objectContaining({ body: '', data: { url: '/' } }),
+    );
   });
 
   it('shows what the server sends exactly, within its limits, and never splits a character', async () => {
@@ -189,10 +253,19 @@ describe('the service worker: notifications', () => {
     // that is up to 160 and 480 UTF-16 units, which must still be shown whole.
     const title = '🚀'.repeat(80);
     const body = `${'进度'.repeat(100)}${'✅'.repeat(40)}`;
-    await push({ title, body, tag: 'reply-finished:01jabcdefghjkmnpqrstvwxyz0', url: '/projects/01jabcdefghjkmnpqrstvwxyz1/sessions/01jabcdefghjkmnpqrstvwxyz2' });
+    await push({
+      title,
+      body,
+      tag: 'reply-finished:01jabcdefghjkmnpqrstvwxyz0',
+      url: '/projects/01jabcdefghjkmnpqrstvwxyz1/sessions/01jabcdefghjkmnpqrstvwxyz2',
+    });
     expect(worker.showNotification).toHaveBeenLastCalledWith(
       title,
-      expect.objectContaining({ body, tag: 'reply-finished:01jabcdefghjkmnpqrstvwxyz0', data: { url: '/projects/01jabcdefghjkmnpqrstvwxyz1/sessions/01jabcdefghjkmnpqrstvwxyz2' } }),
+      expect.objectContaining({
+        body,
+        tag: 'reply-finished:01jabcdefghjkmnpqrstvwxyz0',
+        data: { url: '/projects/01jabcdefghjkmnpqrstvwxyz1/sessions/01jabcdefghjkmnpqrstvwxyz2' },
+      }),
     );
 
     // Something longer than any server sends is cut by characters: no half of a surrogate pair is left behind.
@@ -226,7 +299,13 @@ describe('the service worker: notifications', () => {
   it('focuses an open window and navigates it in place instead of opening another', async () => {
     const focus = vi.fn(async () => undefined);
     const postMessage = vi.fn();
-    worker.windows.push({ url: `${ORIGIN}/settings`, focused: false, visibilityState: 'visible', focus, postMessage });
+    worker.windows.push({
+      url: `${ORIGIN}/settings`,
+      focused: false,
+      visibilityState: 'visible',
+      focus,
+      postMessage,
+    });
     await click('/inbox');
     expect(focus).toHaveBeenCalled();
     expect(postMessage).toHaveBeenCalledWith({ type: 'navigate', url: '/inbox' });

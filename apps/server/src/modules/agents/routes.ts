@@ -24,7 +24,9 @@ import {
 import { z } from 'zod';
 import { describeError, notFound } from '../../kernel/errors.js';
 import { requireBrowser } from '../../kernel/http.js';
+import type { Principal } from '../../kernel/principal.js';
 import type { ModuleContext } from '../../kernel/module.js';
+import { registerConversationRoutes } from './conversations.js';
 import type { AgentAdapter } from './adapter.js';
 import type { AttachmentFiles } from './attachments.js';
 import type { RunService } from './runtime.js';
@@ -45,24 +47,66 @@ const agentParams = z.object({ agentId: z.string().min(1).max(80) });
 /** The modes an API token may put a session in: those that ask a person at least as often as before. */
 const TOKEN_PERMISSION_MODES: ReadonlySet<PermissionMode> = new Set(['ask', 'plan']);
 
-async function describeAgent(context: ModuleContext, adapter: AgentAdapter): Promise<Agent> {
+async function describeAgent(
+  context: ModuleContext,
+  adapter: AgentAdapter,
+  user: Principal,
+): Promise<Agent> {
   let status: Agent['status'];
   try {
     status = await adapter.status();
   } catch (error) {
-    context.log.warn({ agent: adapter.id, err: describeError(error) }, 'reading an agent\'s status failed');
-    status = { installed: false, version: null, signedIn: false, account: null, problem: 'The status of this agent could not be read.' };
+    context.log.warn(
+      { agent: adapter.id, err: describeError(error) },
+      "reading an agent's status failed",
+    );
+    status = {
+      installed: false,
+      version: null,
+      signedIn: false,
+      account: null,
+      problem: 'The status of this agent could not be read.',
+    };
   }
-  return { id: adapter.id, displayName: adapter.displayName, kind: adapter.kind, capabilities: await adapter.capabilities(), status };
+  const profileId = context.services.agents.accounts.resolve(user.userId, adapter.id);
+  if (profileId !== null) {
+    const profile = context.services.agents.accounts.require(user.userId, profileId);
+    const checked = await context.services.agents.accounts.status(user.userId, profileId);
+    status = {
+      ...status,
+      signedIn: checked.signedIn === true,
+      account: profile.name,
+      problem:
+        checked.signedIn === true
+          ? null
+          : checked.signedIn === false
+            ? 'Sign in to the selected account profile.'
+            : 'The selected account profile sign-in could not be checked.',
+    };
+  }
+  return {
+    id: adapter.id,
+    displayName: adapter.displayName,
+    kind: adapter.kind,
+    capabilities: await adapter.capabilities(),
+    status,
+  };
 }
 
 export function registerAgentRoutes(
   context: ModuleContext,
-  deps: { store: AgentStore; sessions: SessionService; runs: RunService; files: AttachmentFiles; removeSession: (sessionId: string) => Promise<void> },
+  deps: {
+    store: AgentStore;
+    sessions: SessionService;
+    runs: RunService;
+    files: AttachmentFiles;
+    removeSession: (sessionId: string) => Promise<void>;
+  },
 ): void {
   const { http } = context;
   const { sessions, runs } = deps;
   const projects = context.services.projects;
+  registerConversationRoutes(context, deps);
 
   // ---- agents ---------------------------------------------------------------
 
@@ -70,7 +114,11 @@ export function registerAgentRoutes(
     method: 'GET',
     url: '/api/agents',
     access: 'user',
-    handler: async () => ({ agents: await Promise.all(runs.adapters().map((adapter) => describeAgent(context, adapter))) }),
+    handler: async ({ user }) => ({
+      agents: await Promise.all(
+        runs.adapters().map((adapter) => describeAgent(context, adapter, user)),
+      ),
+    }),
   });
 
   http.route({
@@ -78,10 +126,10 @@ export function registerAgentRoutes(
     url: '/api/agents/:agentId',
     access: 'user',
     params: agentParams,
-    handler: ({ params }) => {
+    handler: ({ params, user }) => {
       const adapter = runs.adapter(params.agentId);
       if (!adapter) throw notFound('No such agent.', 'agent_not_found');
-      return describeAgent(context, adapter);
+      return describeAgent(context, adapter, user);
     },
   });
 
@@ -107,7 +155,9 @@ export function registerAgentRoutes(
     body: agentProjectSettingsSchema,
     handler: ({ user, params, body }): AgentProjectSettings => {
       projects.requireAccess(user, params.projectId, 'write');
-      const project = projects.patchSettings(params.projectId, { [AUTO_MODE_SETTING]: body.autoMode });
+      const project = projects.patchSettings(params.projectId, {
+        [AUTO_MODE_SETTING]: body.autoMode,
+      });
       context.services.audit.record({
         category: 'change',
         action: body.autoMode ? 'project.auto-mode.enabled' : 'project.auto-mode.disabled',
@@ -180,7 +230,8 @@ export function registerAgentRoutes(
     handler: ({ user, params, body }) => {
       const { row } = sessions.requireSession(user, params.sessionId, 'write');
       // A token may make a session ask more, never less: loosening is for the person who answers the questions.
-      if (body.permissionMode !== undefined && !TOKEN_PERMISSION_MODES.has(body.permissionMode)) requireBrowser(user);
+      if (body.permissionMode !== undefined && !TOKEN_PERMISSION_MODES.has(body.permissionMode))
+        requireBrowser(user);
       return sessions.update(user, params.sessionId, body, runs.adapter(row.agent_id));
     },
   });
@@ -307,7 +358,8 @@ export function registerAgentRoutes(
     access: 'user',
     params: queueParams,
     body: editQueuedMessageRequestSchema,
-    handler: ({ user, params, body }) => runs.editQueued(user, params.sessionId, params.itemId, body.text),
+    handler: ({ user, params, body }) =>
+      runs.editQueued(user, params.sessionId, params.itemId, body.text),
   });
 
   http.route({

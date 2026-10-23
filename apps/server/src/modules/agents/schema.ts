@@ -232,4 +232,58 @@ export const AGENTS_MIGRATIONS: readonly Migration[] = [
       CREATE INDEX agent_usage_at ON agent_usage(at);
     `,
   },
+  {
+    version: 3,
+    name: 'personal groups, independent branches and account bindings',
+    sql: `
+      CREATE TABLE agent_conversation_groups (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        UNIQUE(user_id, name)
+      );
+      ALTER TABLE agent_sessions ADD COLUMN group_id TEXT REFERENCES agent_conversation_groups(id) ON DELETE SET NULL;
+      ALTER TABLE agent_sessions ADD COLUMN account_profile_id TEXT;
+      ALTER TABLE agent_sessions ADD COLUMN fast_mode INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE agent_sessions ADD COLUMN forked_at_seq INTEGER;
+      CREATE INDEX agent_sessions_group ON agent_sessions(user_id, group_id);
+      CREATE TABLE agent_account_profiles (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        agent_id TEXT NOT NULL CHECK(agent_id IN ('claude-code', 'codex')),
+        name TEXT NOT NULL,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        UNIQUE(user_id, agent_id, name)
+      );
+      CREATE TABLE agent_file_checkpoints (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
+        run_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        path TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        UNIQUE(run_id, path)
+      );
+      CREATE UNIQUE INDEX agent_account_profile_default ON agent_account_profiles(user_id, agent_id) WHERE is_default = 1;
+    `,
+  },
+  {
+    version: 4,
+    name: 'explicit external conversation roots and import provenance',
+    sql: `
+      CREATE TABLE agent_external_roots (
+        id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL, agent_id TEXT NOT NULL, directory TEXT NOT NULL, created_at INTEGER NOT NULL
+      );
+      CREATE TABLE agent_external_imports (
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        source_id TEXT NOT NULL, version TEXT NOT NULL, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        session_id TEXT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
+        PRIMARY KEY(user_id, source_id, version, project_id)
+      );
+    `,
+  },
 ];

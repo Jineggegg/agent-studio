@@ -1,3 +1,4 @@
+import { requireFastMode } from './fast-mode.js';
 import { realpathSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -28,7 +29,13 @@ import {
 import type { FastifyBaseLogger } from 'fastify';
 import type { AgentToolResult } from '../../kernel/agent-tools.js';
 import { newId, sha256 } from '../../kernel/crypto.js';
-import { conflict, describeError, forbidden, notFound, unprocessable } from '../../kernel/errors.js';
+import {
+  conflict,
+  describeError,
+  forbidden,
+  notFound,
+  unprocessable,
+} from '../../kernel/errors.js';
 import type { ModuleContext } from '../../kernel/module.js';
 import type { Principal } from '../../kernel/principal.js';
 import { redactSecrets } from '../../kernel/redact.js';
@@ -74,7 +81,16 @@ import {
   titleFromMessage,
 } from './present.js';
 import type { SessionService } from './sessions.js';
-import type { AgentStore, ApprovalRow, AttachmentRow, QueueRow, ReceiptRow, RuleRow, RunRow, SessionRow } from './store.js';
+import type {
+  AgentStore,
+  ApprovalRow,
+  AttachmentRow,
+  QueueRow,
+  ReceiptRow,
+  RuleRow,
+  RunRow,
+  SessionRow,
+} from './store.js';
 
 export interface RuntimeOptions {
   /** How long a tool or plan approval waits before it is denied. */
@@ -119,7 +135,10 @@ interface ActiveRun {
   readonly refusedTools: Map<string, string>;
   /** Refusals of a Studio tool whose tool call was not known yet when they happened; matched when the call finishes. */
   readonly pendingRefusals: Array<{ name: string; input: unknown; message: string }>;
-  readonly usage: Map<string, { input: number; output: number; cacheRead: number; cacheWrite: number; cost: number | null }>;
+  readonly usage: Map<
+    string,
+    { input: number; output: number; cacheRead: number; cacheWrite: number; cost: number | null }
+  >;
   readonly settled: Promise<void>;
   readonly settle: () => void;
   readonly host: AgentRunHost;
@@ -169,7 +188,11 @@ function sameJson(a: unknown, b: unknown): boolean {
     if (Array.isArray(value)) return value.map(canonical);
     if (typeof value !== 'object' || value === null) return value;
     const record = value as Record<string, unknown>;
-    return Object.fromEntries(Object.keys(record).sort().map((key) => [key, canonical(record[key])]));
+    return Object.fromEntries(
+      Object.keys(record)
+        .sort()
+        .map((key) => [key, canonical(record[key])]),
+    );
   };
   try {
     return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
@@ -205,7 +228,12 @@ function requestHash(sessionId: string, input: SendMessageRequest, origin: RunOr
 }
 
 const withQuote = (text: string, quote: string | null): string =>
-  quote === null || quote.trim() === '' ? text : `${quote.split('\n').map((line) => `> ${line}`).join('\n')}\n\n${text}`;
+  quote === null || quote.trim() === ''
+    ? text
+    : `${quote
+        .split('\n')
+        .map((line) => `> ${line}`)
+        .join('\n')}\n\n${text}`;
 
 /**
  * Runs: accepting a message, starting the agent, recording what it does,
@@ -224,6 +252,7 @@ export class RunService {
   readonly #attachmentPath: (row: AttachmentRow) => string;
   readonly #adapters = new Map<string, AgentAdapter>();
   readonly #active = new Map<string, ActiveRun>();
+  readonly #launching = new Map<string, Promise<void>>();
   readonly #activeBySession = new Map<string, ActiveRun>();
   readonly #waiters = new Map<string, Waiter>();
   /** Requests being worked on right now, so the same id cannot be accepted twice at once. */
@@ -251,8 +280,10 @@ export class RunService {
   // ---- adapters ------------------------------------------------------------
 
   registerAdapter(adapter: AgentAdapter): void {
-    if (!/^[a-z][a-z0-9-]{0,39}$/.test(adapter.id)) throw new Error(`"${adapter.id}" is not a valid agent id.`);
-    if (this.#adapters.has(adapter.id)) throw new Error(`Agent "${adapter.id}" is already registered.`);
+    if (!/^[a-z][a-z0-9-]{0,39}$/.test(adapter.id))
+      throw new Error(`"${adapter.id}" is not a valid agent id.`);
+    if (this.#adapters.has(adapter.id))
+      throw new Error(`Agent "${adapter.id}" is already registered.`);
     this.#adapters.set(adapter.id, adapter);
   }
 
@@ -307,7 +338,9 @@ export class RunService {
   }
 
   #projectOf(session: SessionRow): ProjectRecord | null {
-    return session.project_id === null ? null : this.#context.services.projects.find(session.project_id);
+    return session.project_id === null
+      ? null
+      : this.#context.services.projects.find(session.project_id);
   }
 
   // ---- sending -------------------------------------------------------------
@@ -316,7 +349,12 @@ export class RunService {
    * Accepts a message. The receipt is durable before the agent does anything,
    * and the same request id never starts a second run.
    */
-  async send(principal: Principal, sessionId: string, input: SendMessageRequest, options: SendOptions = {}): Promise<MessageReceipt> {
+  async send(
+    principal: Principal,
+    sessionId: string,
+    input: SendMessageRequest,
+    options: SendOptions = {},
+  ): Promise<MessageReceipt> {
     const { row: session } = this.#sessions.requireSession(principal, sessionId, 'write');
     const origin = options.origin ?? 'interactive';
     const hash = requestHash(sessionId, input, origin);
@@ -324,18 +362,33 @@ export class RunService {
     const known = this.#store.receipt(principal.userId, input.requestId);
     if (known) return this.#duplicate(known, hash, sessionId);
     const key = `${principal.userId}\n${input.requestId}`;
-    if (this.#inFlight.has(key)) throw conflict('That message is already being processed.', 'request_in_progress');
+    if (this.#inFlight.has(key))
+      throw conflict('That message is already being processed.', 'request_in_progress');
     this.#inFlight.add(key);
     try {
+      this.#context.services.usage?.assertRequestAllowed(session.user_id, session.agent_id);
       const adapter = this.#adapters.get(session.agent_id);
-      if (!adapter) throw unprocessable('The agent of this session is not available on this Studio.', 'agent_unavailable');
-      if (input.permissionMode !== undefined) await this.#sessions.assertModeSupported(adapter, input.permissionMode);
+      if (!adapter)
+        throw unprocessable(
+          'The agent of this session is not available on this Studio.',
+          'agent_unavailable',
+        );
+      if (input.permissionMode !== undefined)
+        await this.#sessions.assertModeSupported(adapter, input.permissionMode);
       const attachments = this.#claimAttachments(sessionId, principal.userId, input.attachmentIds);
       const unattended = origin === 'scheduled' || origin === 'automation';
+      const expandedText =
+        origin === 'interactive'
+          ? (this.#context.services.toolLibrary?.expand(
+              principal,
+              session.project_id,
+              input.text,
+            ) ?? input.text)
+          : input.text;
       const spec = {
         requestId: input.requestId,
         hash,
-        text: input.text,
+        text: expandedText,
         attachmentIds: attachments.map((row) => row.id),
         quote: input.quote ?? null,
         origin,
@@ -355,7 +408,12 @@ export class RunService {
       }
       // A steer attempt takes time; the run may have ended meanwhile.
       if (this.#store.activeRun(sessionId)) return this.#enqueue(session, principal.userId, spec);
-      return this.#start(session, principal.userId, { ...spec, promptText: input.text, receipt: 'insert', continuesRunId: null });
+      return this.#start(session, principal.userId, {
+        ...spec,
+        promptText: expandedText,
+        receipt: 'insert',
+        continuesRunId: null,
+      });
     } finally {
       this.#inFlight.delete(key);
     }
@@ -365,13 +423,17 @@ export class RunService {
   receipt(principal: Principal, sessionId: string, requestId: string): MessageReceipt {
     this.#sessions.requireSession(principal, sessionId, 'view');
     const row = this.#store.receipt(principal.userId, requestId);
-    if (!row || row.session_id !== sessionId) throw notFound('No message with that request id was received.', 'receipt_not_found');
+    if (!row || row.session_id !== sessionId)
+      throw notFound('No message with that request id was received.', 'receipt_not_found');
     return this.#presentReceipt(row, true);
   }
 
   #duplicate(row: ReceiptRow, hash: string, sessionId: string): MessageReceipt {
     if (row.request_hash !== hash || row.session_id !== sessionId) {
-      throw conflict('That request id was already used for a different message.', 'request_conflict');
+      throw conflict(
+        'That request id was already used for a different message.',
+        'request_conflict',
+      );
     }
     return this.#presentReceipt(row, true);
   }
@@ -395,8 +457,16 @@ export class RunService {
     const rows: AttachmentRow[] = [];
     for (const id of new Set(ids)) {
       const row = this.#store.attachment(sessionId, id);
-      if (!row || row.user_id !== userId) throw unprocessable('An attachment of this message was not found in this session.', 'attachment_not_found');
-      if (row.sent_at !== null) throw unprocessable('An attachment of this message was already sent.', 'attachment_already_sent');
+      if (!row || row.user_id !== userId)
+        throw unprocessable(
+          'An attachment of this message was not found in this session.',
+          'attachment_not_found',
+        );
+      if (row.sent_at !== null)
+        throw unprocessable(
+          'An attachment of this message was already sent.',
+          'attachment_already_sent',
+        );
       rows.push(row);
     }
     return rows;
@@ -423,10 +493,13 @@ export class RunService {
     },
   ): MessageReceipt {
     if (this.#shuttingDown) throw conflict('The server is shutting down.', 'shutting_down');
+    this.#context.services.usage?.assertRequestAllowed(session.user_id, session.agent_id);
     const runId = newId();
     const now = Date.now();
     const sessionId = session.id;
-    const attachments = spec.attachmentIds.map((id) => this.#store.attachment(sessionId, id)).filter((row): row is AttachmentRow => row !== undefined);
+    const attachments = spec.attachmentIds
+      .map((id) => this.#store.attachment(sessionId, id))
+      .filter((row): row is AttachmentRow => row !== undefined);
     // Background the session was created with goes out in front of the first message the agent really gets.
     const seed = this.#undeliveredSeed(sessionId);
     const promptText = seed === null ? spec.promptText : `${seed}\n\n${spec.promptText}`;
@@ -434,7 +507,10 @@ export class RunService {
     try {
       this.#sessions.atomic(() => {
         if (this.#store.activeRun(sessionId)) throw busy();
-        if (spec.continuesRunId !== null && !this.#store.claimContinuation(spec.continuesRunId, userId, runId)) {
+        if (
+          spec.continuesRunId !== null &&
+          !this.#store.claimContinuation(spec.continuesRunId, userId, runId)
+        ) {
           throw conflict('That run was already continued or dismissed.', 'run_not_available');
         }
         const mode = spec.permissionMode ?? session.permission_mode;
@@ -450,7 +526,11 @@ export class RunService {
           wait_for_approval: spec.waitForApproval ? 1 : 0,
           status: 'accepted',
           source_text: spec.text,
-          prompt: JSON.stringify({ text: promptText, attachmentIds: spec.attachmentIds, quote: spec.quote }),
+          prompt: JSON.stringify({
+            text: promptText,
+            attachmentIds: spec.attachmentIds,
+            quote: spec.quote,
+          }),
           model: spec.model ?? session.model,
           effort: spec.effort ?? session.effort,
           permission_mode: mode,
@@ -508,14 +588,26 @@ export class RunService {
       });
     } catch (error) {
       // The unique index on active runs is the last line of defence against two runs in one session.
-      if (error instanceof Error && /UNIQUE constraint failed: agent_runs\.session_id/.test(error.message)) throw busy();
+      if (
+        error instanceof Error &&
+        /UNIQUE constraint failed: agent_runs\.session_id/.test(error.message)
+      )
+        throw busy();
       throw error;
     }
 
     const run = this.#track(runId, session, spec.unattended, spec.waitForApproval);
     this.#sessions.refreshAttention(sessionId, { announce: true });
-    setImmediate(() => void this.#launch(run));
-    return this.#presentReceipt(this.#store.receipt(userId, spec.requestId) ?? this.#syntheticReceipt(userId, spec, sessionId, runId, now), false);
+    setImmediate(() => {
+      const launch = this.#launch(run);
+      this.#launching.set(run.id, launch);
+      void launch.finally(() => this.#launching.delete(run.id)).catch(() => {});
+    });
+    return this.#presentReceipt(
+      this.#store.receipt(userId, spec.requestId) ??
+        this.#syntheticReceipt(userId, spec, sessionId, runId, now),
+      false,
+    );
   }
 
   /**
@@ -531,20 +623,47 @@ export class RunService {
     return session.seed;
   }
 
-  #syntheticReceipt(userId: string, spec: { requestId: string; hash: string }, sessionId: string, runId: string, at: number): ReceiptRow {
-    return { user_id: userId, request_id: spec.requestId, session_id: sessionId, request_hash: spec.hash, disposition: 'run', run_id: runId, queue_item_id: null, created_at: at };
+  #syntheticReceipt(
+    userId: string,
+    spec: { requestId: string; hash: string },
+    sessionId: string,
+    runId: string,
+    at: number,
+  ): ReceiptRow {
+    return {
+      user_id: userId,
+      request_id: spec.requestId,
+      session_id: sessionId,
+      request_hash: spec.hash,
+      disposition: 'run',
+      run_id: runId,
+      queue_item_id: null,
+      created_at: at,
+    };
   }
 
   #enqueue(
     session: SessionRow,
     userId: string,
-    spec: { requestId: string; hash: string; text: string; attachmentIds: string[]; quote: string | null; model?: string | undefined; effort?: string | undefined; permissionMode?: PermissionMode | undefined },
+    spec: {
+      requestId: string;
+      hash: string;
+      text: string;
+      attachmentIds: string[];
+      quote: string | null;
+      model?: string | undefined;
+      effort?: string | undefined;
+      permissionMode?: PermissionMode | undefined;
+    },
   ): MessageReceipt {
     const now = Date.now();
     const itemId = newId();
     this.#sessions.atomic(() => {
       if (this.#store.queueLength(session.id) >= AGENT_LIMITS.queueItems) {
-        throw conflict(`The queue is full (${AGENT_LIMITS.queueItems} messages). Send or remove one first.`, 'queue_full');
+        throw conflict(
+          `The queue is full (${AGENT_LIMITS.queueItems} messages). Send or remove one first.`,
+          'queue_full',
+        );
       }
       this.#store.insertQueueItem({
         id: itemId,
@@ -570,7 +689,14 @@ export class RunService {
       this.#store.markAttachmentsSent(session.id, spec.attachmentIds, now);
       this.#store.updateSession(
         session.id,
-        { model: spec.model, effort: spec.effort, permissionMode: spec.permissionMode, archivedAt: null, draft: '', draftUpdatedAt: now },
+        {
+          model: spec.model,
+          effort: spec.effort,
+          permissionMode: spec.permissionMode,
+          archivedAt: null,
+          draft: '',
+          draftUpdatedAt: now,
+        },
         now,
       );
     });
@@ -583,7 +709,13 @@ export class RunService {
   async #steer(
     sessionId: string,
     userId: string,
-    spec: { requestId: string; hash: string; text: string; attachmentIds: string[]; quote: string | null },
+    spec: {
+      requestId: string;
+      hash: string;
+      text: string;
+      attachmentIds: string[];
+      quote: string | null;
+    },
     attachments: readonly AttachmentRow[],
   ): Promise<MessageReceipt | null> {
     const run = this.#activeBySession.get(sessionId);
@@ -592,11 +724,19 @@ export class RunService {
     let taken = false;
     try {
       taken = await Promise.race([
-        Promise.resolve(steer.call(run.handle, { text: withQuote(spec.text, spec.quote), attachments: attachments.map((row) => this.#promptAttachment(row)) })),
+        Promise.resolve(
+          steer.call(run.handle, {
+            text: withQuote(spec.text, spec.quote),
+            attachments: attachments.map((row) => this.#promptAttachment(row)),
+          }),
+        ),
         run.settled.then(() => false),
       ]);
     } catch (error) {
-      this.#log.warn({ runId: run.id, err: redactSecrets(describeError(error)) }, 'steering a run failed');
+      this.#log.warn(
+        { runId: run.id, err: redactSecrets(describeError(error)) },
+        'steering a run failed',
+      );
     }
     if (!taken || !this.#store.session(sessionId)) return null;
     const now = Date.now();
@@ -612,7 +752,11 @@ export class RunService {
         created_at: now,
       });
       this.#store.markAttachmentsSent(sessionId, spec.attachmentIds, now);
-      this.#store.updateSession(sessionId, { lastUserMessageAt: now, draft: '', draftUpdatedAt: now }, now);
+      this.#store.updateSession(
+        sessionId,
+        { lastUserMessageAt: now, draft: '', draftUpdatedAt: now },
+        now,
+      );
       this.#sessions.append(sessionId, run.id, SESSION_EVENT.messageUser, {
         runId: run.id,
         requestId: spec.requestId,
@@ -629,7 +773,12 @@ export class RunService {
 
   // ---- the life of a run ---------------------------------------------------
 
-  #track(runId: string, session: SessionRow, unattended: boolean, waitForApproval: boolean): ActiveRun {
+  #track(
+    runId: string,
+    session: SessionRow,
+    unattended: boolean,
+    waitForApproval: boolean,
+  ): ActiveRun {
     let settle!: () => void;
     const settled = new Promise<void>((resolve) => {
       settle = resolve;
@@ -671,17 +820,43 @@ export class RunService {
         try {
           this.#onEvent(run, event);
         } catch (error) {
-          this.#log.error({ runId: run.id, err: redactSecrets(describeError(error)) }, 'recording an agent event failed');
+          this.#log.error(
+            { runId: run.id, err: redactSecrets(describeError(error)) },
+            'recording an agent event failed',
+          );
         }
       },
       requestPermission: (request) =>
-        this.#requestPermission(run, request).catch((error: unknown): PermissionDecision => {
-          this.#log.error({ runId: run.id, err: redactSecrets(describeError(error)) }, 'deciding a permission request failed');
-          return { behavior: 'deny', message: 'The Studio could not decide this request.', source: 'policy' };
-        }),
+        this.#requestPermission(run, request)
+          .then(async (decision) => {
+            if (decision.behavior === 'allow' && request.kind === 'edit' && request.paths?.length) {
+              await this.#context.services.agents.checkpoints.capture(
+                run.sessionId,
+                run.id,
+                run.userId,
+                run.projectId,
+                request.paths,
+              );
+            }
+            return decision;
+          })
+          .catch((error: unknown): PermissionDecision => {
+            this.#log.error(
+              { runId: run.id, err: redactSecrets(describeError(error)) },
+              'deciding a permission request failed',
+            );
+            return {
+              behavior: 'deny',
+              message: 'The Studio could not decide this request.',
+              source: 'policy',
+            };
+          }),
       askUser: (question) =>
         this.#askUser(run, question).catch((error: unknown): UserQuestionAnswer => {
-          this.#log.error({ runId: run.id, err: redactSecrets(describeError(error)) }, 'asking the user failed');
+          this.#log.error(
+            { runId: run.id, err: redactSecrets(describeError(error)) },
+            'asking the user failed',
+          );
           return { status: 'cancelled', answers: [] };
         }),
       studioTools: {
@@ -715,7 +890,11 @@ export class RunService {
     const mode = this.#sessions.effectiveModeOf(session, project);
     run.startedAt = Date.now();
     this.#sessions.atomic(() => {
-      this.#store.transitionRun(run.id, ['accepted'], { status: 'running', startedAt: run.startedAt, permissionMode: mode });
+      this.#store.transitionRun(run.id, ['accepted'], {
+        status: 'running',
+        startedAt: run.startedAt,
+        permissionMode: mode,
+      });
       this.#sessions.append(run.sessionId, run.id, SESSION_EVENT.runStarted, {
         runId: run.id,
         agentId: run.agentId,
@@ -725,9 +904,20 @@ export class RunService {
         origin: row.origin,
       });
     });
-    const reference = { runId: run.id, sessionId: run.sessionId, projectId: run.projectId, agentId: run.agentId };
+    const reference = {
+      runId: run.id,
+      sessionId: run.sessionId,
+      projectId: run.projectId,
+      agentId: run.agentId,
+    };
     this.#sessions.toUser(run.userId, USER_AGENT_EVENT.runStarted, reference);
-    this.#sessions.internal('run.started', { ...reference, userId: run.userId, origin: row.origin, unattended: run.unattended, title: session.title });
+    this.#sessions.internal('run.started', {
+      ...reference,
+      userId: run.userId,
+      origin: row.origin,
+      unattended: run.unattended,
+      title: session.title,
+    });
     this.#sessions.refreshAttention(run.sessionId, { announce: true });
     if (run.stopRequested) {
       // Stopped before the agent was even started: there is nothing to start.
@@ -737,28 +927,50 @@ export class RunService {
 
     try {
       const adapter = this.#adapters.get(run.agentId);
-      if (!adapter) throw new AgentRunError('agent_unavailable', 'The agent of this session is not available on this Studio.');
+      if (!adapter)
+        throw new AgentRunError(
+          'agent_unavailable',
+          'The agent of this session is not available on this Studio.',
+        );
       if (session.project_id !== null) {
-        if (!project) throw new AgentRunError('project_missing', 'The project of this session no longer exists.');
+        if (!project)
+          throw new AgentRunError(
+            'project_missing',
+            'The project of this session no longer exists.',
+          );
         if (!this.#context.services.projects.isAgentEnabled(project, run.agentId)) {
-          throw new AgentRunError('agent_not_enabled', 'This agent is no longer offered in this project.');
+          throw new AgentRunError(
+            'agent_not_enabled',
+            'This agent is no longer offered in this project.',
+          );
         }
         // The message may have waited in a queue: the person must still be allowed to work here.
         const principal = this.principalFor(run.userId);
-        if (!principal || this.#context.services.projects.accessOf(principal, project.id) !== 'write') {
-          throw new AgentRunError('access_revoked', 'You no longer have write access to this project.');
+        if (
+          !principal ||
+          this.#context.services.projects.accessOf(principal, project.id) !== 'write'
+        ) {
+          throw new AgentRunError(
+            'access_revoked',
+            'You no longer have write access to this project.',
+          );
         }
       }
-      const request = this.#buildRequest(run, row, session, project, mode);
+      if (session.fast_mode === 1)
+        requireFastMode(session.agent_id, row.model, await adapter.capabilities());
+      const request = await this.#buildRequest(run, row, session, project, mode);
       run.request = request;
-      const handle = await adapter.run(request, run.host);
-      if ((run.phase as ActiveRun['phase']) === 'finished') {
-        void Promise.resolve()
-          .then(() => handle.cancel())
-          .catch(() => {});
+      if (run.abort.signal.aborted || (run.phase as ActiveRun['phase']) === 'finished') {
+        this.#finish(run, { status: 'completed', error: null });
         return;
       }
+      const handle = await adapter.run(request, run.host);
       run.handle = handle;
+      if ((run.phase as ActiveRun['phase']) === 'finished') {
+        await handle.cancel();
+        await handle.done.catch(() => {});
+        return;
+      }
       run.phase = 'running';
       if (run.stopRequested) this.#cancelHandle(run);
       handle.done.then(
@@ -770,27 +982,65 @@ export class RunService {
     }
   }
 
-  #buildRequest(run: ActiveRun, row: RunRow, session: SessionRow, project: ProjectRecord | null, mode: PermissionMode): AgentRunRequest {
-    const prompt = JSON.parse(row.prompt) as { text: string; attachmentIds: string[]; quote: string | null };
+  async #buildRequest(
+    run: ActiveRun,
+    row: RunRow,
+    session: SessionRow,
+    project: ProjectRecord | null,
+    mode: PermissionMode,
+  ): Promise<AgentRunRequest> {
+    const account =
+      session.account_profile_id === null
+        ? null
+        : await this.#context.services.agents.accounts.environment(
+            session.user_id,
+            session.account_profile_id,
+            session.agent_id,
+          );
+    const prompt = JSON.parse(row.prompt) as {
+      text: string;
+      attachmentIds: string[];
+      quote: string | null;
+    };
     const attachments = prompt.attachmentIds
       .map((id) => this.#store.attachment(session.id, id))
       .filter((attachment): attachment is AttachmentRow => attachment !== undefined)
       .map((attachment) => this.#promptAttachment(attachment));
     const history: HistoryMessage[] = [];
     // Everything before this run's own user message.
-    const ownMessage = this.#store.eventsTail(session.id, 0, 4).find((event) => event.run_id === run.id && event.type === SESSION_EVENT.messageUser);
-    for (const event of this.#store.conversation(session.id, ownMessage?.seq ?? session.last_seq + 1, HISTORY_MESSAGES)) {
+    const ownMessage = this.#store
+      .eventsTail(session.id, 0, 4)
+      .find((event) => event.run_id === run.id && event.type === SESSION_EVENT.messageUser);
+    for (const event of this.#store.conversation(
+      session.id,
+      ownMessage?.seq ?? session.last_seq + 1,
+      HISTORY_MESSAGES,
+    )) {
       const data = JSON.parse(event.data) as { text: string; parentToolCallId?: string | null };
       if (event.type === SESSION_EVENT.messageAssistant && data.parentToolCallId) continue;
       if (data.text.trim() === '') continue;
-      history.push({ role: event.type === SESSION_EVENT.messageUser ? 'user' : 'assistant', text: data.text });
+      history.push({
+        role: event.type === SESSION_EVENT.messageUser ? 'user' : 'assistant',
+        text: data.text,
+      });
     }
     // The transcript keeps the person's own words, so the background the session began with is not in
     // it. An adapter that is handed the conversation as history finds it where it was said: at the start.
-    if (session.seed !== null && session.seed !== '' && history.length > 0 && !prompt.text.startsWith(session.seed)) {
+    if (
+      session.seed !== null &&
+      session.seed !== '' &&
+      history.length > 0 &&
+      !prompt.text.startsWith(session.seed)
+    ) {
       history.unshift({ role: 'user', text: session.seed });
     }
-    const token = this.#tokens.mint({ runId: run.id, sessionId: run.sessionId, projectId: run.projectId, userId: run.userId, agentId: run.agentId });
+    const token = this.#tokens.mint({
+      runId: run.id,
+      sessionId: run.sessionId,
+      projectId: run.projectId,
+      userId: run.userId,
+      agentId: run.agentId,
+    });
     return {
       runId: run.id,
       sessionId: run.sessionId,
@@ -802,6 +1052,8 @@ export class RunService {
       effort: row.effort,
       permissionMode: mode,
       nativeSessionId: session.native_session_id,
+      fastMode: session.fast_mode === 1,
+      ...(account ? { accountEnvironment: account.env, accountDirectory: account.directory } : {}),
       history,
       signal: run.abort.signal,
       bridge: this.#tokens.connection(token),
@@ -811,22 +1063,39 @@ export class RunService {
   }
 
   #outcomeOf(result: unknown): { status: 'completed' | 'failed'; error: RunError | null } {
-    const value = (result ?? {}) as { status?: unknown; error?: { code?: unknown; message?: unknown } };
+    const value = (result ?? {}) as {
+      status?: unknown;
+      error?: { code?: unknown; message?: unknown };
+    };
     if (value.status !== 'failed') return { status: 'completed', error: null };
     return {
       status: 'failed',
       error: {
         code: typeof value.error?.code === 'string' ? clip(value.error.code, 80) : 'agent_error',
-        message: typeof value.error?.message === 'string' ? clip(value.error.message, ERROR_CHARS) : 'The agent reported a failure.',
+        message:
+          typeof value.error?.message === 'string'
+            ? clip(value.error.message, ERROR_CHARS)
+            : 'The agent reported a failure.',
       },
     };
   }
 
   #failureOf(run: ActiveRun, error: unknown): { status: 'failed'; error: RunError } {
-    if (error instanceof AgentRunError) return { status: 'failed', error: { code: clip(error.code, 80), message: clip(error.message, ERROR_CHARS) } };
+    if (error instanceof AgentRunError)
+      return {
+        status: 'failed',
+        error: { code: clip(error.code, 80), message: clip(error.message, ERROR_CHARS) },
+      };
     // Anything else may carry paths, upstream bodies or credentials: it goes to the log, redacted, and not to the user.
-    if (!run.stopRequested) this.#log.error({ runId: run.id, agent: run.agentId, err: redactSecrets(describeError(error)) }, 'an agent run failed unexpectedly');
-    return { status: 'failed', error: { code: 'agent_error', message: 'The agent stopped unexpectedly.' } };
+    if (!run.stopRequested)
+      this.#log.error(
+        { runId: run.id, agent: run.agentId, err: redactSecrets(describeError(error)) },
+        'an agent run failed unexpectedly',
+      );
+    return {
+      status: 'failed',
+      error: { code: 'agent_error', message: 'The agent stopped unexpectedly.' },
+    };
   }
 
   #onEvent(run: ActiveRun, event: AgentEvent): void {
@@ -835,9 +1104,17 @@ export class RunService {
     const runId = run.id;
     switch (event.type) {
       case 'session': {
-        if (typeof event.nativeSessionId === 'string' && event.nativeSessionId !== '' && event.nativeSessionId.length <= 400) {
+        if (
+          typeof event.nativeSessionId === 'string' &&
+          event.nativeSessionId !== '' &&
+          event.nativeSessionId.length <= 400
+        ) {
           const before = this.#store.session(sessionId);
-          this.#store.updateSession(sessionId, { nativeSessionId: event.nativeSessionId }, Date.now());
+          this.#store.updateSession(
+            sessionId,
+            { nativeSessionId: event.nativeSessionId },
+            Date.now(),
+          );
           if (before && before.native_session_id === null) this.#sessions.announceUpdate(sessionId);
         }
         return;
@@ -848,16 +1125,24 @@ export class RunService {
         const kind = event.type === 'text.delta' ? 'text' : 'thinking';
         const messageId = String(event.messageId);
         let block = run.streaming.get(messageId);
-        if (!block) run.streaming.set(messageId, (block = { kind, text: '', parentToolCallId: event.parentToolCallId ?? null }));
+        if (!block)
+          run.streaming.set(
+            messageId,
+            (block = { kind, text: '', parentToolCallId: event.parentToolCallId ?? null }),
+          );
         const offset = block.text.length;
         block.text += event.text;
-        this.#sessions.live(sessionId, kind === 'text' ? LIVE_EVENT.messageDelta : LIVE_EVENT.thinkingDelta, {
-          runId,
-          messageId,
-          offset,
-          text: event.text,
-          parentToolCallId: block.parentToolCallId,
-        });
+        this.#sessions.live(
+          sessionId,
+          kind === 'text' ? LIVE_EVENT.messageDelta : LIVE_EVENT.thinkingDelta,
+          {
+            runId,
+            messageId,
+            offset,
+            text: event.text,
+            parentToolCallId: block.parentToolCallId,
+          },
+        );
         return;
       }
       case 'text': {
@@ -887,7 +1172,11 @@ export class RunService {
       }
       case 'tool.started': {
         const bounded = boundInput(event.input);
-        run.openTools.set(String(event.toolCallId), { name: String(event.name), input: event.input, claimed: false });
+        run.openTools.set(String(event.toolCallId), {
+          name: String(event.name),
+          input: event.input,
+          claimed: false,
+        });
         this.#sessions.append(sessionId, runId, SESSION_EVENT.toolStarted, {
           runId,
           toolCallId: String(event.toolCallId),
@@ -903,8 +1192,15 @@ export class RunService {
       case 'tool.output': {
         if (typeof event.text !== 'string' || event.text === '') return;
         const toolCallId = String(event.toolCallId);
-        run.toolTails.set(toolCallId, ((run.toolTails.get(toolCallId) ?? '') + event.text).slice(-TAIL_CHARS));
-        this.#sessions.live(sessionId, LIVE_EVENT.toolOutput, { runId, toolCallId, text: clip(event.text, 64_000) });
+        run.toolTails.set(
+          toolCallId,
+          ((run.toolTails.get(toolCallId) ?? '') + event.text).slice(-TAIL_CHARS),
+        );
+        this.#sessions.live(sessionId, LIVE_EVENT.toolOutput, {
+          runId,
+          toolCallId,
+          text: clip(event.text, 64_000),
+        });
         return;
       }
       case 'tool.finished': {
@@ -915,7 +1211,9 @@ export class RunService {
         const refusal = event.status === 'error' ? this.#takeRefusal(run, toolCallId) : null;
         run.openTools.delete(toolCallId);
         run.refusedTools.delete(toolCallId);
-        const output = boundOutput(refusal !== null ? refusal : typeof event.output === 'string' ? event.output : '');
+        const output = boundOutput(
+          refusal !== null ? refusal : typeof event.output === 'string' ? event.output : '',
+        );
         const diffs = boundDiffs(event.diffs ?? []);
         this.#sessions.append(sessionId, runId, SESSION_EVENT.toolFinished, {
           runId,
@@ -929,7 +1227,9 @@ export class RunService {
         return;
       }
       case 'todos': {
-        const items = (event.items ?? []).slice(0, 200).map((item) => ({ text: clip(String(item.text), 1000), status: item.status }));
+        const items = (event.items ?? [])
+          .slice(0, 200)
+          .map((item) => ({ text: clip(String(item.text), 1000), status: item.status }));
         this.#sessions.append(sessionId, runId, SESSION_EVENT.todosUpdated, { runId, items });
         return;
       }
@@ -946,7 +1246,8 @@ export class RunService {
         return;
       case 'title': {
         const title = typeof event.title === 'string' ? cleanProposedTitle(event.title) : null;
-        if (title && this.#sessions.rename(sessionId, title, 'agent')) this.#sessions.announceUpdate(sessionId);
+        if (title && this.#sessions.rename(sessionId, title, 'agent'))
+          this.#sessions.announceUpdate(sessionId);
         return;
       }
       default:
@@ -955,10 +1256,14 @@ export class RunService {
   }
 
   #recordUsage(run: ActiveRun, event: Extract<AgentEvent, { type: 'usage' }>): void {
-    const count = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0);
+    const count = (value: unknown): number =>
+      typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0;
     const model = clip(String(event.model || 'unknown'), 200);
     const previous = event.cumulative ? undefined : run.usage.get(model);
-    const cost = typeof event.costUsd === 'number' && Number.isFinite(event.costUsd) && event.costUsd >= 0 ? event.costUsd : null;
+    const cost =
+      typeof event.costUsd === 'number' && Number.isFinite(event.costUsd) && event.costUsd >= 0
+        ? event.costUsd
+        : null;
     const total = {
       input: (previous?.input ?? 0) + count(event.inputTokens),
       output: (previous?.output ?? 0) + count(event.outputTokens),
@@ -1003,7 +1308,10 @@ export class RunService {
   }
 
   /** Ends a run: exactly once, whatever raced to get here. */
-  #finish(run: ActiveRun, outcome: { status: 'completed' | 'failed'; error: RunError | null }): void {
+  #finish(
+    run: ActiveRun,
+    outcome: { status: 'completed' | 'failed'; error: RunError | null },
+  ): void {
     if (run.phase === 'finished') return;
     if (this.#shuttingDown) {
       // The process is going down: the run stays "running" on disk and is marked interrupted at the next start.
@@ -1044,9 +1352,16 @@ export class RunService {
             });
           }
         }
-        for (const approval of this.#store.pendingApprovalsOfRun(run.id)) this.#resolve(approval.id, { status: 'cancelled', decidedBy: null, note: null, answers: null });
+        for (const approval of this.#store.pendingApprovalsOfRun(run.id))
+          this.#resolve(approval.id, {
+            status: 'cancelled',
+            decidedBy: null,
+            note: null,
+            answers: null,
+          });
         // A finished result counts as seen when its owner is looking at the session; a stop is the owner's own doing.
-        const seen = status === 'stopped' || (status === 'completed' && viewers.includes(run.userId));
+        const seen =
+          status === 'stopped' || (status === 'completed' && viewers.includes(run.userId));
         recorded = this.#store.transitionRun(run.id, ['accepted', 'running'], {
           status,
           finishedAt: now,
@@ -1069,7 +1384,12 @@ export class RunService {
     this.#forget(run);
 
     if (session && recorded) {
-      const reference = { runId: run.id, sessionId: run.sessionId, projectId: run.projectId, agentId: run.agentId };
+      const reference = {
+        runId: run.id,
+        sessionId: run.sessionId,
+        projectId: run.projectId,
+        agentId: run.agentId,
+      };
       this.#sessions.toUser(run.userId, USER_AGENT_EVENT.runFinished, { ...reference, status });
       this.#sessions.internal('run.finished', {
         ...reference,
@@ -1092,7 +1412,8 @@ export class RunService {
     run.phase = 'finished';
     this.#tokens.revokeRun(run.id);
     this.#active.delete(run.id);
-    if (this.#activeBySession.get(run.sessionId) === run) this.#activeBySession.delete(run.sessionId);
+    if (this.#activeBySession.get(run.sessionId) === run)
+      this.#activeBySession.delete(run.sessionId);
     for (const [id, waiter] of this.#waiters) {
       if (waiter.run !== run) continue;
       if (waiter.timer) clearTimeout(waiter.timer);
@@ -1107,7 +1428,12 @@ export class RunService {
     if (!handle) return;
     void Promise.resolve()
       .then(() => handle.cancel())
-      .catch((error: unknown) => this.#log.warn({ runId: run.id, err: redactSecrets(describeError(error)) }, 'cancelling an agent failed'));
+      .catch((error: unknown) =>
+        this.#log.warn(
+          { runId: run.id, err: redactSecrets(describeError(error)) },
+          'cancelling an agent failed',
+        ),
+      );
   }
 
   // ---- stop ----------------------------------------------------------------
@@ -1123,11 +1449,20 @@ export class RunService {
   async #stopRun(run: ActiveRun): Promise<void> {
     if (!run.stopRequested && run.phase !== 'finished') {
       run.stopRequested = true;
-      for (const approval of this.#store.pendingApprovalsOfRun(run.id)) this.#resolve(approval.id, { status: 'cancelled', decidedBy: null, note: null, answers: null });
+      for (const approval of this.#store.pendingApprovalsOfRun(run.id))
+        this.#resolve(approval.id, {
+          status: 'cancelled',
+          decidedBy: null,
+          note: null,
+          answers: null,
+        });
       run.abort.abort();
       this.#cancelHandle(run);
       // An agent that does not wind down in time is left behind; the run still ends, once.
-      run.stopTimer = setTimeout(() => this.#finish(run, { status: 'completed', error: null }), this.#options.stopGraceMs);
+      run.stopTimer = setTimeout(
+        () => this.#finish(run, { status: 'completed', error: null }),
+        this.#options.stopGraceMs,
+      );
       run.stopTimer.unref();
     }
     await run.settled;
@@ -1161,7 +1496,10 @@ export class RunService {
   }
 
   #announceQueue(sessionId: string, taken: { itemId: string; runId: string } | null): void {
-    this.#sessions.live(sessionId, LIVE_EVENT.queueChanged, { queue: this.#queueOf(sessionId), taken });
+    this.#sessions.live(sessionId, LIVE_EVENT.queueChanged, {
+      queue: this.#queueOf(sessionId),
+      taken,
+    });
   }
 
   queue(principal: Principal, sessionId: string): QueuedMessage[] {
@@ -1189,7 +1527,10 @@ export class RunService {
   }
 
   #notQueued() {
-    return conflict('That message is no longer queued — it may already have been sent.', 'not_queued');
+    return conflict(
+      'That message is no longer queued — it may already have been sent.',
+      'not_queued',
+    );
   }
 
   /** Sends one queued message ahead of the rest: into the running turn if it can take it, otherwise as the very next turn. */
@@ -1201,15 +1542,25 @@ export class RunService {
 
     if (run && run.handle?.steer && run.phase === 'running' && !run.stopRequested) {
       const ids = JSON.parse(item.attachment_ids) as string[];
-      const attachments = ids.map((id) => this.#store.attachment(sessionId, id)).filter((row): row is AttachmentRow => row !== undefined);
+      const attachments = ids
+        .map((id) => this.#store.attachment(sessionId, id))
+        .filter((row): row is AttachmentRow => row !== undefined);
       let taken = false;
       try {
         taken = await Promise.race([
-          Promise.resolve(run.handle.steer({ text: withQuote(item.text, item.quote), attachments: attachments.map((row) => this.#promptAttachment(row)) })),
+          Promise.resolve(
+            run.handle.steer({
+              text: withQuote(item.text, item.quote),
+              attachments: attachments.map((row) => this.#promptAttachment(row)),
+            }),
+          ),
           run.settled.then(() => false),
         ]);
       } catch (error) {
-        this.#log.warn({ runId: run.id, err: redactSecrets(describeError(error)) }, 'steering a run failed');
+        this.#log.warn(
+          { runId: run.id, err: redactSecrets(describeError(error)) },
+          'steering a run failed',
+        );
       }
       // The item may have been sent or removed while the agent was deciding.
       if (taken && this.#store.queueItem(sessionId, itemId)) {
@@ -1256,7 +1607,10 @@ export class RunService {
         try {
           this.#drain(sessionId, false);
         } catch (error) {
-          this.#log.error({ sessionId, err: redactSecrets(describeError(error)) }, 'sending a queued message failed');
+          this.#log.error(
+            { sessionId, err: redactSecrets(describeError(error)) },
+            'sending a queued message failed',
+          );
         }
       }),
     );
@@ -1274,14 +1628,23 @@ export class RunService {
     if (!session || !item) return null;
     if (!force) {
       const latest = this.#store.latestRun(sessionId);
-      if (latest && (latest.status === 'failed' || latest.status === 'interrupted') && latest.dismissed_at === null && latest.continued_by_run_id === null) {
+      if (
+        latest &&
+        (latest.status === 'failed' || latest.status === 'interrupted') &&
+        latest.dismissed_at === null &&
+        latest.continued_by_run_id === null
+      ) {
         return null;
       }
     }
     // The account behind a queued message may have lost its access since; then it simply stays queued.
     const principal = this.principalFor(item.user_id);
     if (!principal) return null;
-    if (session.project_id !== null && this.#context.services.projects.accessOf(principal, session.project_id) !== 'write') return null;
+    if (
+      session.project_id !== null &&
+      this.#context.services.projects.accessOf(principal, session.project_id) !== 'write'
+    )
+      return null;
 
     const receipt = this.#store.receipt(item.user_id, item.request_id);
     let runId: string | null = null;
@@ -1308,10 +1671,24 @@ export class RunService {
 
   // ---- recovery records ----------------------------------------------------
 
-  listRuns(principal: Principal, query: { state: 'unresolved' | 'active' | 'all'; projectId?: string | undefined; sessionId?: string | undefined; limit: number }): Run[] {
-    if (query.sessionId !== undefined) this.#sessions.requireSession(principal, query.sessionId, 'view');
-    if (query.projectId !== undefined) this.#context.services.projects.requireAccess(principal, query.projectId);
-    const visible = new Set(this.#context.services.projects.list(principal, { includeArchived: true }).map((project) => project.id));
+  listRuns(
+    principal: Principal,
+    query: {
+      state: 'unresolved' | 'active' | 'all';
+      projectId?: string | undefined;
+      sessionId?: string | undefined;
+      limit: number;
+    },
+  ): Run[] {
+    if (query.sessionId !== undefined)
+      this.#sessions.requireSession(principal, query.sessionId, 'view');
+    if (query.projectId !== undefined)
+      this.#context.services.projects.requireAccess(principal, query.projectId);
+    const visible = new Set(
+      this.#context.services.projects
+        .list(principal, { includeArchived: true })
+        .map((project) => project.id),
+    );
     return this.#store
       .listRuns({
         // Without a session the list is the caller's own runs. With one, it is that session's runs: whoever may
@@ -1333,7 +1710,8 @@ export class RunService {
     try {
       this.#sessions.requireSession(principal, row.session_id, need);
     } catch (error) {
-      if ((error as { status?: number }).status === 404) throw notFound('No such run.', 'run_not_found');
+      if ((error as { status?: number }).status === 404)
+        throw notFound('No such run.', 'run_not_found');
       throw error;
     }
     return row;
@@ -1349,15 +1727,25 @@ export class RunService {
    * record; it uses the session's current model and permission mode, and no
    * earlier approval carries over.
    */
-  async continueRun(principal: Principal, runId: string, requestId: string): Promise<MessageReceipt> {
+  async continueRun(
+    principal: Principal,
+    runId: string,
+    requestId: string,
+  ): Promise<MessageReceipt> {
     const record = this.#requireRun(principal, runId, 'write');
     const session = this.#store.session(record.session_id)!;
     const hash = sha256(JSON.stringify(['continue', runId]));
     const known = this.#store.receipt(principal.userId, requestId);
     if (known) return this.#duplicate(known, hash, session.id);
-    if (record.status !== 'failed' && record.status !== 'interrupted') throw conflict('Only a failed or interrupted run can be continued.', 'run_not_continuable');
-    if (record.continued_by_run_id !== null || record.dismissed_at !== null) throw conflict('That run was already continued or dismissed.', 'run_not_available');
-    if (!this.#adapters.has(session.agent_id)) throw unprocessable('The agent of this session is not available on this Studio.', 'agent_unavailable');
+    if (record.status !== 'failed' && record.status !== 'interrupted')
+      throw conflict('Only a failed or interrupted run can be continued.', 'run_not_continuable');
+    if (record.continued_by_run_id !== null || record.dismissed_at !== null)
+      throw conflict('That run was already continued or dismissed.', 'run_not_available');
+    if (!this.#adapters.has(session.agent_id))
+      throw unprocessable(
+        'The agent of this session is not available on this Studio.',
+        'agent_unavailable',
+      );
     const prompt = JSON.parse(record.prompt) as { attachmentIds: string[]; quote: string | null };
     return Promise.resolve(
       this.#start(session, principal.userId, {
@@ -1380,7 +1768,8 @@ export class RunService {
   /** Marks a failed or interrupted run as dealt with, without running anything. */
   dismissRun(principal: Principal, runId: string): { run: Run; alreadyHandled: boolean } {
     const record = this.#requireRun(principal, runId, 'control');
-    if (record.status === 'accepted' || record.status === 'running') throw conflict('That run is still in progress.', 'run_in_progress');
+    if (record.status === 'accepted' || record.status === 'running')
+      throw conflict('That run is still in progress.', 'run_in_progress');
     if (record.status !== 'failed' && record.status !== 'interrupted') {
       // A finished result: acknowledging it marks it read.
       this.#sessions.markSeen(record.session_id);
@@ -1405,7 +1794,14 @@ export class RunService {
       sessionId,
       lastSeq: session.last_seq,
       run: row ? presentRun(row) : null,
-      streaming: run ? [...run.streaming].map(([messageId, block]) => ({ messageId, kind: block.kind, text: block.text, parentToolCallId: block.parentToolCallId })) : [],
+      streaming: run
+        ? [...run.streaming].map(([messageId, block]) => ({
+            messageId,
+            kind: block.kind,
+            text: block.text,
+            parentToolCallId: block.parentToolCallId,
+          }))
+        : [],
       toolOutput: run ? [...run.toolTails].map(([toolCallId, text]) => ({ toolCallId, text })) : [],
       pendingApprovals: this.#store.pendingApprovalsOfSession(sessionId).map(presentApproval),
       queue: this.#queueOf(sessionId),
@@ -1416,11 +1812,24 @@ export class RunService {
   // ---- permissions ---------------------------------------------------------
 
   #rulesFor(run: { userId: string; projectId: string | null; sessionId: string }): EngineRule[] {
-    return this.#store.rulesForRun(run).map((rule) => ({ id: rule.id, scope: rule.scope, effect: rule.effect, tool: rule.tool, pattern: rule.pattern }));
+    return this.#store.rulesForRun(run).map((rule) => ({
+      id: rule.id,
+      scope: rule.scope,
+      effect: rule.effect,
+      tool: rule.tool,
+      pattern: rule.pattern,
+    }));
   }
 
-  async #requestPermission(run: ActiveRun, request: PermissionRequest): Promise<PermissionDecision> {
-    const cancelled: PermissionDecision = { behavior: 'deny', message: 'The run was stopped.', source: 'cancelled' };
+  async #requestPermission(
+    run: ActiveRun,
+    request: PermissionRequest,
+  ): Promise<PermissionDecision> {
+    const cancelled: PermissionDecision = {
+      behavior: 'deny',
+      message: 'The run was stopped.',
+      source: 'cancelled',
+    };
     if (run.phase === 'finished' || run.stopRequested || this.#shuttingDown) return cancelled;
     const session = this.#store.session(run.sessionId);
     if (!session) return cancelled;
@@ -1428,12 +1837,22 @@ export class RunService {
     const env = this.#environment(session, project);
     const toolName = clip(String(request.toolName), 200);
     const command = typeof request.command === 'string' ? request.command : null;
-    const paths = (request.paths ?? []).filter((entry): entry is string => typeof entry === 'string').slice(0, 200);
+    const paths = (request.paths ?? [])
+      .filter((entry): entry is string => typeof entry === 'string')
+      .slice(0, 200);
 
     if (request.approval === 'plan') {
       if (run.unattended && !run.waitForApproval) {
-        this.#notice(run, 'approval_skipped', 'Nobody is watching this run, so its plan was not put up for approval.');
-        return { behavior: 'deny', message: 'Nobody is available to approve the plan in an unattended run.', source: 'unattended' };
+        this.#notice(
+          run,
+          'approval_skipped',
+          'Nobody is watching this run, so its plan was not put up for approval.',
+        );
+        return {
+          behavior: 'deny',
+          message: 'Nobody is available to approve the plan in an unattended run.',
+          source: 'unattended',
+        };
       }
       const resolution = await this.#ask(run, session, {
         kind: 'plan',
@@ -1441,7 +1860,15 @@ export class RunService {
         toolKind: request.kind,
         toolCallId: request.toolCallId ?? null,
         title: request.title ?? 'Approve the plan',
-        detail: { command: null, paths: [], diff: null, input: boundInput(request.input).input, plan: clip(String(request.plan ?? ''), 200_000), questions: null, suggestedRule: null },
+        detail: {
+          command: null,
+          paths: [],
+          diff: null,
+          input: boundInput(request.input).input,
+          plan: clip(String(request.plan ?? ''), 200_000),
+          questions: null,
+          suggestedRule: null,
+        },
         risk: 'medium',
         categories: [],
         reason: 'The agent has a plan and waits for your approval before it changes anything.',
@@ -1452,22 +1879,63 @@ export class RunService {
       return this.#decisionFrom(resolution, request.input, 'Keep revising the plan.');
     }
 
-    const toolRequest: ToolRequest = { toolName, kind: request.kind, command, paths, url: request.url ?? null };
-    const outcome = evaluatePermission({ request: toolRequest, mode: session.permission_mode, rules: this.#rulesFor(run), env });
+    const toolRequest: ToolRequest = {
+      toolName,
+      kind: request.kind,
+      command,
+      paths,
+      url: request.url ?? null,
+    };
+    const outcome = evaluatePermission({
+      request: toolRequest,
+      mode: session.permission_mode,
+      rules: this.#rulesFor(run),
+      env,
+    });
     // `requireHuman`: what the mode or a rule would allow is still put to a person, and cannot be remembered.
     const mustAsk = request.requireHuman === true && outcome.decision === 'allow';
 
     if (outcome.decision === 'allow' && !mustAsk) {
-      if (outcome.risk === 'dangerous') this.#audit('approval.auto-allowed', run.userId, request, `auto mode · ${outcome.categories.join(', ')}`);
-      return { behavior: 'allow', updatedInput: request.input, source: outcome.code === 'allow_rule' ? 'rule' : 'mode' };
+      if (outcome.risk === 'dangerous')
+        this.#audit(
+          'approval.auto-allowed',
+          run.userId,
+          request,
+          `auto mode · ${outcome.categories.join(', ')}`,
+        );
+      return {
+        behavior: 'allow',
+        updatedInput: request.input,
+        source: outcome.code === 'allow_rule' ? 'rule' : 'mode',
+      };
     }
     if (outcome.decision === 'deny') {
-      if (outcome.risk === 'dangerous') this.#audit('approval.auto-denied', run.userId, request, `${outcome.code} · ${outcome.categories.join(', ')}`, 'failure');
-      return { behavior: 'deny', message: outcome.reason, source: outcome.code === 'deny_rule' ? 'rule' : outcome.code === 'hard_deny' ? 'policy' : 'mode' };
+      if (outcome.risk === 'dangerous')
+        this.#audit(
+          'approval.auto-denied',
+          run.userId,
+          request,
+          `${outcome.code} · ${outcome.categories.join(', ')}`,
+          'failure',
+        );
+      return {
+        behavior: 'deny',
+        message: outcome.reason,
+        source:
+          outcome.code === 'deny_rule' ? 'rule' : outcome.code === 'hard_deny' ? 'policy' : 'mode',
+      };
     }
     if (run.unattended && !run.waitForApproval) {
-      this.#notice(run, 'approval_skipped', `Nobody is watching this run, so "${clip(request.title ?? toolName, 200)}" was denied instead of waiting for approval.`);
-      return { behavior: 'deny', message: 'This needs approval, and nobody is watching an unattended run.', source: 'unattended' };
+      this.#notice(
+        run,
+        'approval_skipped',
+        `Nobody is watching this run, so "${clip(request.title ?? toolName, 200)}" was denied instead of waiting for approval.`,
+      );
+      return {
+        behavior: 'deny',
+        message: 'This needs approval, and nobody is watching an unattended run.',
+        source: 'unattended',
+      };
     }
 
     const resolution = await this.#ask(run, session, {
@@ -1479,7 +1947,8 @@ export class RunService {
       detail: {
         command: command === null ? null : clip(command, 100_000),
         paths,
-        diff: typeof request.diff === 'string' ? clip(request.diff, AGENT_LIMITS.toolDiffChars) : null,
+        diff:
+          typeof request.diff === 'string' ? clip(request.diff, AGENT_LIMITS.toolDiffChars) : null,
         input: boundInput(request.input).input,
         plan: null,
         questions: null,
@@ -1487,14 +1956,26 @@ export class RunService {
       },
       risk: outcome.risk,
       categories: outcome.categories,
-      reason: mustAsk ? 'This is not covered by the permission mode or by saved rules: a person has to approve it each time.' : outcome.reason,
+      reason: mustAsk
+        ? 'This is not covered by the permission mode or by saved rules: a person has to approve it each time.'
+        : outcome.reason,
       // Without the engine's request a rule saved later cannot answer this one in passing.
       toolRequest: request.requireHuman === true ? null : toolRequest,
       questions: null,
       ttlMs: this.#options.approvalTtlMs,
     });
-    if (outcome.risk === 'dangerous' && (resolution.status === 'allowed' || resolution.status === 'denied' || resolution.status === 'expired')) {
-      this.#audit(resolution.status === 'allowed' ? 'approval.allowed' : 'approval.denied', resolution.decidedBy ?? run.userId, request, `${resolution.status} · ${outcome.categories.join(', ')}`);
+    if (
+      outcome.risk === 'dangerous' &&
+      (resolution.status === 'allowed' ||
+        resolution.status === 'denied' ||
+        resolution.status === 'expired')
+    ) {
+      this.#audit(
+        resolution.status === 'allowed' ? 'approval.allowed' : 'approval.denied',
+        resolution.decidedBy ?? run.userId,
+        request,
+        `${resolution.status} · ${outcome.categories.join(', ')}`,
+      );
     }
     return this.#decisionFrom(resolution, request.input, 'The user denied this request.');
   }
@@ -1504,20 +1985,33 @@ export class RunService {
       case 'allowed':
         return { behavior: 'allow', updatedInput: input, source: 'user' };
       case 'denied':
-        return { behavior: 'deny', message: resolution.note && resolution.note.trim() !== '' ? resolution.note : denial, source: 'user' };
+        return {
+          behavior: 'deny',
+          message: resolution.note && resolution.note.trim() !== '' ? resolution.note : denial,
+          source: 'user',
+        };
       case 'expired':
-        return { behavior: 'deny', message: 'Nobody answered in time, so this was denied.', source: 'expired' };
+        return {
+          behavior: 'deny',
+          message: 'Nobody answered in time, so this was denied.',
+          source: 'expired',
+        };
       default:
         return { behavior: 'deny', message: 'The run was stopped.', source: 'cancelled' };
     }
   }
 
   async #askUser(run: ActiveRun, question: UserQuestionRequest): Promise<UserQuestionAnswer> {
-    if (run.phase === 'finished' || run.stopRequested || this.#shuttingDown) return { status: 'cancelled', answers: [] };
+    if (run.phase === 'finished' || run.stopRequested || this.#shuttingDown)
+      return { status: 'cancelled', answers: [] };
     const session = this.#store.session(run.sessionId);
     if (!session) return { status: 'cancelled', answers: [] };
     if (run.unattended && !run.waitForApproval) {
-      this.#notice(run, 'question_skipped', 'Nobody is watching this run, so the agent\'s question was left for it to decide.');
+      this.#notice(
+        run,
+        'question_skipped',
+        "Nobody is watching this run, so the agent's question was left for it to decide.",
+      );
       return { status: 'unattended', answers: [] };
     }
     const questions: Question[] = (question.questions ?? []).slice(0, 20).map((entry, index) => ({
@@ -1526,8 +2020,12 @@ export class RunService {
       question: clip(String(entry.question ?? ''), 4000),
       options: (entry.options ?? []).slice(0, 20).map((option) => ({
         label: clip(String(option.label), 2000),
-        ...(option.description === undefined ? {} : { description: clip(String(option.description), 4000) }),
-        ...(option.recommended === true || RECOMMENDED.test(String(option.label)) ? { recommended: true } : {}),
+        ...(option.description === undefined
+          ? {}
+          : { description: clip(String(option.description), 4000) }),
+        ...(option.recommended === true || RECOMMENDED.test(String(option.label))
+          ? { recommended: true }
+          : {}),
       })),
       multiSelect: entry.multiSelect === true,
     }));
@@ -1536,8 +2034,19 @@ export class RunService {
       toolName: null,
       toolKind: null,
       toolCallId: question.toolCallId ?? null,
-      title: questions.length === 1 ? clip(questions[0]!.question, 200) : `${questions.length} questions from the agent`,
-      detail: { command: null, paths: [], diff: null, input: null, plan: null, questions, suggestedRule: null },
+      title:
+        questions.length === 1
+          ? clip(questions[0]!.question, 200)
+          : `${questions.length} questions from the agent`,
+      detail: {
+        command: null,
+        paths: [],
+        diff: null,
+        input: null,
+        plan: null,
+        questions,
+        suggestedRule: null,
+      },
       risk: 'low',
       categories: [],
       reason: 'The agent needs an answer from you to continue.',
@@ -1559,17 +2068,31 @@ export class RunService {
 
   #notice(run: ActiveRun, code: string, text: string): void {
     if (run.phase === 'finished') return;
-    this.#sessions.append(run.sessionId, run.id, SESSION_EVENT.notice, { runId: run.id, level: 'warning', code, text });
+    this.#sessions.append(run.sessionId, run.id, SESSION_EVENT.notice, {
+      runId: run.id,
+      level: 'warning',
+      code,
+      text,
+    });
   }
 
-  #audit(action: string, userId: string, request: PermissionRequest, detail: string, category: 'change' | 'failure' = 'change'): void {
+  #audit(
+    action: string,
+    userId: string,
+    request: PermissionRequest,
+    detail: string,
+    category: 'change' | 'failure' = 'change',
+  ): void {
     try {
       this.#context.services.audit.record({
         category,
         action,
         userId,
         subject: clip(String(request.title ?? request.toolName), 180),
-        detail: clip(`${detail}${typeof request.command === 'string' ? ` · ${request.command}` : ''}`, 480),
+        detail: clip(
+          `${detail}${typeof request.command === 'string' ? ` · ${request.command}` : ''}`,
+          480,
+        ),
       });
     } catch (error) {
       this.#log.error({ err: describeError(error) }, 'writing the audit log failed');
@@ -1634,11 +2157,17 @@ export class RunService {
       try {
         this.#sessions.atomic(() => {
           this.#store.insertApproval(row);
-          this.#sessions.append(run.sessionId, run.id, SESSION_EVENT.approvalRequested, { runId: run.id, approval });
+          this.#sessions.append(run.sessionId, run.id, SESSION_EVENT.approvalRequested, {
+            runId: run.id,
+            approval,
+          });
         });
       } catch (error) {
         this.#waiters.delete(row.id);
-        this.#log.error({ runId: run.id, err: redactSecrets(describeError(error)) }, 'recording an approval failed');
+        this.#log.error(
+          { runId: run.id, err: redactSecrets(describeError(error)) },
+          'recording an approval failed',
+        );
         resolve({ status: 'cancelled', decidedBy: null, note: null, answers: null });
         return;
       }
@@ -1651,7 +2180,8 @@ export class RunService {
       // A member cannot allow a dangerous request: the owners are told too.
       if (approval.requiresOwner) {
         for (const owner of this.#owners()) {
-          if (owner !== run.userId) this.#sessions.toUser(owner, USER_AGENT_EVENT.approvalPending, { approval });
+          if (owner !== run.userId)
+            this.#sessions.toUser(owner, USER_AGENT_EVENT.approvalPending, { approval });
         }
       }
       this.#sessions.internal('approval.pending', {
@@ -1696,7 +2226,12 @@ export class RunService {
       if (won) {
         // An approved plan lets the work start: the session leaves plan mode in the same step, so that
         // whoever hears of the approval — the agent first of all — already finds the new mode in force.
-        if (resolution.sessionMode !== undefined) this.#store.updateSession(row.session_id, { permissionMode: resolution.sessionMode }, Date.now());
+        if (resolution.sessionMode !== undefined)
+          this.#store.updateSession(
+            row.session_id,
+            { permissionMode: resolution.sessionMode },
+            Date.now(),
+          );
         this.#sessions.append(row.session_id, row.run_id, SESSION_EVENT.approvalResolved, {
           runId: row.run_id,
           approvalId,
@@ -1714,14 +2249,25 @@ export class RunService {
       if (waiter.timer) clearTimeout(waiter.timer);
       this.#waiters.delete(approvalId);
     }
-    const summary = { approvalId, sessionId: row.session_id, runId: row.run_id, status: resolution.status };
+    const summary = {
+      approvalId,
+      sessionId: row.session_id,
+      runId: row.run_id,
+      status: resolution.status,
+    };
     this.#sessions.toUser(row.user_id, USER_AGENT_EVENT.approvalResolved, summary);
     if (row.risk === 'dangerous') {
       for (const owner of this.#owners()) {
-        if (owner !== row.user_id) this.#sessions.toUser(owner, USER_AGENT_EVENT.approvalResolved, summary);
+        if (owner !== row.user_id)
+          this.#sessions.toUser(owner, USER_AGENT_EVENT.approvalResolved, summary);
       }
     }
-    this.#sessions.internal('approval.resolved', { ...summary, projectId: row.project_id, userId: row.user_id, decidedBy: resolution.decidedBy });
+    this.#sessions.internal('approval.resolved', {
+      ...summary,
+      projectId: row.project_id,
+      userId: row.user_id,
+      decidedBy: resolution.decidedBy,
+    });
     this.#sessions.refreshAttention(row.session_id, { announce: true });
     waiter?.resolve(resolution);
     return true;
@@ -1735,8 +2281,13 @@ export class RunService {
       waiter?.kind === 'question' && waiter.questions
         ? waiter.questions
             .map((question): QuestionAnswer => {
-              const recommended = question.options.filter((option) => option.recommended === true).map((option) => option.label);
-              return { questionId: question.id, selected: question.multiSelect ? recommended : recommended.slice(0, 1) };
+              const recommended = question.options
+                .filter((option) => option.recommended === true)
+                .map((option) => option.label);
+              return {
+                questionId: question.id,
+                selected: question.multiSelect ? recommended : recommended.slice(0, 1),
+              };
             })
             .filter((answer) => answer.selected.length > 0)
         : null;
@@ -1761,9 +2312,17 @@ export class RunService {
     return presentApproval(this.#requireApproval(principal, approvalId));
   }
 
-  listApprovals(principal: Principal, query: { status: 'pending' | 'all'; sessionId?: string | undefined; limit: number }): Approval[] {
-    if (query.sessionId !== undefined) this.#sessions.requireSession(principal, query.sessionId, 'view');
-    const visible = new Set(this.#context.services.projects.list(principal, { includeArchived: true }).map((project) => project.id));
+  listApprovals(
+    principal: Principal,
+    query: { status: 'pending' | 'all'; sessionId?: string | undefined; limit: number },
+  ): Approval[] {
+    if (query.sessionId !== undefined)
+      this.#sessions.requireSession(principal, query.sessionId, 'view');
+    const visible = new Set(
+      this.#context.services.projects
+        .list(principal, { includeArchived: true })
+        .map((project) => project.id),
+    );
     return this.#store
       .listApprovals({
         userId: principal.userId,
@@ -1781,25 +2340,45 @@ export class RunService {
    * with the approval, or `ask` for a session that was planning. A session
    * that was in another mode (the agent chose to plan by itself) keeps it.
    */
-  async #modeAfterPlan(row: ApprovalRow, chosen: PermissionMode | undefined): Promise<PermissionMode | undefined> {
+  async #modeAfterPlan(
+    row: ApprovalRow,
+    chosen: PermissionMode | undefined,
+  ): Promise<PermissionMode | undefined> {
     const agentId = this.#store.session(row.session_id)?.agent_id;
     const adapter = agentId === undefined ? undefined : this.#adapters.get(agentId);
-    const supported: readonly PermissionMode[] = adapter ? (await adapter.capabilities()).permissionModes : [];
+    const supported: readonly PermissionMode[] = adapter
+      ? (await adapter.capabilities()).permissionModes
+      : [];
     // Read after the wait above: the mode may have been changed meanwhile.
     const session = this.#store.session(row.session_id);
     if (!session) return undefined;
-    if (chosen === undefined) return session.permission_mode === 'plan' && supported.includes('ask') ? 'ask' : undefined;
-    if (!supported.includes(chosen)) throw unprocessable(`${adapter?.displayName ?? 'This agent'} does not have that permission mode.`, 'unsupported_permission_mode');
+    if (chosen === undefined)
+      return session.permission_mode === 'plan' && supported.includes('ask') ? 'ask' : undefined;
+    if (!supported.includes(chosen))
+      throw unprocessable(
+        `${adapter?.displayName ?? 'This agent'} does not have that permission mode.`,
+        'unsupported_permission_mode',
+      );
     if (chosen === 'auto' && !this.#sessions.autoModeEnabled(this.#projectOf(session))) {
-      throw unprocessable('Auto mode is not enabled for this project. Its owner can enable it in the project settings.', 'auto_mode_not_enabled');
+      throw unprocessable(
+        'Auto mode is not enabled for this project. Its owner can enable it in the project settings.',
+        'auto_mode_not_enabled',
+      );
     }
     return chosen;
   }
 
   /** Answers an approval. The first answer wins; later ones are told so. */
-  async decide(principal: Principal, approvalId: string, body: ApprovalDecisionRequest): Promise<ApprovalDecisionResponse> {
+  async decide(
+    principal: Principal,
+    approvalId: string,
+    body: ApprovalDecisionRequest,
+  ): Promise<ApprovalDecisionResponse> {
     const row = this.#requireApproval(principal, approvalId);
-    const resolved = () => conflict('That request has already been answered.', 'approval_resolved', { status: this.#store.approval(approvalId)?.status });
+    const resolved = () =>
+      conflict('That request has already been answered.', 'approval_resolved', {
+        status: this.#store.approval(approvalId)?.status,
+      });
     if (row.status !== 'pending') throw resolved();
     if (row.expires_at !== null && Date.now() >= row.expires_at) {
       this.#expire(approvalId);
@@ -1821,8 +2400,13 @@ export class RunService {
         throw unprocessable('This request cannot be remembered.', 'remember_not_allowed');
       }
       // A rule belongs to the person whose runs it governs.
-      if (principal.userId !== row.user_id) throw forbidden('Only the person whose run is asking can save a rule for it.', 'remember_not_allowed');
-      if (body.remember === 'project' && row.project_id === null) throw unprocessable('This session is not in a project.', 'remember_not_allowed');
+      if (principal.userId !== row.user_id)
+        throw forbidden(
+          'Only the person whose run is asking can save a rule for it.',
+          'remember_not_allowed',
+        );
+      if (body.remember === 'project' && row.project_id === null)
+        throw unprocessable('This session is not in a project.', 'remember_not_allowed');
     }
     let answers: QuestionAnswer[] | null = null;
     if (row.kind === 'question' && body.decision === 'allow') {
@@ -1831,9 +2415,14 @@ export class RunService {
     }
     const approvesPlan = row.kind === 'plan' && body.decision === 'allow';
     if (body.permissionMode !== undefined && !approvesPlan) {
-      throw unprocessable('A permission mode can only be chosen when approving a plan.', 'mode_not_applicable');
+      throw unprocessable(
+        'A permission mode can only be chosen when approving a plan.',
+        'mode_not_applicable',
+      );
     }
-    const sessionMode = approvesPlan ? await this.#modeAfterPlan(row, body.permissionMode) : undefined;
+    const sessionMode = approvesPlan
+      ? await this.#modeAfterPlan(row, body.permissionMode)
+      : undefined;
 
     const won = this.#resolve(approvalId, {
       status: body.decision === 'allow' ? 'allowed' : 'denied',
@@ -1860,7 +2449,8 @@ export class RunService {
       });
       // The same tap answers every other waiting request the new rule covers.
       for (const waiter of [...this.#waiters.values()]) {
-        if (waiter.kind !== 'tool' || !waiter.toolRequest || waiter.run.userId !== row.user_id) continue;
+        if (waiter.kind !== 'tool' || !waiter.toolRequest || waiter.run.userId !== row.user_id)
+          continue;
         const session = this.#store.session(waiter.run.sessionId);
         if (!session) continue;
         const outcome = evaluatePermission({
@@ -1869,7 +2459,15 @@ export class RunService {
           rules: this.#rulesFor(waiter.run),
           env: this.#environment(session, this.#projectOf(session)),
         });
-        if (outcome.decision === 'allow' && this.#resolve(waiter.approvalId, { status: 'allowed', decidedBy: principal.userId, note: null, answers: null })) {
+        if (
+          outcome.decision === 'allow' &&
+          this.#resolve(waiter.approvalId, {
+            status: 'allowed',
+            decidedBy: principal.userId,
+            note: null,
+            answers: null,
+          })
+        ) {
           alsoResolved.push(waiter.approvalId);
         }
       }
@@ -1882,7 +2480,8 @@ export class RunService {
   #saveRule(input: Omit<RuleRow, 'id' | 'created_at'>): PermissionRule {
     const existing = this.#store.findRule(input);
     if (existing) return presentRule(existing);
-    if (this.#store.countRules(input.user_id) >= MAX_RULES_PER_USER) throw conflict('Too many permission rules are saved. Remove some first.', 'too_many_rules');
+    if (this.#store.countRules(input.user_id) >= MAX_RULES_PER_USER)
+      throw conflict('Too many permission rules are saved. Remove some first.', 'too_many_rules');
     const row: RuleRow = { ...input, id: newId(), created_at: Date.now() };
     this.#store.insertRule(row);
     return presentRule(row);
@@ -1890,20 +2489,41 @@ export class RunService {
 
   createRule(
     principal: Principal,
-    input: { scope: RuleRow['scope']; projectId?: string | undefined; sessionId?: string | undefined; effect: RuleRow['effect']; tool: string; pattern?: string | undefined; shared: boolean },
+    input: {
+      scope: RuleRow['scope'];
+      projectId?: string | undefined;
+      sessionId?: string | undefined;
+      effect: RuleRow['effect'];
+      tool: string;
+      pattern?: string | undefined;
+      shared: boolean;
+    },
   ): PermissionRule {
-    if ((input.pattern?.match(/\*/g)?.length ?? 0) > 12) throw unprocessable('Use fewer wildcards in the pattern.', 'pattern_too_complex');
+    if ((input.pattern?.match(/\*/g)?.length ?? 0) > 12)
+      throw unprocessable('Use fewer wildcards in the pattern.', 'pattern_too_complex');
     let projectId: string | null = null;
     let sessionId: string | null = null;
     if (input.scope === 'project') {
-      projectId = this.#context.services.projects.requireAccess(principal, input.projectId!, 'write').id;
+      projectId = this.#context.services.projects.requireAccess(
+        principal,
+        input.projectId!,
+        'write',
+      ).id;
     } else if (input.scope === 'session') {
       sessionId = this.#sessions.requireSession(principal, input.sessionId!, 'write').row.id;
     }
     if (input.shared) {
       // A rule for everyone in a project can only tighten, and only the owner may set it.
-      if (principal.role !== 'owner') throw forbidden('Only the owner of this Studio can set a rule for everyone.', 'owner_required');
-      if (input.scope !== 'project' || input.effect === 'allow') throw unprocessable('A rule for everyone must be a project rule that denies or asks.', 'invalid_shared_rule');
+      if (principal.role !== 'owner')
+        throw forbidden(
+          'Only the owner of this Studio can set a rule for everyone.',
+          'owner_required',
+        );
+      if (input.scope !== 'project' || input.effect === 'allow')
+        throw unprocessable(
+          'A rule for everyone must be a project rule that denies or asks.',
+          'invalid_shared_rule',
+        );
     }
     return this.#saveRule({
       scope: input.scope,
@@ -1917,9 +2537,18 @@ export class RunService {
     });
   }
 
-  listRules(principal: Principal, query: { scope?: RuleRow['scope'] | undefined; projectId?: string | undefined; sessionId?: string | undefined }): PermissionRule[] {
-    if (query.projectId !== undefined) this.#context.services.projects.requireAccess(principal, query.projectId);
-    if (query.sessionId !== undefined) this.#sessions.requireSession(principal, query.sessionId, 'view');
+  listRules(
+    principal: Principal,
+    query: {
+      scope?: RuleRow['scope'] | undefined;
+      projectId?: string | undefined;
+      sessionId?: string | undefined;
+    },
+  ): PermissionRule[] {
+    if (query.projectId !== undefined)
+      this.#context.services.projects.requireAccess(principal, query.projectId);
+    if (query.sessionId !== undefined)
+      this.#sessions.requireSession(principal, query.sessionId, 'view');
     return this.#store
       .listRules({
         userId: principal.userId,
@@ -1971,24 +2600,50 @@ export class RunService {
    * from `options.toolCallId` when the caller knows it (an adapter calling directly; the bridge, when the agent's
    * program names the call), and otherwise from the run's own record of the calls its adapter has announced.
    */
-  async callStudioTool(runId: string, name: string, input: unknown, options: { toolCallId?: string } = {}): Promise<AgentToolResult> {
+  async callStudioTool(
+    runId: string,
+    name: string,
+    input: unknown,
+    options: { toolCallId?: string; signal?: AbortSignal } = {},
+  ): Promise<AgentToolResult> {
     const run = this.#active.get(runId);
     if (!run || run.phase === 'finished') return { text: 'This run has ended.', isError: true };
-    if (this.#sessions.isHidden(run.sessionId)) return { text: 'This run has no tools.', isError: true };
+    if (this.#sessions.isHidden(run.sessionId))
+      return { text: 'This run has no tools.', isError: true };
     const tool = this.#context.agentTools.get(name);
     if (!tool) return { text: `There is no tool named "${name}".`, isError: true };
     let effective = input;
     if (tool.effect === 'write') {
       const toolCallId = await this.#toolCallOf(run, name, input, options.toolCallId);
-      const decision = await run.host.requestPermission({ toolName: name, kind: 'other', title: `Use ${name}`, input, ...(toolCallId === null ? {} : { toolCallId }) });
+      const decision = await run.host.requestPermission({
+        toolName: name,
+        kind: 'other',
+        title: `Use ${name}`,
+        input,
+        ...(toolCallId === null ? {} : { toolCallId }),
+      });
       if (decision.behavior === 'deny') {
-        if (toolCallId !== null && run.openTools.has(toolCallId)) run.refusedTools.set(toolCallId, decision.message);
+        if (toolCallId !== null && run.openTools.has(toolCallId))
+          run.refusedTools.set(toolCallId, decision.message);
         else run.pendingRefusals.push({ name, input, message: decision.message });
         return { text: `Not allowed: ${decision.message}`, isError: true, denied: true };
       }
       effective = decision.updatedInput;
     }
-    return this.#context.agentTools.call(name, { runId: run.id, sessionId: run.sessionId, projectId: run.projectId, userId: run.userId, agentId: run.agentId }, effective);
+    return this.#context.agentTools.call(
+      name,
+      {
+        runId: run.id,
+        sessionId: run.sessionId,
+        projectId: run.projectId,
+        userId: run.userId,
+        agentId: run.agentId,
+        signal: options.signal
+          ? AbortSignal.any([run.abort.signal, options.signal])
+          : run.abort.signal,
+      },
+      effective,
+    );
   }
 
   /**
@@ -1996,21 +2651,33 @@ export class RunService {
    * cannot be told. An adapter announces a call (`tool.started`) on one channel and the call itself arrives on
    * another — the bridge — so the announcement may be a moment behind: it is waited for briefly.
    */
-  async #toolCallOf(run: ActiveRun, name: string, input: unknown, hint: string | undefined): Promise<string | null> {
+  async #toolCallOf(
+    run: ActiveRun,
+    name: string,
+    input: unknown,
+    hint: string | undefined,
+  ): Promise<string | null> {
     const find = (): string | null => {
       if (hint !== undefined) {
         const named = run.openTools.get(hint);
         // A hint is the agent program's word: it counts only for a call that is open and is a call of this tool.
         if (named && isStudioToolCall(named.name, name)) return hint;
       }
-      const candidates = [...run.openTools].filter(([, call]) => !call.claimed && isStudioToolCall(call.name, name));
+      const candidates = [...run.openTools].filter(
+        ([, call]) => !call.claimed && isStudioToolCall(call.name, name),
+      );
       const sameInput = candidates.filter(([, call]) => sameJson(call.input, input));
       const found = sameInput[0] ?? (candidates.length === 1 ? candidates[0] : undefined);
       return found ? found[0] : null;
     };
     const deadline = Date.now() + TOOL_CALL_WAIT_MS;
     let toolCallId = find();
-    while (toolCallId === null && Date.now() < deadline && run.phase !== 'finished' && !run.abort.signal.aborted) {
+    while (
+      toolCallId === null &&
+      Date.now() < deadline &&
+      run.phase !== 'finished' &&
+      !run.abort.signal.aborted
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 20));
       toolCallId = find();
     }
@@ -2026,7 +2693,9 @@ export class RunService {
     if (!call || run.pendingRefusals.length === 0) return null;
     // Only the very call that was refused: the same tool with the same input. A later, different call of that
     // tool that fails by itself is a failure.
-    const index = run.pendingRefusals.findIndex((refusal) => isStudioToolCall(call.name, refusal.name) && sameJson(call.input, refusal.input));
+    const index = run.pendingRefusals.findIndex(
+      (refusal) => isStudioToolCall(call.name, refusal.name) && sameJson(call.input, refusal.input),
+    );
     if (index < 0) return null;
     return run.pendingRefusals.splice(index, 1)[0]!.message;
   }
@@ -2034,20 +2703,30 @@ export class RunService {
   /** The bridge's `permission_prompt` tool: turns an agent's own permission request into the Studio's. */
   async permissionPrompt(runId: string, prompt: PermissionPrompt): Promise<PermissionPromptResult> {
     const run = this.#active.get(runId);
-    if (!run || run.phase === 'finished') return { behavior: 'deny', message: 'This run has ended.' };
+    if (!run || run.phase === 'finished')
+      return { behavior: 'deny', message: 'This run has ended.' };
     const adapter = this.#adapters.get(run.agentId);
     if (adapter?.onPermissionPrompt && run.request) {
       try {
         return await adapter.onPermissionPrompt(prompt, run.host, run.request);
       } catch (error) {
-        this.#log.error({ runId, err: redactSecrets(describeError(error)) }, 'an adapter could not handle a permission prompt');
+        this.#log.error(
+          { runId, err: redactSecrets(describeError(error)) },
+          'an adapter could not handle a permission prompt',
+        );
         return { behavior: 'deny', message: 'The Studio could not decide this request.' };
       }
     }
     // No adapter knowledge of the tool: an unknown kind, with the command and file taken from conventional fields.
-    const fields = (typeof prompt.input === 'object' && prompt.input !== null ? prompt.input : {}) as Record<string, unknown>;
-    const command = [fields.command, fields.cmd].find((value): value is string => typeof value === 'string');
-    const paths = [fields.file_path, fields.path, fields.notebook_path].filter((value): value is string => typeof value === 'string');
+    const fields = (
+      typeof prompt.input === 'object' && prompt.input !== null ? prompt.input : {}
+    ) as Record<string, unknown>;
+    const command = [fields.command, fields.cmd].find(
+      (value): value is string => typeof value === 'string',
+    );
+    const paths = [fields.file_path, fields.path, fields.notebook_path].filter(
+      (value): value is string => typeof value === 'string',
+    );
     const decision = await run.host.requestPermission({
       toolName: prompt.toolName,
       kind: command === undefined ? 'other' : 'execute',
@@ -2056,7 +2735,9 @@ export class RunService {
       ...(command === undefined ? {} : { command }),
       ...(paths.length === 0 ? {} : { paths }),
     });
-    return decision.behavior === 'allow' ? { behavior: 'allow', updatedInput: decision.updatedInput } : { behavior: 'deny', message: decision.message };
+    return decision.behavior === 'allow'
+      ? { behavior: 'allow', updatedInput: decision.updatedInput }
+      : { behavior: 'deny', message: decision.message };
   }
 
   // ---- removing sessions, projects and accounts ------------------------------
@@ -2073,9 +2754,31 @@ export class RunService {
   }
 
   /** Stops everything a deleted account was running. */
-  abandonUser(userId: string): void {
-    for (const run of [...this.#active.values()]) {
-      if (run.userId === userId) this.abandon(run.sessionId);
+  async abandonUser(userId: string): Promise<void> {
+    const runs = [...this.#active.values()].filter((run) => run.userId === userId);
+    for (const run of runs) this.abandon(run.sessionId);
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        Promise.all(
+          runs.map(async (run) => {
+            await this.#launching.get(run.id);
+            if (run.handle) {
+              await run.handle.cancel();
+              await run.handle.done.catch(() => {});
+            }
+          }),
+        ),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(
+            () => reject(new Error('Deleted account processes have not stopped.')),
+            15_000,
+          );
+          timer.unref();
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 
@@ -2112,7 +2815,11 @@ export class RunService {
             });
           }
         }
-        const error = { code: 'server_restart', message: 'The server restarted while this run was in progress. Part of the work may already have been done.' };
+        const error = {
+          code: 'server_restart',
+          message:
+            'The server restarted while this run was in progress. Part of the work may already have been done.',
+        };
         if (
           this.#store.transitionRun(row.id, ['accepted', 'running'], {
             status: 'interrupted',
@@ -2148,13 +2855,18 @@ export class RunService {
     const now = Date.now();
     for (const approval of this.#store.allPendingApprovals()) {
       if (this.#waiters.has(approval.id)) continue;
-      if (this.#store.resolveApproval(approval.id, 'cancelled', null, now, null, null)) sessionsTouched.add(approval.session_id);
+      if (this.#store.resolveApproval(approval.id, 'cancelled', null, now, null, null))
+        sessionsTouched.add(approval.session_id);
     }
     for (const sessionId of sessionsTouched) this.#sessions.refreshAttention(sessionId);
     this.#store.removeOrphanedIndex();
     // Messages that were queued and never taken were never run, so they still go out in order.
     for (const sessionId of this.#store.sessionsWithQueue()) this.#scheduleDrain(sessionId);
-    if (interrupted.length > 0) this.#log.warn({ runs: interrupted.length }, 'runs that were in progress at the last shutdown were marked interrupted');
+    if (interrupted.length > 0)
+      this.#log.warn(
+        { runs: interrupted.length },
+        'runs that were in progress at the last shutdown were marked interrupted',
+      );
   }
 
   /** Stops every agent without recording an outcome: the next start reports those runs as interrupted. */
@@ -2184,7 +2896,10 @@ export class RunService {
         );
       }
     }
-    await Promise.race([Promise.all(settling), new Promise((resolve) => setTimeout(resolve, 1500).unref())]);
+    await Promise.race([
+      Promise.all(settling),
+      new Promise((resolve) => setTimeout(resolve, 1500).unref()),
+    ]);
     for (const run of runs) {
       run.phase = 'finished';
       this.#tokens.revokeRun(run.id);

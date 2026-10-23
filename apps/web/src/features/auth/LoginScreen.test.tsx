@@ -14,7 +14,11 @@ beforeEach(() => {
   resetSessionStore();
 });
 
-const fill = async (user: ReturnType<typeof userEvent.setup>, username: string, password: string) => {
+const fill = async (
+  user: ReturnType<typeof userEvent.setup>,
+  username: string,
+  password: string,
+) => {
   if (username) await user.type(screen.getByLabelText('Username'), username);
   if (password) await user.type(screen.getByLabelText('Password'), password);
 };
@@ -79,12 +83,16 @@ describe('the sign-in form', () => {
 
   it('gives one generic message for any refused credentials and keeps what was typed', async () => {
     const user = userEvent.setup();
-    signIn.mockRejectedValue(new ApiError(401, 'invalid_credentials', 'That username or password is not correct.'));
+    signIn.mockRejectedValue(
+      new ApiError(401, 'invalid_credentials', 'That username or password is not correct.'),
+    );
     renderInApp(<LoginScreen />);
     await fill(user, 'ada', 'wrong password');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('That username or password is not correct.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'That username or password is not correct.',
+    );
     expect(screen.getByLabelText('Username')).toHaveValue('ada');
     expect(screen.getByLabelText('Password')).toHaveValue('wrong password');
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeEnabled();
@@ -92,7 +100,11 @@ describe('the sign-in form', () => {
 
   it('says when to try again after too many attempts, and waits until then', async () => {
     const user = userEvent.setup();
-    signIn.mockRejectedValue(new ApiError(429, 'rate_limited', 'Too many sign-in attempts. Try again later.', { retryAfterSeconds: 120 }));
+    signIn.mockRejectedValue(
+      new ApiError(429, 'rate_limited', 'Too many sign-in attempts. Try again later.', {
+        retryAfterSeconds: 120,
+      }),
+    );
     renderInApp(<LoginScreen />);
     await fill(user, 'ada', 'whatever it is');
     await user.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -117,7 +129,7 @@ describe('the sign-in form', () => {
     useSession.setState({ status: 'ready', endReason: 'expired' });
     renderInApp(<LoginScreen />);
     expect(screen.getByRole('status')).toHaveTextContent('Your session ended');
-    await waitFor(() => expect(document.title).toBe('Sign in · Agent Studio'));
+    await waitFor(() => expect(document.title).toBe('Sign in · Cloud Harness'));
   });
 
   it('can show and hide the password', async () => {

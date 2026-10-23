@@ -1,4 +1,9 @@
-import { type ProviderBalanceKind, type ProviderKind, type ProviderModel, providerModelSchema } from '@agent-studio/protocol';
+import {
+  type ProviderBalanceKind,
+  type ProviderKind,
+  type ProviderModel,
+  providerModelSchema,
+} from '@agent-studio/protocol';
 import { type Database, type Migration, toSql } from '../../kernel/database.js';
 
 export const PROVIDERS_MIGRATIONS: readonly Migration[] = [
@@ -94,7 +99,7 @@ function toRecord(row: ProviderRow): ProviderRecord {
   return {
     id: row.id,
     name: row.name,
-    kind: row.kind === 'openai-compatible' ? row.kind : 'openai-compatible',
+    kind: row.kind === 'anthropic' ? 'anthropic' : 'openai-compatible',
     baseUrl: row.base_url,
     allowPrivateNetwork: row.allow_private_network === 1,
     keyRequired: row.key_required === 1,
@@ -126,7 +131,9 @@ export class ProviderStore {
   }
 
   list(): ProviderRecord[] {
-    return this.#db.all<ProviderRow>('SELECT * FROM providers ORDER BY created_at, rowid').map(toRecord);
+    return this.#db
+      .all<ProviderRow>('SELECT * FROM providers ORDER BY created_at, rowid')
+      .map(toRecord);
   }
 
   find(id: string): ProviderRecord | null {
@@ -189,7 +196,13 @@ export class ProviderStore {
    * one usage reports aggregate; nothing here writes to it.
    */
   spend(agentId: string, recentSince: number): SpendTotals {
-    const row = this.#db.get<{ runs: number; unpriced: number; total: number | null; recent: number | null; since: number | null }>(
+    const row = this.#db.get<{
+      runs: number;
+      unpriced: number;
+      total: number | null;
+      recent: number | null;
+      since: number | null;
+    }>(
       `SELECT COUNT(DISTINCT run_id) AS runs,
               COUNT(DISTINCT CASE WHEN cost_usd IS NULL THEN run_id END) AS unpriced,
               SUM(cost_usd) AS total,

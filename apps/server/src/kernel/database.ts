@@ -83,7 +83,9 @@ export class Database {
       return result;
     } catch (error) {
       this.#depth -= 1;
-      this.#db.exec(this.#depth === 0 ? 'ROLLBACK' : `ROLLBACK TO ${savepoint}; RELEASE ${savepoint}`);
+      this.#db.exec(
+        this.#depth === 0 ? 'ROLLBACK' : `ROLLBACK TO ${savepoint}; RELEASE ${savepoint}`,
+      );
       throw error;
     }
   }
@@ -95,9 +97,10 @@ export class Database {
    */
   migrate(module: string, migrations: readonly Migration[]): number {
     const applied = new Set(
-      this.all<{ version: number }>('SELECT version FROM schema_migrations WHERE module = ?', module).map(
-        (row) => row.version,
-      ),
+      this.all<{ version: number }>(
+        'SELECT version FROM schema_migrations WHERE module = ?',
+        module,
+      ).map((row) => row.version),
     );
     const ordered = [...migrations].sort((a, b) => a.version - b.version);
     ordered.forEach((migration, index) => {
@@ -108,7 +111,7 @@ export class Database {
     const newest = Math.max(0, ...applied);
     if (newest > ordered.length) {
       throw new Error(
-        `The database was last used by a newer version of Agent Cloud Studio (part "${module}" is at schema ${newest}, ` +
+        `The database was last used by a newer version of Cloud Harness (part "${module}" is at schema ${newest}, ` +
           `this version knows ${ordered.length}). Install that version again, or restore the copy saved before the upgrade` +
           ` (in ${path.join(path.dirname(this.#file), 'backups')}). Nothing was changed.`,
       );

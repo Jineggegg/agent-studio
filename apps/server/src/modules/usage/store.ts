@@ -56,6 +56,11 @@ export const USAGE_MIGRATIONS: readonly Migration[] = [
       CREATE UNIQUE INDEX usage_budgets_one ON usage_budgets(user_id, COALESCE(agent_id, ''), metric);
     `,
   },
+  {
+    version: 2,
+    name: 'opt-in budget request gates',
+    sql: 'ALTER TABLE usage_budgets ADD COLUMN enforce INTEGER NOT NULL DEFAULT 0 CHECK (enforce IN (0, 1));',
+  },
 ];
 
 /** Which usage records a figure is made of. `null` means "any". */
@@ -105,6 +110,7 @@ export interface BudgetRow {
   metric: BudgetMetric;
   amount: number;
   time_zone: string;
+  enforce: number;
   announced_month: string | null;
   announced_threshold: number;
   created_at: number;
@@ -156,34 +162,52 @@ export class UsageStore {
 
   figures(filter: UsageFilter): FiguresRow {
     const where = this.#where(filter);
-    return this.#db.get<FiguresRow>(`SELECT ${FIGURES} FROM agent_usage WHERE ${where.sql}`, ...where.params)!;
+    return this.#db.get<FiguresRow>(
+      `SELECT ${FIGURES} FROM agent_usage WHERE ${where.sql}`,
+      ...where.params,
+    )!;
   }
 
   byAgent(filter: UsageFilter): Array<FiguresRow & { agent_id: string }> {
     const where = this.#where(filter);
-    return this.#db.all(`SELECT agent_id, ${FIGURES} FROM agent_usage WHERE ${where.sql} GROUP BY agent_id`, ...where.params);
+    return this.#db.all(
+      `SELECT agent_id, ${FIGURES} FROM agent_usage WHERE ${where.sql} GROUP BY agent_id`,
+      ...where.params,
+    );
   }
 
   byModel(filter: UsageFilter): Array<FiguresRow & { agent_id: string; model: string }> {
     const where = this.#where(filter);
-    return this.#db.all(`SELECT agent_id, model, ${FIGURES} FROM agent_usage WHERE ${where.sql} GROUP BY agent_id, model`, ...where.params);
+    return this.#db.all(
+      `SELECT agent_id, model, ${FIGURES} FROM agent_usage WHERE ${where.sql} GROUP BY agent_id, model`,
+      ...where.params,
+    );
   }
 
   byProject(filter: UsageFilter): Array<FiguresRow & { project_id: string | null }> {
     const where = this.#where(filter);
-    return this.#db.all(`SELECT project_id, ${FIGURES} FROM agent_usage WHERE ${where.sql} GROUP BY project_id`, ...where.params);
+    return this.#db.all(
+      `SELECT project_id, ${FIGURES} FROM agent_usage WHERE ${where.sql} GROUP BY project_id`,
+      ...where.params,
+    );
   }
 
   byUser(filter: UsageFilter): Array<FiguresRow & { user_id: string }> {
     const where = this.#where(filter);
-    return this.#db.all(`SELECT user_id, ${FIGURES} FROM agent_usage WHERE ${where.sql} GROUP BY user_id`, ...where.params);
+    return this.#db.all(
+      `SELECT user_id, ${FIGURES} FROM agent_usage WHERE ${where.sql} GROUP BY user_id`,
+      ...where.params,
+    );
   }
 
   /**
    * Everything but the named (agent, model) pairs, counted in one go: a run
    * may use several models, so the groups of `byModel` cannot simply be added up.
    */
-  figuresExceptModels(filter: UsageFilter, pairs: ReadonlyArray<readonly [agentId: string, model: string]>): FiguresRow {
+  figuresExceptModels(
+    filter: UsageFilter,
+    pairs: ReadonlyArray<readonly [agentId: string, model: string]>,
+  ): FiguresRow {
     const where = this.#where(filter);
     // The number of pairs varies from call to call, so the list travels as one JSON value.
     return this.#db.get<FiguresRow>(
@@ -200,11 +224,18 @@ export class UsageStore {
   // ---- plan-window readings ----------------------------------------------------
 
   quota(userId: string, agentId: string): QuotaRow | undefined {
-    return this.#db.get<QuotaRow>('SELECT * FROM usage_quota_readings WHERE user_id = ? AND agent_id = ?', userId, agentId);
+    return this.#db.get<QuotaRow>(
+      'SELECT * FROM usage_quota_readings WHERE user_id = ? AND agent_id = ?',
+      userId,
+      agentId,
+    );
   }
 
   quotasOf(userId: string): QuotaRow[] {
-    return this.#db.all<QuotaRow>('SELECT * FROM usage_quota_readings WHERE user_id = ? ORDER BY agent_id', userId);
+    return this.#db.all<QuotaRow>(
+      'SELECT * FROM usage_quota_readings WHERE user_id = ? ORDER BY agent_id',
+      userId,
+    );
   }
 
   /** Keeps a reading unless a newer one is already stored. False when it was older. */
@@ -225,7 +256,11 @@ export class UsageStore {
   // ---- provider notes ----------------------------------------------------------
 
   note(userId: string, providerId: string): NoteRow | undefined {
-    return this.#db.get<NoteRow>('SELECT * FROM usage_provider_notes WHERE user_id = ? AND provider_id = ?', userId, providerId);
+    return this.#db.get<NoteRow>(
+      'SELECT * FROM usage_provider_notes WHERE user_id = ? AND provider_id = ?',
+      userId,
+      providerId,
+    );
   }
 
   saveNote(row: NoteRow): void {
@@ -243,18 +278,31 @@ export class UsageStore {
   }
 
   deleteNote(userId: string, providerId: string): boolean {
-    return this.#db.run('DELETE FROM usage_provider_notes WHERE user_id = ? AND provider_id = ?', userId, providerId).changes === 1;
+    return (
+      this.#db.run(
+        'DELETE FROM usage_provider_notes WHERE user_id = ? AND provider_id = ?',
+        userId,
+        providerId,
+      ).changes === 1
+    );
   }
 
   // ---- budgets -----------------------------------------------------------------
 
   budgetsOf(userId: string): BudgetRow[] {
-    return this.#db.all<BudgetRow>('SELECT * FROM usage_budgets WHERE user_id = ? ORDER BY created_at, rowid', userId);
+    return this.#db.all<BudgetRow>(
+      'SELECT * FROM usage_budgets WHERE user_id = ? ORDER BY created_at, rowid',
+      userId,
+    );
   }
 
   /** The caller's own budget, or nothing: somebody else's id answers like one that does not exist. */
   budget(userId: string, id: string): BudgetRow | undefined {
-    return this.#db.get<BudgetRow>('SELECT * FROM usage_budgets WHERE id = ? AND user_id = ?', id, userId);
+    return this.#db.get<BudgetRow>(
+      'SELECT * FROM usage_budgets WHERE id = ? AND user_id = ?',
+      id,
+      userId,
+    );
   }
 
   findBudget(userId: string, agentId: string | null, metric: BudgetMetric): BudgetRow | undefined {
@@ -267,19 +315,23 @@ export class UsageStore {
   }
 
   countBudgets(userId: string): number {
-    return this.#db.get<{ n: number }>('SELECT COUNT(*) AS n FROM usage_budgets WHERE user_id = ?', userId)!.n;
+    return this.#db.get<{ n: number }>(
+      'SELECT COUNT(*) AS n FROM usage_budgets WHERE user_id = ?',
+      userId,
+    )!.n;
   }
 
   insertBudget(row: BudgetRow): void {
     this.#db.run(
-      `INSERT INTO usage_budgets (id, user_id, agent_id, metric, amount, time_zone, announced_month, announced_threshold, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO usage_budgets (id, user_id, agent_id, metric, amount, time_zone, enforce, announced_month, announced_threshold, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       row.id,
       row.user_id,
       row.agent_id,
       row.metric,
       row.amount,
       row.time_zone,
+      row.enforce,
       row.announced_month,
       row.announced_threshold,
       row.created_at,
@@ -287,12 +339,24 @@ export class UsageStore {
     );
   }
 
-  updateBudget(userId: string, id: string, patch: { amount: number; timeZone: string; announcedMonth: string | null; announcedThreshold: number }, now: number): boolean {
+  updateBudget(
+    userId: string,
+    id: string,
+    patch: {
+      amount: number;
+      timeZone: string;
+      enforce: number;
+      announcedMonth: string | null;
+      announcedThreshold: number;
+    },
+    now: number,
+  ): boolean {
     return (
       this.#db.run(
-        'UPDATE usage_budgets SET amount = ?, time_zone = ?, announced_month = ?, announced_threshold = ?, updated_at = ? WHERE id = ? AND user_id = ?',
+        'UPDATE usage_budgets SET amount = ?, time_zone = ?, enforce = ?, announced_month = ?, announced_threshold = ?, updated_at = ? WHERE id = ? AND user_id = ?',
         patch.amount,
         patch.timeZone,
+        patch.enforce,
         patch.announcedMonth,
         patch.announcedThreshold,
         now,
@@ -303,7 +367,10 @@ export class UsageStore {
   }
 
   deleteBudget(userId: string, id: string): boolean {
-    return this.#db.run('DELETE FROM usage_budgets WHERE id = ? AND user_id = ?', id, userId).changes === 1;
+    return (
+      this.#db.run('DELETE FROM usage_budgets WHERE id = ? AND user_id = ?', id, userId).changes ===
+      1
+    );
   }
 
   /**

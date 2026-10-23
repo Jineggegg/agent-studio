@@ -137,7 +137,15 @@ export const AGENT_LIMITS = {
 export const permissionModeSchema = z.enum(['plan', 'ask', 'accept-edits', 'auto']);
 export type PermissionMode = z.infer<typeof permissionModeSchema>;
 
-export const toolKindSchema = z.enum(['read', 'search', 'edit', 'execute', 'fetch', 'agent', 'other']);
+export const toolKindSchema = z.enum([
+  'read',
+  'search',
+  'edit',
+  'execute',
+  'fetch',
+  'agent',
+  'other',
+]);
 export type ToolKind = z.infer<typeof toolKindSchema>;
 
 export const riskClassSchema = z.enum(['low', 'medium', 'dangerous']);
@@ -157,7 +165,14 @@ export const riskCategorySchema = z.enum([
 ]);
 export type RiskCategory = z.infer<typeof riskCategorySchema>;
 
-export const runStatusSchema = z.enum(['accepted', 'running', 'completed', 'failed', 'stopped', 'interrupted']);
+export const runStatusSchema = z.enum([
+  'accepted',
+  'running',
+  'completed',
+  'failed',
+  'stopped',
+  'interrupted',
+]);
 export type RunStatus = z.infer<typeof runStatusSchema>;
 
 export const terminalRunStatusSchema = z.enum(['completed', 'failed', 'stopped', 'interrupted']);
@@ -168,7 +183,13 @@ export type TerminalRunStatus = z.infer<typeof terminalRunStatusSchema>;
  * nobody is assumed to be watching, so what would need approval is denied
  * unless the caller that started the run opted in to waiting.
  */
-export const runOriginSchema = z.enum(['interactive', 'queued', 'continue', 'scheduled', 'automation']);
+export const runOriginSchema = z.enum([
+  'interactive',
+  'queued',
+  'continue',
+  'scheduled',
+  'automation',
+]);
 export type RunOrigin = z.infer<typeof runOriginSchema>;
 
 /**
@@ -197,6 +218,7 @@ export const agentModelOptionSchema = z.object({
   /** Effort levels this model accepts, weakest first. Empty or absent: none. */
   efforts: z.array(z.string()).optional(),
   defaultEffort: z.string().optional(),
+  fastMode: z.boolean().optional(),
 });
 export type AgentModelOption = z.infer<typeof agentModelOptionSchema>;
 
@@ -213,6 +235,16 @@ export const agentCapabilitiesSchema = z.object({
   planMode: z.boolean(),
   /** The agent reports token usage. */
   usage: z.boolean(),
+  fastMode: z.object({ supported: z.boolean(), reason: z.string().nullable() }).optional(),
+  mcp: z
+    .array(
+      z.object({
+        name: z.string(),
+        status: z.enum(['connected', 'configured', 'unavailable']),
+        detail: z.string().nullable(),
+      }),
+    )
+    .optional(),
 });
 export type AgentCapabilities = z.infer<typeof agentCapabilitiesSchema>;
 
@@ -275,7 +307,14 @@ export const uploadAttachmentsResponseSchema = z.object({
 export type UploadAttachmentsResponse = z.infer<typeof uploadAttachmentsResponseSchema>;
 
 /** How a message refers to its attachments in the transcript. */
-export const attachmentRefSchema = attachmentSchema.pick({ id: true, name: true, mediaType: true, size: true, isImage: true, url: true });
+export const attachmentRefSchema = attachmentSchema.pick({
+  id: true,
+  name: true,
+  mediaType: true,
+  size: true,
+  isImage: true,
+  url: true,
+});
 export type AttachmentRef = z.infer<typeof attachmentRefSchema>;
 
 // ---------------------------------------------------------------------------
@@ -305,6 +344,10 @@ export const sessionSchema = z.object({
   /** Sessions handed from one agent to another share a chain. */
   chainId: idSchema.nullable(),
   parentSessionId: idSchema.nullable(),
+  groupId: idSchema.nullable().optional(),
+  accountProfileId: idSchema.nullable().optional(),
+  fastMode: z.boolean().optional(),
+  forkedAtSeq: z.number().int().nonnegative().nullable().optional(),
   attention: attentionSchema,
   /** The run in progress, if any. */
   activeRunId: idSchema.nullable(),
@@ -333,6 +376,9 @@ export const createSessionRequestSchema = z.object({
   title: sessionTitleSchema.optional(),
   /** The session this one continues after a handoff to another agent. */
   parentSessionId: idSchema.optional(),
+  groupId: idSchema.nullable().optional(),
+  accountProfileId: idSchema.nullable().optional(),
+  fastMode: z.boolean().optional(),
 });
 export type CreateSessionRequest = z.infer<typeof createSessionRequestSchema>;
 
@@ -340,6 +386,8 @@ export const updateSessionRequestSchema = z
   .object({
     title: sessionTitleSchema,
     pinned: z.boolean(),
+    groupId: idSchema.nullable(),
+    fastMode: z.boolean(),
     archived: z.boolean(),
     model: agentModelSchema.nullable(),
     effort: agentEffortSchema.nullable(),
@@ -349,6 +397,7 @@ export const updateSessionRequestSchema = z
 export type UpdateSessionRequest = z.infer<typeof updateSessionRequestSchema>;
 
 export const listSessionsQuerySchema = z.object({
+  groupId: z.union([idSchema, z.literal('ungrouped')]).optional(),
   projectId: idSchema.optional(),
   /** Words that must all appear in the title. */
   q: z.string().trim().max(200).optional(),
@@ -367,7 +416,11 @@ export const sessionListSchema = z.object({
 });
 export type SessionList = z.infer<typeof sessionListSchema>;
 
-export const draftSchema = z.object({ sessionId: idSchema, text: z.string(), updatedAt: timestampSchema.nullable() });
+export const draftSchema = z.object({
+  sessionId: idSchema,
+  text: z.string(),
+  updatedAt: timestampSchema.nullable(),
+});
 export type Draft = z.infer<typeof draftSchema>;
 export const saveDraftRequestSchema = z.object({ text: z.string().max(AGENT_LIMITS.messageChars) });
 
@@ -376,7 +429,11 @@ export const nativeSessionIdResponseSchema = z.object({ nativeSessionId: z.strin
 /** Which sessions are visibly on screen in one browser tab. Each report replaces the tab's previous one. */
 export const presenceRequestSchema = z.object({
   /** Chosen by the client; identifies the tab. */
-  clientId: z.string().min(8).max(64).regex(/^[A-Za-z0-9_-]+$/),
+  clientId: z
+    .string()
+    .min(8)
+    .max(64)
+    .regex(/^[A-Za-z0-9_-]+$/),
   /** Empty when the page is hidden. */
   visible: z.array(idSchema).max(AGENT_LIMITS.presenceSessions),
 });
@@ -517,7 +574,9 @@ export type QueuedMessage = z.infer<typeof queuedMessageSchema>;
 
 /** In send order. */
 export const queueSchema = z.object({ queue: z.array(queuedMessageSchema) });
-export const editQueuedMessageRequestSchema = z.object({ text: z.string().trim().min(1).max(AGENT_LIMITS.messageChars) });
+export const editQueuedMessageRequestSchema = z.object({
+  text: z.string().trim().min(1).max(AGENT_LIMITS.messageChars),
+});
 
 /**
  * `steered`      the running turn took the message;
@@ -552,7 +611,13 @@ export const dismissRunResponseSchema = z.object({ run: runSchema, alreadyHandle
 export const approvalKindSchema = z.enum(['tool', 'plan', 'question']);
 export type ApprovalKind = z.infer<typeof approvalKindSchema>;
 
-export const approvalStatusSchema = z.enum(['pending', 'allowed', 'denied', 'expired', 'cancelled']);
+export const approvalStatusSchema = z.enum([
+  'pending',
+  'allowed',
+  'denied',
+  'expired',
+  'cancelled',
+]);
 export type ApprovalStatus = z.infer<typeof approvalStatusSchema>;
 
 export const questionOptionSchema = z.object({
@@ -916,7 +981,10 @@ export const sessionEventSchema = z.discriminatedUnion('type', [
 ]);
 export type SessionEvent = z.infer<typeof sessionEventSchema>;
 export type SessionEventType = SessionEvent['type'];
-export type SessionEventData<T extends SessionEventType> = Extract<SessionEvent, { type: T }>['data'];
+export type SessionEventData<T extends SessionEventType> = Extract<
+  SessionEvent,
+  { type: T }
+>['data'];
 
 export const listEventsQuerySchema = z
   .object({
@@ -926,7 +994,9 @@ export const listEventsQuerySchema = z
     before: z.coerce.number().int().min(1).optional(),
     limit: limitQuery(200, 1000),
   })
-  .refine((value) => value.after === undefined || value.before === undefined, { message: 'Use after or before, not both.' });
+  .refine((value) => value.after === undefined || value.before === undefined, {
+    message: 'Use after or before, not both.',
+  });
 
 export const eventPageSchema = z.object({
   /** Always oldest first. */
@@ -958,7 +1028,11 @@ export const textDeltaDataSchema = z.object({
   text: z.string(),
   parentToolCallId: z.string().nullable(),
 });
-export const toolOutputDataSchema = z.object({ runId: idSchema, toolCallId: z.string(), text: z.string() });
+export const toolOutputDataSchema = z.object({
+  runId: idSchema,
+  toolCallId: z.string(),
+  text: z.string(),
+});
 export const queueChangedDataSchema = z.object({
   queue: z.array(queuedMessageSchema),
   /** Set when the change is the server taking an item to send it. */
@@ -966,7 +1040,8 @@ export const queueChangedDataSchema = z.object({
 });
 export const sessionUpdatedDataSchema = z.object({ session: sessionSchema });
 
-const live = <T extends string, D extends z.ZodType>(type: T, data: D) => z.object({ type: z.literal(type), data });
+const live = <T extends string, D extends z.ZodType>(type: T, data: D) =>
+  z.object({ type: z.literal(type), data });
 export const liveSessionEventSchema = z.discriminatedUnion('type', [
   live(LIVE_EVENT.messageDelta, textDeltaDataSchema),
   live(LIVE_EVENT.thinkingDelta, textDeltaDataSchema),
@@ -1016,13 +1091,21 @@ export const USER_AGENT_EVENT = {
   approvalResolved: 'approval.resolved',
 } as const;
 
-const runRefSchema = z.object({ runId: idSchema, sessionId: idSchema, projectId: idSchema.nullable(), agentId: z.string() });
+const runRefSchema = z.object({
+  runId: idSchema,
+  sessionId: idSchema,
+  projectId: idSchema.nullable(),
+  agentId: z.string(),
+});
 
 export const userAgentEventSchema = z.discriminatedUnion('type', [
   live(USER_AGENT_EVENT.sessionCreated, z.object({ session: sessionSchema })),
   /** Renamed (also automatically), pinned, archived, attention mark changed, model or mode changed. */
   live(USER_AGENT_EVENT.sessionUpdated, z.object({ session: sessionSchema })),
-  live(USER_AGENT_EVENT.sessionRemoved, z.object({ sessionId: idSchema, projectId: idSchema.nullable() })),
+  live(
+    USER_AGENT_EVENT.sessionRemoved,
+    z.object({ sessionId: idSchema, projectId: idSchema.nullable() }),
+  ),
   live(USER_AGENT_EVENT.draftChanged, draftSchema),
   live(USER_AGENT_EVENT.runStarted, runRefSchema),
   live(USER_AGENT_EVENT.runFinished, runRefSchema.extend({ status: terminalRunStatusSchema })),
@@ -1030,9 +1113,81 @@ export const userAgentEventSchema = z.discriminatedUnion('type', [
   live(USER_AGENT_EVENT.approvalPending, z.object({ approval: approvalSchema })),
   live(
     USER_AGENT_EVENT.approvalResolved,
-    z.object({ approvalId: idSchema, sessionId: idSchema, runId: idSchema, status: approvalStatusSchema }),
+    z.object({
+      approvalId: idSchema,
+      sessionId: idSchema,
+      runId: idSchema,
+      status: approvalStatusSchema,
+    }),
   ),
 ]);
 export type UserAgentEvent = z.infer<typeof userAgentEventSchema>;
 
 export const sessionTopic = (sessionId: string) => `session:${sessionId}`;
+
+/** Personal organisation and immutable conversation branching. */
+export const conversationGroupSchema = z.object({
+  id: idSchema,
+  name: z.string(),
+  createdAt: timestampSchema,
+});
+export type ConversationGroup = z.infer<typeof conversationGroupSchema>;
+export const conversationGroupsSchema = z.object({ groups: z.array(conversationGroupSchema) });
+export const saveConversationGroupSchema = z.object({ name: z.string().trim().min(1).max(80) });
+export const forkSessionRequestSchema = z
+  .object({
+    throughSeq: z.number().int().positive().optional(),
+    title: sessionTitleSchema.optional(),
+    /** Editing creates a branch ending immediately before this user message and sends the replacement there. */
+    replacement: z
+      .object({
+        text: z.string().trim().min(1).max(AGENT_LIMITS.messageChars),
+        requestId: requestIdSchema,
+      })
+      .optional(),
+  })
+  .refine((value) => value.replacement === undefined || value.throughSeq !== undefined, {
+    message: 'Choose the message to replace.',
+  });
+export type ForkSessionRequest = z.infer<typeof forkSessionRequestSchema>;
+
+export const accountProfileSchema = z.object({
+  id: idSchema,
+  agentId: z.enum(['claude-code', 'codex']),
+  name: z.string(),
+  isDefault: z.boolean(),
+  createdAt: timestampSchema,
+});
+export type AccountProfile = z.infer<typeof accountProfileSchema>;
+export const accountProfilesSchema = z.object({ profiles: z.array(accountProfileSchema) });
+export const createAccountProfileSchema = z.object({
+  agentId: z.enum(['claude-code', 'codex']),
+  name: z.string().trim().min(1).max(80),
+});
+export const accountProfileStatusSchema = z.object({
+  signedIn: z.boolean().nullable(),
+  checkedAt: timestampSchema,
+});
+
+export const messageCheckpointsSchema = z.object({
+  scope: z.string(),
+  files: z.array(
+    z.object({
+      id: idSchema,
+      path: z.string(),
+      before: z.string(),
+      current: z.string().nullable(),
+      currentVersion: z.string().nullable(),
+      available: z.boolean(),
+      capturedAt: timestampSchema,
+    }),
+  ),
+});
+export const checkpointRestoreRequestSchema = z.object({
+  currentVersion: z.string().min(1).max(128),
+  confirm: z.literal(true),
+});
+export const checkpointRestoredSchema = z.object({
+  restored: z.literal(true),
+  version: z.string(),
+});

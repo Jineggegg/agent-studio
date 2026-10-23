@@ -54,4 +54,9 @@ export const INBOX_MIGRATIONS: readonly Migration[] = [
       );
     `,
   },
+  {
+    version: 2,
+    name: 'notification channel credentials cleanup',
+    sql: `CREATE TRIGGER notification_channel_secret_cleanup AFTER DELETE ON users BEGIN DELETE FROM secrets WHERE name = 'notifications:' || OLD.id || ':smtp' OR name = 'notifications:' || OLD.id || ':bark'; END;`,
+  },
 ];

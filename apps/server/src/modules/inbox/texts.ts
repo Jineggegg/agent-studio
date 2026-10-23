@@ -7,7 +7,7 @@
 
 export type Language = 'en' | 'zh-CN';
 
-export const PRODUCT_NAME = 'Agent Studio';
+export const PRODUCT_NAME = 'Cloud Harness';
 
 export function isLanguage(value: unknown): value is Language {
   return value === 'en' || value === 'zh-CN';
@@ -21,7 +21,9 @@ export function languageFromHeader(header: string | undefined): Language | null 
     .slice(0, 12)
     .map((part) => {
       const [tag, ...parameters] = part.trim().split(';');
-      const quality = parameters.map((parameter) => /^\s*q=([0-9.]+)\s*$/.exec(parameter)?.[1]).find((value) => value !== undefined);
+      const quality = parameters
+        .map((parameter) => /^\s*q=([0-9.]+)\s*$/.exec(parameter)?.[1])
+        .find((value) => value !== undefined);
       return { tag: (tag ?? '').toLowerCase(), q: quality === undefined ? 1 : Number(quality) };
     })
     .filter((entry) => entry.tag !== '' && Number.isFinite(entry.q) && entry.q > 0)
@@ -41,15 +43,16 @@ const en = {
   'needsYou.plan': '{agent} has a plan waiting for you to confirm',
   'needsYou.question': '{agent} has a question for you',
   'needsYou.owner.tool': "{agent} needs an owner's approval to use {tool} (run by {person})",
-  'needsYou.owner.toolUnnamed': "{agent} needs an owner's approval for a tool action (run by {person})",
-  'replyFinished': '{agent} finished its reply',
-  'backgroundFinished': '{agent} finished its background work',
-  'runFailed': "{agent}'s run failed",
-  'runInterrupted': "{agent}'s run was cut short by a restart. Open the session to continue.",
+  'needsYou.owner.toolUnnamed':
+    "{agent} needs an owner's approval for a tool action (run by {person})",
+  replyFinished: '{agent} finished its reply',
+  backgroundFinished: '{agent} finished its background work',
+  runFailed: "{agent}'s run failed",
+  runInterrupted: "{agent}'s run was cut short by a restart. Open the session to continue.",
   'deviceAdded.title': 'Notifications are on',
   'deviceAdded.body': '{device} will now receive notifications.',
   'test.title': 'Test notification',
-  'test.body': 'Notifications from Agent Studio reach this device.',
+  'test.body': 'Notifications from Cloud Harness reach this device.',
   'plugin.discreet': '{plugin} sent a notification',
   'summary.waiting.one': '1 waiting',
   'summary.waiting.other': '{count} waiting',
@@ -72,14 +75,14 @@ const zhCN: Record<TextKey, string> = {
   'needsYou.question': '{agent} 有问题等你回答',
   'needsYou.owner.tool': '{agent} 需要所有者批准使用 {tool}（{person} 的任务）',
   'needsYou.owner.toolUnnamed': '{agent} 需要所有者批准一项工具操作（{person} 的任务）',
-  'replyFinished': '{agent} 已完成回复',
-  'backgroundFinished': '{agent} 的后台任务已完成',
-  'runFailed': '{agent} 的任务失败了',
-  'runInterrupted': '{agent} 的任务因服务重启而中断，打开会话即可继续。',
+  replyFinished: '{agent} 已完成回复',
+  backgroundFinished: '{agent} 的后台任务已完成',
+  runFailed: '{agent} 的任务失败了',
+  runInterrupted: '{agent} 的任务因服务重启而中断，打开会话即可继续。',
   'deviceAdded.title': '通知已开启',
   'deviceAdded.body': '{device} 现在会收到通知。',
   'test.title': '测试通知',
-  'test.body': '这台设备可以收到 Agent Studio 的通知。',
+  'test.body': '这台设备可以收到 Cloud Harness 的通知。',
   'plugin.discreet': '{plugin} 发来一条通知',
   'summary.waiting.one': '1 项待处理',
   'summary.waiting.other': '{count} 项待处理',
@@ -96,10 +99,16 @@ const zhCN: Record<TextKey, string> = {
 const dictionaries: Record<Language, Record<TextKey, string>> = { en, 'zh-CN': zhCN };
 
 export function text(language: Language, key: TextKey, vars: Vars = {}): string {
-  return dictionaries[language][key].replace(/\{(\w+)\}/g, (whole, name: string) => (name in vars ? String(vars[name]) : whole));
+  return dictionaries[language][key].replace(/\{(\w+)\}/g, (whole, name: string) =>
+    name in vars ? String(vars[name]) : whole,
+  );
 }
 
 /** A counted sentence: `key.one` for exactly one, `key.other` otherwise. */
-export function counted(language: Language, key: 'summary.waiting' | 'summary.results' | 'summary.running', count: number): string {
+export function counted(
+  language: Language,
+  key: 'summary.waiting' | 'summary.results' | 'summary.running',
+  count: number,
+): string {
   return text(language, `${key}.${count === 1 ? 'one' : 'other'}`, { count });
 }

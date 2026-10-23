@@ -133,7 +133,9 @@ export const terminalTitleSchema = z
   .regex(/^[^\u0000-\u001f\u007f-\u009f]*$/, 'A title cannot contain control characters.');
 
 /** Launchers are chosen by key from the server's fixed list (see `TerminalCapability.launchers`). */
-export const terminalLauncherKeySchema = z.string().regex(/^[a-z][a-z0-9-]{1,39}$/, 'Not a launcher key.');
+export const terminalLauncherKeySchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9-]{1,39}$/, 'Not a launcher key.');
 
 /** Launchers the server always knows: the sign-in commands of the supported agent CLIs. */
 export const TERMINAL_LAUNCHERS = {
@@ -160,6 +162,7 @@ export const createTerminalSessionRequestSchema = z.strictObject({
   projectId: idSchema.optional(),
   /** Omit for the login shell. */
   launcher: terminalLauncherKeySchema.optional(),
+  accountProfileId: idSchema.optional(),
   /** Required by remote launchers, refused by all others. */
   remote: terminalRemoteTargetSchema.optional(),
   cols: terminalColsSchema.default(TERMINAL_COLS.default),
@@ -189,7 +192,16 @@ export type TerminalLocalUrl = z.infer<typeof terminalLocalUrlSchema>;
  * user lost the right to a terminal; `project_removed` — its project was
  * removed; `failed` — the program could not be kept running.
  */
-export const terminalEndReasonSchema = z.enum(['exited', 'closed', 'idle', 'lifetime', 'shutdown', 'revoked', 'project_removed', 'failed']);
+export const terminalEndReasonSchema = z.enum([
+  'exited',
+  'closed',
+  'idle',
+  'lifetime',
+  'shutdown',
+  'revoked',
+  'project_removed',
+  'failed',
+]);
 export type TerminalEndReason = z.infer<typeof terminalEndReasonSchema>;
 
 export const terminalSessionSchema = z.object({
@@ -236,7 +248,9 @@ export const closeTerminalSessionResponseSchema = z.object({
 export type CloseTerminalSessionResponse = z.infer<typeof closeTerminalSessionResponseSchema>;
 
 export const TYPED_TEXT_MAX_CHARS = 4000;
-export const typeTextRequestSchema = z.strictObject({ text: z.string().min(1).max(TYPED_TEXT_MAX_CHARS) });
+export const typeTextRequestSchema = z.strictObject({
+  text: z.string().min(1).max(TYPED_TEXT_MAX_CHARS),
+});
 export type TypeTextRequest = z.infer<typeof typeTextRequestSchema>;
 
 export const typeTextResponseSchema = z.object({
@@ -261,7 +275,12 @@ export const terminalLauncherInfoSchema = z.object({
 });
 export type TerminalLauncherInfo = z.infer<typeof terminalLauncherInfoSchema>;
 
-export const terminalUnavailableCodeSchema = z.enum(['disabled', 'owner_only', 'session_required', 'pty_unavailable']);
+export const terminalUnavailableCodeSchema = z.enum([
+  'disabled',
+  'owner_only',
+  'session_required',
+  'pty_unavailable',
+]);
 
 export const terminalCapabilitySchema = z.object({
   available: z.boolean(),
@@ -361,7 +380,8 @@ export const terminalServerFrameSchema = z.discriminatedUnion('type', [
 ]);
 export type TerminalServerFrame = z.infer<typeof terminalServerFrameSchema>;
 
-export const terminalSocketPath = (sessionId: string) => `/api/terminal/sessions/${sessionId}/socket`;
+export const terminalSocketPath = (sessionId: string) =>
+  `/api/terminal/sessions/${sessionId}/socket`;
 
 /**
  * Published on the creating user's realtime topic (`user:<id>`) so that other

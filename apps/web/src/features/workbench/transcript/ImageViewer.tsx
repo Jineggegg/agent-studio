@@ -1,6 +1,14 @@
+import { AnnotationEditor, type ImageUse } from '../media/AnnotationEditor';
 import type { AttachmentRef } from '@agent-studio/protocol';
-import { ChevronLeft, ChevronRight, Download, X } from 'lucide-react';
-import { type PointerEvent as ReactPointerEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Download, Pencil, X } from 'lucide-react';
+import {
+  type PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { useT } from '@/i18n';
 import { OverlayPortal, focusableWithin, useOverlayLayer } from '@/ui/overlay';
 
@@ -10,6 +18,7 @@ export interface ImageViewerProps {
   open: boolean;
   onClose: () => void;
   onIndexChange: (index: number) => void;
+  onUseImage?: ((value: ImageUse) => Promise<void>) | undefined;
 }
 
 const MAX_SCALE = 6;
@@ -28,19 +37,48 @@ const REST: View = { scale: 1, x: 0, y: 0 };
  * swipe sideways (or use the arrow keys) for the next one; swipe down, press
  * Escape or use the close button to leave. Focus returns to the thumbnail.
  */
-export function ImageViewer({ images, index, open, onClose, onIndexChange }: ImageViewerProps) {
+export function ImageViewer({
+  images,
+  index,
+  open,
+  onClose,
+  onIndexChange,
+  onUseImage,
+}: ImageViewerProps) {
   if (!open || images.length === 0) return null;
-  return <Viewer images={images} index={Math.min(index, images.length - 1)} onClose={onClose} onIndexChange={onIndexChange} />;
+  return (
+    <Viewer
+      images={images}
+      index={Math.min(index, images.length - 1)}
+      onClose={onClose}
+      onIndexChange={onIndexChange}
+      onUseImage={onUseImage}
+    />
+  );
 }
 
-function Viewer({ images, index, onClose, onIndexChange }: Omit<ImageViewerProps, 'open'>) {
+function Viewer({
+  images,
+  index,
+  onClose,
+  onIndexChange,
+  onUseImage,
+}: Omit<ImageViewerProps, 'open'>) {
   const t = useT();
   const layer = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLElement | null>(null);
+  const [editing, setEditing] = useState(false);
   const [view, setView] = useState<View>(REST);
   const [drag, setDrag] = useState(0);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const gesture = useRef<{ startX: number; startY: number; origin: View; distance: number; moved: boolean; lastTap: number } | null>(null);
+  const gesture = useRef<{
+    startX: number;
+    startY: number;
+    origin: View;
+    distance: number;
+    moved: boolean;
+    lastTap: number;
+  } | null>(null);
   const lastTap = useRef(0);
   const image = images[index]!;
 
@@ -59,12 +97,13 @@ function Viewer({ images, index, onClose, onIndexChange }: Omit<ImageViewerProps
 
   const go = useCallback(
     (step: number) => {
+      if (editing) return;
       const next = index + step;
       if (next < 0 || next >= images.length) return;
       setView(REST);
       onIndexChange(next);
     },
-    [index, images.length, onIndexChange],
+    [index, images.length, onIndexChange, editing],
   );
 
   useEffect(() => {
@@ -90,7 +129,11 @@ function Viewer({ images, index, onClose, onIndexChange }: Omit<ImageViewerProps
     const element = layer.current;
     const limitX = ((element?.clientWidth ?? 0) * (scale - 1)) / 2;
     const limitY = ((element?.clientHeight ?? 0) * (scale - 1)) / 2;
-    return { scale, x: Math.min(limitX, Math.max(-limitX, next.x)), y: Math.min(limitY, Math.max(-limitY, next.y)) };
+    return {
+      scale,
+      x: Math.min(limitX, Math.max(-limitX, next.x)),
+      y: Math.min(limitY, Math.max(-limitY, next.y)),
+    };
   };
 
   const spread = (): number => {
@@ -99,10 +142,17 @@ function Viewer({ images, index, onClose, onIndexChange }: Omit<ImageViewerProps
   };
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if ((event.target as Element).closest('button, a')) return;
+    if (editing || (event.target as Element).closest('button, a, input, textarea, canvas')) return;
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    gesture.current = { startX: event.clientX, startY: event.clientY, origin: view, distance: spread(), moved: false, lastTap: lastTap.current };
+    gesture.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      origin: view,
+      distance: spread(),
+      moved: false,
+      lastTap: lastTap.current,
+    };
   };
   const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const state = gesture.current;
@@ -110,14 +160,18 @@ function Viewer({ images, index, onClose, onIndexChange }: Omit<ImageViewerProps
     pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.current.size >= 2) {
       const distance = spread();
-      if (state.distance > 0) setView(clamp({ ...state.origin, scale: state.origin.scale * (distance / state.distance) }));
+      if (state.distance > 0)
+        setView(
+          clamp({ ...state.origin, scale: state.origin.scale * (distance / state.distance) }),
+        );
       state.moved = true;
       return;
     }
     const dx = event.clientX - state.startX;
     const dy = event.clientY - state.startY;
     if (Math.abs(dx) > 6 || Math.abs(dy) > 6) state.moved = true;
-    if (state.origin.scale > 1) setView(clamp({ scale: state.origin.scale, x: state.origin.x + dx, y: state.origin.y + dy }));
+    if (state.origin.scale > 1)
+      setView(clamp({ scale: state.origin.scale, x: state.origin.x + dx, y: state.origin.y + dy }));
     else setDrag(Math.abs(dy) > Math.abs(dx) ? Math.max(0, dy) : 0);
   };
   const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -159,35 +213,94 @@ function Viewer({ images, index, onClose, onIndexChange }: Omit<ImageViewerProps
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        onWheel={(event) => setView(clamp({ ...view, scale: view.scale * (event.deltaY < 0 ? 1.15 : 1 / 1.15) }))}
+        onWheel={(event) =>
+          !editing &&
+          setView(clamp({ ...view, scale: view.scale * (event.deltaY < 0 ? 1.15 : 1 / 1.15) }))
+        }
       >
         <div className="wb-viewer__bar">
-          <button type="button" className="wb-viewer__button" onClick={onClose} aria-label={t('common.close')} title={t('common.close')}>
+          <button
+            type="button"
+            className="wb-viewer__button"
+            onClick={onClose}
+            aria-label={t('common.close')}
+            title={t('common.close')}
+          >
             <X size={22} aria-hidden="true" />
           </button>
           <span className="wb-viewer__name u-truncate">
             {image.name}
-            {images.length > 1 && <span className="u-tabular"> · {t('workbench.viewer.position', { index: t.number(index + 1), total: t.number(images.length) })}</span>}
+            {images.length > 1 && (
+              <span className="u-tabular">
+                {' '}
+                ·{' '}
+                {t('workbench.viewer.position', {
+                  index: t.number(index + 1),
+                  total: t.number(images.length),
+                })}
+              </span>
+            )}
           </span>
-          <a className="wb-viewer__button" href={image.url} download={image.name} aria-label={t('workbench.viewer.download')} title={t('workbench.viewer.download')}>
+          <button
+            type="button"
+            className="wb-viewer__button"
+            onClick={() => setEditing(!editing)}
+            aria-pressed={editing}
+            aria-label={t('media.annotate')}
+          >
+            <Pencil size={20} aria-hidden="true" />
+          </button>
+          <a
+            className="wb-viewer__button"
+            href={image.url}
+            download={image.name}
+            aria-label={t('workbench.viewer.download')}
+            title={t('workbench.viewer.download')}
+          >
             <Download size={20} aria-hidden="true" />
           </a>
         </div>
-        <img
-          key={image.id}
-          className="wb-viewer__image"
-          src={image.url}
-          alt={image.name}
-          draggable={false}
-          style={{ transform: `translate3d(${view.x}px, ${view.y + drag}px, 0) scale(${view.scale})`, opacity: drag > 0 ? Math.max(0.4, 1 - drag / 400) : 1 }}
-          data-moving={gesture.current ? '' : undefined}
-        />
-        {images.length > 1 && (
+        {editing ? (
+          <AnnotationEditor
+            key={image.id}
+            image={image}
+            onUseImage={onUseImage}
+            onClose={onClose}
+          />
+        ) : (
+          <img
+            key={image.id}
+            className="wb-viewer__image"
+            src={image.url}
+            alt={image.name}
+            draggable={false}
+            style={{
+              transform: `translate3d(${view.x}px, ${view.y + drag}px, 0) scale(${view.scale})`,
+              opacity: drag > 0 ? Math.max(0.4, 1 - drag / 400) : 1,
+            }}
+            data-moving={gesture.current ? '' : undefined}
+          />
+        )}
+        {images.length > 1 && !editing && (
           <>
-            <button type="button" className="wb-viewer__button wb-viewer__nav" data-side="previous" disabled={index === 0} onClick={() => go(-1)} aria-label={t('workbench.viewer.previous')}>
+            <button
+              type="button"
+              className="wb-viewer__button wb-viewer__nav"
+              data-side="previous"
+              disabled={index === 0}
+              onClick={() => go(-1)}
+              aria-label={t('workbench.viewer.previous')}
+            >
               <ChevronLeft size={24} aria-hidden="true" />
             </button>
-            <button type="button" className="wb-viewer__button wb-viewer__nav" data-side="next" disabled={index === images.length - 1} onClick={() => go(1)} aria-label={t('workbench.viewer.next')}>
+            <button
+              type="button"
+              className="wb-viewer__button wb-viewer__nav"
+              data-side="next"
+              disabled={index === images.length - 1}
+              onClick={() => go(1)}
+              aria-label={t('workbench.viewer.next')}
+            >
               <ChevronRight size={24} aria-hidden="true" />
             </button>
           </>

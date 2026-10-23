@@ -11,42 +11,57 @@ type Vars = Readonly<Record<string, string | number>>;
 
 const en = {
   // summaries: notify
+  'notified.external': 'Delivered through {count} configured notification channels.',
   'notified.app': 'Sent “{message}” to the notification list in the app.',
   'notified.devices.one': 'Sent “{message}” to 1 device.',
   'notified.devices.other': 'Sent “{message}” to {count} devices.',
   'notified.both.one': 'Sent “{message}” to the app and 1 device.',
   'notified.both.other': 'Sent “{message}” to the app and {count} devices.',
-  'quiet.eventOff': 'Not sent: notifications about automations are switched off in the creator’s settings.',
-  'quiet.channelsOff': 'Not sent: every notification channel is switched off in the creator’s settings.',
-  'failed.notDelivered': 'Not delivered: no device’s push service accepted the message, and the list in the app is switched off.',
+  'quiet.eventOff':
+    'Not sent: notifications about automations are switched off in the creator’s settings.',
+  'quiet.channelsOff':
+    'Not sent: every notification channel is switched off in the creator’s settings.',
+  'failed.notDelivered':
+    'Not delivered: no device’s push service accepted the message, and the list in the app is switched off.',
   // summaries: agent runs
-  'started': '{agent} is working in “{session}” ({mode}).',
-  'completed': '{agent} finished in “{session}”.',
-  'denied.approval.one': '{agent} finished in “{session}”, but 1 action needed approval and was denied because nobody was there to give it.',
-  'denied.approval.other': '{agent} finished in “{session}”, but {count} actions needed approval and were denied because nobody was there to give it.',
+  started: '{agent} is working in “{session}” ({mode}).',
+  completed: '{agent} finished in “{session}”.',
+  'denied.approval.one':
+    '{agent} finished in “{session}”, but 1 action needed approval and was denied because nobody was there to give it.',
+  'denied.approval.other':
+    '{agent} finished in “{session}”, but {count} actions needed approval and were denied because nobody was there to give it.',
   'failed.run': '{agent} failed in “{session}”: {error}',
   'failed.stopped': 'The run in “{session}” was stopped before it finished.',
-  'failed.interrupted': 'The server restarted while this was running. Nothing was run again; open the session to see how far it got.',
-  'failed.interruptedBeforeStart': 'The server stopped before this could start. It was not run again.',
+  'failed.interrupted':
+    'The server restarted while this was running. Nothing was run again; open the session to see how far it got.',
+  'failed.interruptedBeforeStart':
+    'The server stopped before this could start. It was not run again.',
   'failed.error': 'It could not be started: {error}',
   // summaries: guard rails
   'denied.automationOff': 'Not run: automations are switched off for this project.',
   'denied.projectArchived': 'Not run: the project is archived.',
-  'denied.creatorDisabled': 'Not run: the account of {creator}, who created this automation, is disabled or gone.',
-  'denied.accessLost': 'Not run: {creator}, who created this automation, no longer has write access to this project.',
-  'denied.accessLostRead': 'Not sent: {creator}, who created this automation, can no longer see this project.',
+  'denied.creatorDisabled':
+    'Not run: the account of {creator}, who created this automation, is disabled or gone.',
+  'denied.accessLost':
+    'Not run: {creator}, who created this automation, no longer has write access to this project.',
+  'denied.accessLostRead':
+    'Not sent: {creator}, who created this automation, can no longer see this project.',
   'denied.agentUnavailable': 'Not run: {agent} is not available on this Studio.',
   'denied.agentNotEnabled': 'Not run: {agent} is not offered in this project any more.',
-  'denied.modeNotAllowed': 'Not run: the mode “{mode}” needs auto mode, which the project’s owner has not enabled.',
+  'denied.modeNotAllowed':
+    'Not run: the mode “{mode}” needs auto mode, which the project’s owner has not enabled.',
   'denied.modeNotSupported': 'Not run: {agent} does not have the mode “{mode}”.',
-  'denied.sessionGone': 'Not run: the session it was to continue no longer exists or is not the creator’s own.',
+  'denied.sessionGone':
+    'Not run: the session it was to continue no longer exists or is not the creator’s own.',
   // summaries: skipped, missed
   'skipped.stillRunning': 'Skipped: the previous run of this automation was still going.',
   'skipped.sessionBusy': 'Skipped: the session “{session}” was busy with another turn.',
   'missed.one': 'Missed the run of {when}: the server was not running.',
   'missed.other': 'Missed the run of {when} and {count} before it: the server was not running.',
-  'missed.earlier.one': 'Missed 1 earlier run (of {when}): the server was not running. The most recent one is made up now.',
-  'missed.earlier.other': 'Missed {count} earlier runs (since {when}): the server was not running. The most recent one is made up now.',
+  'missed.earlier.one':
+    'Missed 1 earlier run (of {when}): the server was not running. The most recent one is made up now.',
+  'missed.earlier.other':
+    'Missed {count} earlier runs (since {when}): the server was not running. The most recent one is made up now.',
   'event.runFailed': 'A run failed',
   // notifications
   'notify.reminder': 'Reminder from “{name}”',
@@ -65,13 +80,15 @@ const en = {
   'deferred.missed': 'The server was not running at the time, and came back too late.',
   'deferred.runStopped': 'The turn was stopped before it finished.',
   'deferred.interrupted': 'The server restarted during execution — review before continuing.',
-  'deferred.interruptedBeforeSend': 'The server stopped before this message could be sent. It was not sent.',
+  'deferred.interruptedBeforeSend':
+    'The server stopped before this message could be sent. It was not sent.',
   'deferred.withdrawn': 'The message was removed from the session’s queue.',
 } as const;
 
 export type AutomationTextKey = keyof typeof en;
 
 const zhCN: Record<AutomationTextKey, string> = {
+  'notified.external': '已通过 {count} 个已配置的通知渠道送达。',
   'notified.app': '已把“{message}”发到应用内的通知列表。',
   'notified.devices.one': '已把“{message}”发到 1 台设备。',
   'notified.devices.other': '已把“{message}”发到 {count} 台设备。',
@@ -80,10 +97,12 @@ const zhCN: Record<AutomationTextKey, string> = {
   'quiet.eventOff': '未发送：创建者在设置里关闭了自动化提醒。',
   'quiet.channelsOff': '未发送：创建者在设置里关闭了所有通知渠道。',
   'failed.notDelivered': '未送达：没有设备的推送服务接受这条消息，应用内列表也已关闭。',
-  'started': '{agent} 正在“{session}”中工作（{mode}）。',
-  'completed': '{agent} 已在“{session}”中完成。',
-  'denied.approval.one': '{agent} 已在“{session}”中完成，但有 1 项操作需要审批，当时无人在场，已被拒绝。',
-  'denied.approval.other': '{agent} 已在“{session}”中完成，但有 {count} 项操作需要审批，当时无人在场，已被拒绝。',
+  started: '{agent} 正在“{session}”中工作（{mode}）。',
+  completed: '{agent} 已在“{session}”中完成。',
+  'denied.approval.one':
+    '{agent} 已在“{session}”中完成，但有 1 项操作需要审批，当时无人在场，已被拒绝。',
+  'denied.approval.other':
+    '{agent} 已在“{session}”中完成，但有 {count} 项操作需要审批，当时无人在场，已被拒绝。',
   'failed.run': '{agent} 在“{session}”中失败：{error}',
   'failed.stopped': '“{session}”中的任务在完成前被停止。',
   'failed.interrupted': '执行期间服务重启。没有重新运行；请打开会话查看进度。',
@@ -104,7 +123,8 @@ const zhCN: Record<AutomationTextKey, string> = {
   'missed.one': '错过了 {when} 的运行：当时服务没有运行。',
   'missed.other': '错过了 {when} 以及之前 {count} 次运行：当时服务没有运行。',
   'missed.earlier.one': '错过了更早的 1 次运行（{when}）：当时服务没有运行。现在补跑最近的一次。',
-  'missed.earlier.other': '错过了更早的 {count} 次运行（自 {when} 起）：当时服务没有运行。现在补跑最近的一次。',
+  'missed.earlier.other':
+    '错过了更早的 {count} 次运行（自 {when} 起）：当时服务没有运行。现在补跑最近的一次。',
   'event.runFailed': '有任务失败',
   'notify.reminder': '来自“{name}”的提醒',
   'notify.finished': '“{name}”已完成',
@@ -128,12 +148,24 @@ const zhCN: Record<AutomationTextKey, string> = {
 const dictionaries: Record<Language, Record<AutomationTextKey, string>> = { en, 'zh-CN': zhCN };
 
 export function say(language: Language, key: AutomationTextKey, vars: Vars = {}): string {
-  return dictionaries[language][key].replace(/\{(\w+)\}/g, (whole, name: string) => (name in vars ? String(vars[name]) : whole));
+  return dictionaries[language][key].replace(/\{(\w+)\}/g, (whole, name: string) =>
+    name in vars ? String(vars[name]) : whole,
+  );
 }
 
-type Counted = { [K in AutomationTextKey]: K extends `${infer Base}.other` ? Base : never }[AutomationTextKey];
+type Counted = {
+  [K in AutomationTextKey]: K extends `${infer Base}.other` ? Base : never;
+}[AutomationTextKey];
 
 /** A counted sentence: `key.one` for exactly one, `key.other` otherwise. */
-export function sayCounted(language: Language, key: Counted, count: number, vars: Vars = {}): string {
-  return say(language, `${key}.${count === 1 ? 'one' : 'other'}` as AutomationTextKey, { count, ...vars });
+export function sayCounted(
+  language: Language,
+  key: Counted,
+  count: number,
+  vars: Vars = {},
+): string {
+  return say(language, `${key}.${count === 1 ? 'one' : 'other'}` as AutomationTextKey, {
+    count,
+    ...vars,
+  });
 }

@@ -13,7 +13,15 @@
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { downloadTerminal, TERMINAL_PLATFORMS } from './release-download.mjs';
@@ -30,7 +38,11 @@ const name = `agent-studio-${version}`;
 const stage = path.join(out, name);
 
 function run(command, commandArgs, options = {}) {
-  return execFileSync(command, commandArgs, { stdio: ['ignore', 'pipe', 'inherit'], encoding: 'utf8', ...options });
+  return execFileSync(command, commandArgs, {
+    stdio: ['ignore', 'pipe', 'inherit'],
+    encoding: 'utf8',
+    ...options,
+  });
 }
 
 function need(file, hint) {
@@ -50,7 +62,8 @@ mkdirSync(stage, { recursive: true });
 
 // What runs. Source maps and compiled tests stay behind.
 const runtimeOnly = (source) => !/\.(map|test\.js|test\.d\.ts)$/.test(source);
-const copy = (from, to = from) => cpSync(path.join(root, from), path.join(stage, to), { recursive: true, filter: runtimeOnly });
+const copy = (from, to = from) =>
+  cpSync(path.join(root, from), path.join(stage, to), { recursive: true, filter: runtimeOnly });
 for (const entry of [
   'package.json',
   'package-lock.json',
@@ -75,12 +88,26 @@ for (const entry of [
 }
 copy('packaging/bin', 'bin');
 chmodSync(path.join(stage, 'bin', 'agent-studio'), 0o755);
+chmodSync(path.join(stage, 'bin', 'cloud-harness'), 0o755);
 
 // Runtime dependencies of the server and the packages it loads, exactly as the lockfile pins them.
-run('npm', ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund', '--workspace=@agent-studio/server', '--workspace=@agent-studio/protocol', '--workspace=@agent-studio/plugin-sdk'], {
-  cwd: stage,
-  stdio: ['ignore', 'inherit', 'inherit'],
-});
+run(
+  'npm',
+  [
+    'ci',
+    '--omit=dev',
+    '--ignore-scripts',
+    '--no-audit',
+    '--no-fund',
+    '--workspace=@agent-studio/server',
+    '--workspace=@agent-studio/protocol',
+    '--workspace=@agent-studio/plugin-sdk',
+  ],
+  {
+    cwd: stage,
+    stdio: ['ignore', 'inherit', 'inherit'],
+  },
+);
 
 // npm installs the terminal binary of this machine only. The others come from the registry, each checked
 // against the integrity the lockfile records for it.
@@ -101,12 +128,28 @@ writeFileSync(path.join(stage, 'VERSION'), `${version}\n`);
 
 const epoch = run('git', ['log', '-1', '--format=%ct'], { cwd: root }).trim();
 const archive = `${name}.tar.gz`;
-run('tar', ['--sort=name', `--mtime=@${epoch}`, '--owner=0', '--group=0', '--numeric-owner', '-czf', path.join(out, archive), '-C', out, name]);
+run('tar', [
+  '--sort=name',
+  `--mtime=@${epoch}`,
+  '--owner=0',
+  '--group=0',
+  '--numeric-owner',
+  '-czf',
+  path.join(out, archive),
+  '-C',
+  out,
+  name,
+]);
 rmSync(stage, { recursive: true, force: true });
 
 cpSync(path.join(root, 'packaging', 'install.sh'), path.join(out, 'install.sh'));
 const sums = [archive, 'install.sh']
-  .map((file) => `${createHash('sha256').update(readFileSync(path.join(out, file))).digest('hex')}  ${file}`)
+  .map(
+    (file) =>
+      `${createHash('sha256')
+        .update(readFileSync(path.join(out, file)))
+        .digest('hex')}  ${file}`,
+  )
   .join('\n');
 writeFileSync(path.join(out, 'SHA256SUMS'), `${sums}\n`);
 console.log(`\n${path.relative(root, out)}/\n${sums}`);

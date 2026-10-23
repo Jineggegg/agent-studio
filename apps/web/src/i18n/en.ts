@@ -1,3 +1,8 @@
+import { usageGateMessagesEn } from '@/features/usage/messages';
+import { computerMessagesEn } from '@/features/computer/messages';
+import { browserEn } from '@/features/browser/messages';
+import { miniAppMessagesEn } from '@/features/mini-apps/messages';
+import { libraryMessagesEn } from '@/features/tool-library/messages';
 /**
  * English — the source dictionary. Its keys are the type `MessageKey`.
  *
@@ -7,7 +12,24 @@
  * `errors.<code>` and audit actions under `audit.<action>` — add a line here
  * (and in every other dictionary) when the server gains one.
  */
+import { mediaEn } from '@/features/workbench/media/messages';
+
+import { mailMessagesEn } from '@/features/mailbox/messages';
+import { notificationMessagesEn } from '@/features/notifications/messages';
+import { reminderMessagesEn } from '@/features/automation/messages';
+import { conversationMessagesEn } from '@/features/workbench/sessions/messages';
+
 export const en = {
+  ...libraryMessagesEn,
+  ...miniAppMessagesEn,
+  ...browserEn,
+  ...computerMessagesEn,
+  ...usageGateMessagesEn,
+  ...mediaEn,
+  ...mailMessagesEn,
+  ...notificationMessagesEn,
+  ...reminderMessagesEn,
+  ...conversationMessagesEn,
   // ---- common ---------------------------------------------------------------
   'common.add': 'Add',
   'common.cancel': 'Cancel',
@@ -42,11 +64,14 @@ export const en = {
   'shell.reload': 'Reload',
   'shell.goHome': 'Go to Home',
   'shell.chunk.title': 'This part of the app did not load',
-  'shell.chunk.description': 'A file could not be downloaded. Check the connection and try again — the rest of the app still works.',
+  'shell.chunk.description':
+    'A file could not be downloaded. Check the connection and try again — the rest of the app still works.',
   'shell.crash.title': 'This screen ran into a problem',
-  'shell.crash.description': 'Something failed while showing it. Your work on the server is not affected.',
+  'shell.crash.description':
+    'Something failed while showing it. Your work on the server is not affected.',
   'shell.unreachable.title': 'Cannot reach your Studio',
-  'shell.unreachable.description': 'The server did not answer, so it is not known whether you are signed in. Nothing has been signed out.',
+  'shell.unreachable.description':
+    'The server did not answer, so it is not known whether you are signed in. Nothing has been signed out.',
   'shell.notFound.title': 'Nothing at this address',
   'shell.notFound.description': 'The page may have been moved, or the link is incomplete.',
   'shell.ownerOnly.title': 'Only the owner can open this',
@@ -55,7 +80,7 @@ export const en = {
   'shell.cue.reconnecting': 'Reconnecting…',
   'shell.cue.restored': 'Connected again',
 
-  'update.title': 'Agent Studio was updated',
+  'update.title': 'Cloud Harness was updated',
   'update.detail': 'Refresh to use the new version.',
   'update.refresh': 'Refresh',
 
@@ -63,7 +88,8 @@ export const en = {
   'state.gone.title': 'This is no longer here',
   'state.gone.description': 'It was removed, or it is not shared with you.',
   'state.unreachable.title': 'Could not load this',
-  'state.unreachable.description': 'The server did not answer. What you were looking for is probably fine — try again.',
+  'state.unreachable.description':
+    'The server did not answer. What you were looking for is probably fine — try again.',
   'state.forbidden.title': 'You do not have access to this',
   'state.failed.title': 'Something went wrong',
   'state.failed.description': 'The request could not be completed.',
@@ -88,7 +114,8 @@ export const en = {
   'errors.network_error': 'The server could not be reached. Check the connection and try again.',
   'errors.timeout': 'The server took too long to answer. Try again.',
   'errors.aborted': 'The request was cancelled.',
-  'errors.invalid_response': 'The server sent an answer this version of the app does not understand. Refresh the page.',
+  'errors.invalid_response':
+    'The server sent an answer this version of the app does not understand. Refresh the page.',
   'errors.server_error': 'The server ran into a problem. Try again in a moment.',
   'errors.internal_error': 'The server ran into a problem. Try again in a moment.',
   'errors.rate_limited': 'Too many attempts. Wait a little and try again.',
@@ -105,9 +132,11 @@ export const en = {
   'errors.reauth_cancelled': 'This needs your password to continue.',
   'errors.csrf_failed': 'This page is out of step with your session. Refresh and try again.',
   'errors.origin_not_allowed': 'Requests from this address are not accepted by the server.',
-  'errors.host_not_allowed': 'This address is not one the server answers to. Its operator needs to add it to the allowed addresses.',
+  'errors.host_not_allowed':
+    'This address is not one the server answers to. Its operator needs to add it to the allowed addresses.',
   'errors.invalid_credentials': 'That username or password is not correct.',
-  'errors.invalid_setup_token': 'That setup token is not correct. Copy it again from the server’s console.',
+  'errors.invalid_setup_token':
+    'That setup token is not correct. Copy it again from the server’s console.',
   'errors.already_set_up': 'This Studio is already set up. Sign in instead.',
   'errors.weak_password': 'That password is too easy to guess. Choose another.',
   'errors.username_taken': 'That username is taken.',
@@ -152,7 +181,8 @@ export const en = {
   'validation.username.missing': 'Enter a username.',
   'validation.username.short': 'Use at least {count} characters.',
   'validation.username.long': 'Use at most {count} characters.',
-  'validation.username.characters': 'Use letters, digits, dots, dashes and underscores, starting with a letter or digit.',
+  'validation.username.characters':
+    'Use letters, digits, dots, dashes and underscores, starting with a letter or digit.',
   'validation.password.missing': 'Enter a password.',
   'validation.password.short': 'Use at least {count} characters.',
   'validation.password.long': 'Use at most {count} characters.',
@@ -185,14 +215,16 @@ export const en = {
   'auth.setup.title': 'Set up your Studio',
   'auth.setup.lead': 'Create the owner account. The owner adds everyone else later.',
   'auth.setup.token': 'Setup token',
-  'auth.setup.tokenHint': 'Printed on the server’s console the first time it starts. It proves you control the machine.',
+  'auth.setup.tokenHint':
+    'Printed on the server’s console the first time it starts. It proves you control the machine.',
   'auth.setup.tokenMissing': 'Enter the setup token.',
   'auth.setup.action': 'Create account',
   'auth.setup.working': 'Setting up…',
   'auth.setup.foot': 'This form works once. After the owner account exists it is gone for good.',
 
   'auth.reauth.title': 'Confirm it’s you',
-  'auth.reauth.lead': 'Enter your password to continue. This is asked before changes to who can sign in.',
+  'auth.reauth.lead':
+    'Enter your password to continue. This is asked before changes to who can sign in.',
   'auth.reauth.action': 'Continue',
   'auth.reauth.missing': 'Enter your password.',
   'auth.reauth.wrong': 'That password is not correct.',
@@ -206,8 +238,10 @@ export const en = {
   'home.pageOf': 'Page {page} of {count}',
   'home.previousPage': 'Previous page',
   'home.nextPage': 'Next page',
-  'home.empty.owner': 'No projects yet. A project is a folder on this machine that agents work in — add your first one.',
-  'home.empty.member': 'No projects have been shared with you yet. The owner of this Studio can share one.',
+  'home.empty.owner':
+    'No projects yet. A project is a folder on this machine that agents work in — add your first one.',
+  'home.empty.member':
+    'No projects have been shared with you yet. The owner of this Studio can share one.',
   'home.error.title': 'Projects could not be loaded',
   'home.error.stale': 'Showing the projects from the last successful read',
 
@@ -223,7 +257,8 @@ export const en = {
   'home.project.folderMissing': 'Choose or type the project’s folder.',
   'home.project.browse': 'Browse',
   'home.project.createFolder': 'Create the folder',
-  'home.project.createFolderHint': 'When it does not exist yet, make it (and any missing folders above it).',
+  'home.project.createFolderHint':
+    'When it does not exist yet, make it (and any missing folders above it).',
   'home.project.created': '“{name}” was added',
   'home.project.details': 'Project',
   'home.project.edit': 'Edit name and icon',
@@ -234,14 +269,16 @@ export const en = {
   'home.project.readOnly': 'View only',
   'home.project.createdAt': 'Added',
   'home.project.archive': 'Archive',
-  'home.project.archiveHint': 'Takes it off the home screen. Bring it back from Settings → Projects.',
+  'home.project.archiveHint':
+    'Takes it off the home screen. Bring it back from Settings → Projects.',
   'home.project.archived': '“{name}” was archived',
   'home.project.archivedDetail': 'Find it again in Settings → Projects.',
   'home.project.archivedBadge': 'Archived',
   'home.project.restore': 'Restore to the home screen',
   'home.project.restored': '“{name}” is back on the home screen',
   'home.project.remove': 'Remove project',
-  'home.project.removeHint': 'Removing a project forgets what the Studio stored about it. The folder and its files are never touched.',
+  'home.project.removeHint':
+    'Removing a project forgets what the Studio stored about it. The folder and its files are never touched.',
   'home.project.removeConfirm.title': 'Remove “{name}”?',
   'home.project.removeConfirm.message':
     'The Studio forgets this project and everything it stored about it, including its conversations. The folder and the files in it stay exactly as they are.',
@@ -256,7 +293,8 @@ export const en = {
   'home.folder.empty': 'No folders inside this one',
   'home.folder.emptyHint': 'You can still choose this folder itself.',
   'home.folder.noRoots': 'No workspace folders are available',
-  'home.folder.truncated': 'This folder has more entries than can be listed. Type the path instead.',
+  'home.folder.truncated':
+    'This folder has more entries than can be listed. Type the path instead.',
 
   'symbol.folder': 'Folder',
   'symbol.code': 'Code',
@@ -320,7 +358,8 @@ export const en = {
   'settings.projects.archived': 'Archived',
   'settings.projects.archivedHint': 'Open an archived project to restore it to the home screen.',
   'settings.projects.empty.title': 'No projects yet',
-  'settings.projects.empty.description': 'Projects are added from the home screen with “New project”.',
+  'settings.projects.empty.description':
+    'Projects are added from the home screen with “New project”.',
 
   'appearance.theme': 'Theme',
   'appearance.theme.light': 'Light',
@@ -341,7 +380,8 @@ export const en = {
   'account.locks.normal': 'Normal',
   'account.locks.locked': 'Locked',
   'account.locks.until': 'The password cannot be used before {when}.',
-  'account.locks.hint': 'Locks follow too many wrong passwords and lift by themselves. A passkey still works meanwhile.',
+  'account.locks.hint':
+    'Locks follow too many wrong passwords and lift by themselves. A passkey still works meanwhile.',
   'account.session': 'This session',
   'account.session.detail': 'Signed in {when} · ends {expires} unless used',
   'account.method.password': 'Password',
@@ -360,22 +400,27 @@ export const en = {
   'account.password.changedDetail': 'Your other devices were signed out.',
 
   'account.passkeys': 'Passkeys',
-  'account.passkeys.hint': 'A passkey signs you in with this device’s fingerprint, face or PIN. Each one works only at the address it was made on — here that is {host}.',
-  'account.passkeys.unavailableHere': 'Passkeys cannot be used at this address. They need https and a host name (or localhost).',
+  'account.passkeys.hint':
+    'A passkey signs you in with this device’s fingerprint, face or PIN. Each one works only at the address it was made on — here that is {host}.',
+  'account.passkeys.unavailableHere':
+    'Passkeys cannot be used at this address. They need https and a host name (or localhost).',
   'account.passkeys.unsupported': 'This browser does not support passkeys.',
   'account.passkeys.none': 'No passkeys yet',
   'account.passkeys.noneHint': 'Add one to sign in without typing your password.',
   'account.passkeys.add': 'Add a passkey',
-  'account.passkeys.addLead': 'Your device will ask for your fingerprint, face or PIN. The passkey will work at {host} only.',
+  'account.passkeys.addLead':
+    'Your device will ask for your fingerprint, face or PIN. The passkey will work at {host} only.',
   'account.passkeys.name': 'Name',
-  'account.passkeys.nameHint': 'Something to recognise it by, such as “Work phone”. Left empty, the device’s name is used.',
+  'account.passkeys.nameHint':
+    'Something to recognise it by, such as “Work phone”. Left empty, the device’s name is used.',
   'account.passkeys.create': 'Create passkey',
   'account.passkeys.added': 'Passkey “{name}” added',
   'account.passkeys.here': 'This address',
   'account.passkeys.synced': 'Synced',
   'account.passkeys.actions': 'Actions for passkey {name}',
   'account.passkeys.remove.title': 'Remove passkey “{name}”?',
-  'account.passkeys.remove.message': 'It will no longer sign you in at {host}. It may remain listed on the device until you delete it there too.',
+  'account.passkeys.remove.message':
+    'It will no longer sign you in at {host}. It may remain listed on the device until you delete it there too.',
   'account.passkeys.removed': 'Passkey removed',
 
   'account.devices': 'Signed-in devices',
@@ -385,11 +430,13 @@ export const en = {
   'account.devices.unknown': 'Unknown device',
   'account.devices.actions': 'Actions for {name}',
   'account.devices.signOut.title': 'Sign out {name}?',
-  'account.devices.signOut.message': 'That device will have to sign in again. Work running on the server continues.',
+  'account.devices.signOut.message':
+    'That device will have to sign in again. Work running on the server continues.',
   'account.devices.signedOut': '{name} was signed out',
 
   'account.tokens': 'API tokens',
-  'account.tokens.hint': 'Tokens let scripts act as you without a browser. They cannot manage accounts, passwords or other tokens.',
+  'account.tokens.hint':
+    'Tokens let scripts act as you without a browser. They cannot manage accounts, passwords or other tokens.',
   'account.tokens.none': 'No API tokens',
   'account.tokens.noneHint': 'Create one for a script or another tool.',
   'account.tokens.new': 'New token',
@@ -415,12 +462,15 @@ export const en = {
   'account.tokens.actions': 'Actions for token {name}',
   'account.tokens.revoke': 'Revoke',
   'account.tokens.revoke.title': 'Revoke “{name}”?',
-  'account.tokens.revoke.message': 'Anything using this token stops working at once. This cannot be undone.',
+  'account.tokens.revoke.message':
+    'Anything using this token stops working at once. This cannot be undone.',
   'account.tokens.revoked': 'Token “{name}” revoked',
   'account.tokens.created.title': 'Your new token',
   'account.tokens.created.once': 'Copy it now — it is shown only this once',
-  'account.tokens.created.onceDetail': 'The Studio keeps no copy that can be shown again. If you lose it, revoke it and create another.',
-  'account.tokens.created.usage': 'Send it as “Authorization: Bearer …” from whatever “{name}” is for.',
+  'account.tokens.created.onceDetail':
+    'The Studio keeps no copy that can be shown again. If you lose it, revoke it and create another.',
+  'account.tokens.created.usage':
+    'Send it as “Authorization: Bearer …” from whatever “{name}” is for.',
   'account.tokens.created.done': 'I have saved it',
   'account.tokens.copy': 'Copy token',
   'account.tokens.copyFailed': 'Could not copy. Select the token and copy it by hand.',
@@ -433,9 +483,11 @@ export const en = {
 
   'account.signOut': 'Sign out',
   'account.signOut.title': 'Sign out of this device?',
-  'account.signOut.message': 'This device forgets your session and its local copies of your settings. Work running on the server continues.',
+  'account.signOut.message':
+    'This device forgets your session and its local copies of your settings. Work running on the server continues.',
   'account.signOutEverywhere': 'Sign out everywhere',
-  'account.signOutEverywhere.hint': 'Signing out everywhere ends every session on every device and disables every API token.',
+  'account.signOutEverywhere.hint':
+    'Signing out everywhere ends every session on every device and disables every API token.',
   'account.signOutEverywhere.title': 'Sign out everywhere?',
   'account.signOutEverywhere.message':
     'Every browser and device signed in to this account — this one included — is signed out, live connections drop, and all API tokens stop working. Work already running on the server continues.',
@@ -444,7 +496,8 @@ export const en = {
   // ---- people --------------------------------------------------------------------
   'people.count.one': '{count} person',
   'people.count.other': '{count} people',
-  'people.hint': 'Members can use only the projects shared with them. Changes here ask for your password again.',
+  'people.hint':
+    'Members can use only the projects shared with them. Changes here ask for your password again.',
   'people.add': 'Add person',
   'people.added': '{name} was added',
   'people.you': 'You',
@@ -455,18 +508,22 @@ export const en = {
   'people.role.ownerHint': 'Owners administer the Studio and see every project.',
   'people.role.memberHint': 'Members use the projects an owner shares with them.',
   'people.enabled': 'Can sign in',
-  'people.enabled.hint': 'Turning this off signs the person out everywhere and disables their API tokens. Their work stays.',
+  'people.enabled.hint':
+    'Turning this off signs the person out everywhere and disables their API tokens. Their work stays.',
   'people.initialPassword': 'Password',
-  'people.initialPassword.hint': 'At least {count} characters. Tell them in person; they can change it after signing in.',
+  'people.initialPassword.hint':
+    'At least {count} characters. Tell them in person; they can change it after signing in.',
   'people.newPassword': 'New password',
   'people.newPassword.hint': 'Resetting signs the person out on every device.',
   'people.resetPassword': 'Reset password',
   'people.passwordReset': 'Password reset for {name}',
   'people.delete': 'Delete account',
   'people.delete.title': 'Delete {name}’s account?',
-  'people.delete.message': 'They are signed out everywhere and can no longer sign in. Their conversations are deleted. Memory notes they wrote are kept, and still name them as the author in plain text. Project folders are not touched.',
+  'people.delete.message':
+    'They are signed out everywhere and can no longer sign in. Their conversations are deleted. Memory notes they wrote are kept, and still name them as the author in plain text. Project folders are not touched.',
   'people.deleted': '{name}’s account was deleted',
-  'people.selfHint': 'This is you. Change your own password and devices under Account & security; another owner must change your role.',
+  'people.selfHint':
+    'This is you. Change your own password and devices under Account & security; another owner must change your role.',
 
   // ---- about ---------------------------------------------------------------------
   'about.tagline': 'A self-hosted work platform for AI coding agents.',
@@ -483,10 +540,13 @@ export const en = {
   'about.builtAt': 'Built {when}',
   'about.started': 'Running since',
   'about.sandbox': 'Agent sandbox',
-  'about.sandbox.on': 'Agents and their commands cannot see the Studio’s own data or your credentials.',
-  'about.sandbox.off': 'Agents run without a sandbox: a command you approve could read the Studio’s own data.',
+  'about.sandbox.on':
+    'Agents and their commands cannot see the Studio’s own data or your credentials.',
+  'about.sandbox.off':
+    'Agents run without a sandbox: a command you approve could read the Studio’s own data.',
   'about.terminal': 'Terminal',
-  'about.terminal.on': 'Only the owner of this Studio can open a shell in a project. Members cannot, whatever access they have.',
+  'about.terminal.on':
+    'Only the owner of this Studio can open a shell in a project. Members cannot, whatever access they have.',
   'about.terminal.off': 'Turned off by the server’s configuration.',
   'about.node': 'Node.js',
   'about.platform': 'Platform',
@@ -494,26 +554,31 @@ export const en = {
   'about.workspaceRoots': 'Workspace folders',
   'about.publicOrigins': 'Public addresses',
   'about.publicOrigins.none': 'None configured — reachable only from this machine.',
-  'about.host.hint': 'Shown to owners only. These come from the server’s configuration and are changed there.',
+  'about.host.hint':
+    'Shown to owners only. These come from the server’s configuration and are changed there.',
   'about.update.check': 'Check for a newer version',
   'about.update.current': 'You are on the newest version',
   'about.update.dev': 'The development server always serves the latest code.',
   'about.cache.clear': 'Clear cached files',
-  'about.cache.hint': 'Clearing cached files only removes copies this browser keeps of the app itself. Nothing on the server changes and you stay signed in.',
+  'about.cache.hint':
+    'Clearing cached files only removes copies this browser keeps of the app itself. Nothing on the server changes and you stay signed in.',
   'about.cache.confirm.title': 'Clear cached files?',
-  'about.cache.confirm.message': 'The app’s files are downloaded again when next needed. Your session, settings and work are not affected.',
+  'about.cache.confirm.message':
+    'The app’s files are downloaded again when next needed. Your session, settings and work are not affected.',
   'about.cache.cleared': 'Cached files cleared',
   'about.cache.nothing': 'There was nothing cached',
   'about.cache.failed': 'This browser would not let the cache be cleared',
   'about.licence': 'Licence',
-  'about.licence.hint': 'Agent Studio is open-source software under the MIT License: free to use, change and share, provided without warranty.',
+  'about.licence.hint':
+    'Cloud Harness is open-source software under the MIT License: free to use, change and share, provided without warranty.',
 
   // ---- component gallery (development only) --------------------------------------
   'dev.gallery.title': 'Components',
 
   // ---- errors of the agent runtime (by code) ---------------------------------------
   'errors.session_not_found': 'That conversation no longer exists.',
-  'errors.session_busy': 'The agent is still working in this conversation. Stop it first, or wait for it to finish.',
+  'errors.session_busy':
+    'The agent is still working in this conversation. Stop it first, or wait for it to finish.',
   'errors.request_conflict': 'This message collided with an earlier one. Send it again.',
   'errors.request_in_progress': 'That message is already being processed.',
   'errors.receipt_not_found': 'The server has no record of that message.',
@@ -531,7 +596,8 @@ export const en = {
   'errors.not_your_session': 'Only the person who started this conversation can write in it.',
   'errors.attachment_too_large': 'That file is larger than 10 MB.',
   'errors.too_many_attachments': 'A message can carry at most 10 files.',
-  'errors.attachment_already_sent': 'One of those files has already been sent with another message.',
+  'errors.attachment_already_sent':
+    'One of those files has already been sent with another message.',
   'errors.attachment_not_found': 'One of those files is no longer on the server. Attach it again.',
   'errors.attachment_empty': 'That file is empty.',
   'errors.upload_too_large': 'That upload is too large.',
@@ -608,7 +674,8 @@ export const en = {
   'workbench.session.restore': 'Restore',
   'workbench.session.delete': 'Delete',
   'workbench.session.delete.title': 'Delete “{title}”?',
-  'workbench.session.delete.message': 'The conversation, its transcript and the agent’s own copy are removed for good.',
+  'workbench.session.delete.message':
+    'The conversation, its transcript and the agent’s own copy are removed for good.',
   'workbench.session.delete.messageWithArchive':
     'The conversation, its transcript and the agent’s own copy are removed for good. To put it out of the way and keep it, archive it instead.',
   'workbench.session.draft': 'Draft',
@@ -617,20 +684,27 @@ export const en = {
   'workbench.session.unreachable': 'Could not open this conversation',
 
   'workbench.stage.noProjects': 'No projects yet',
-  'workbench.stage.noProjectsOwner': 'A conversation works inside a project — a folder on this server. Create one to begin.',
-  'workbench.stage.noProjectsMember': 'A conversation works inside a project. Ask the owner of this Studio to share one with you.',
+  'workbench.stage.noProjectsOwner':
+    'A conversation works inside a project — a folder on this server. Create one to begin.',
+  'workbench.stage.noProjectsMember':
+    'A conversation works inside a project. Ask the owner of this Studio to share one with you.',
   'workbench.stage.projectsFailed': 'The projects could not be loaded',
   'workbench.stage.unknownProject': 'Cannot find this project',
-  'workbench.stage.unknownProjectDetail': 'It may have been archived or removed, or it is not shared with you.',
+  'workbench.stage.unknownProjectDetail':
+    'It may have been archived or removed, or it is not shared with you.',
   'workbench.stage.openRecent': 'Open the most recent project',
   'workbench.chat.crashed': 'This conversation could not be shown',
-  'workbench.chat.crashedDetail': 'Something failed while drawing it. The conversation itself is intact on the server.',
+  'workbench.chat.crashedDetail':
+    'Something failed while drawing it. The conversation itself is intact on the server.',
   'workbench.chat.reload': 'Reload conversation',
   'workbench.row.broken': 'This part of the conversation could not be shown.',
 
-  'workbench.readOnly.notYours': 'You are viewing someone else’s conversation. Only the person who started it can write in it.',
-  'workbench.readOnly.project': 'You can view this project but not change it, so you cannot write here.',
-  'workbench.readOnly.agentGone': 'The agent of this conversation is not available on this Studio any more.',
+  'workbench.readOnly.notYours':
+    'You are viewing someone else’s conversation. Only the person who started it can write in it.',
+  'workbench.readOnly.project':
+    'You can view this project but not change it, so you cannot write here.',
+  'workbench.readOnly.agentGone':
+    'The agent of this conversation is not available on this Studio any more.',
   'workbench.readOnly.noAgent': 'No agent is available on this Studio yet.',
 
   'workbench.agent.generic': 'The agent',
@@ -647,7 +721,8 @@ export const en = {
   'workbench.agent.notSignedIn': 'Installed, but not signed in on this server.',
   'workbench.agent.notOffered': 'Not offered in this project.',
   'workbench.agent.readOnly': 'You can view this project but not start work in it.',
-  'workbench.agent.lockedHint': 'A conversation keeps the agent it started with. Start a new conversation to use another.',
+  'workbench.agent.lockedHint':
+    'A conversation keeps the agent it started with. Start a new conversation to use another.',
   'workbench.effort.title': 'Reasoning effort',
   'workbench.effort.button': 'Reasoning effort: {effort}',
   'workbench.effort.default': 'The model’s default',
@@ -663,20 +738,27 @@ export const en = {
   'workbench.mode.announce': 'Permission mode: {mode}',
   'workbench.mode.shortcut': 'Shift+Tab in the message field steps through these, never onto Auto.',
   'workbench.mode.plan': 'Plan',
-  'workbench.mode.plan.hint': 'Reads and searches only. It proposes a plan and changes nothing until you approve it.',
+  'workbench.mode.plan.hint':
+    'Reads and searches only. It proposes a plan and changes nothing until you approve it.',
   'workbench.mode.ask': 'Ask',
-  'workbench.mode.ask.hint': 'Reads inside the project freely. Asks before every edit, command or network access.',
+  'workbench.mode.ask.hint':
+    'Reads inside the project freely. Asks before every edit, command or network access.',
   'workbench.mode.accept-edits': 'Accept edits',
-  'workbench.mode.accept-edits.hint': 'Edits files in the project without asking. Still asks before commands and network access.',
+  'workbench.mode.accept-edits.hint':
+    'Edits files in the project without asking. Still asks before commands and network access.',
   'workbench.mode.auto': 'Auto',
-  'workbench.mode.auto.hint': 'Runs everything without asking, even what the Studio classes as dangerous. Only deny rules and the built-in deny list stop a request.',
+  'workbench.mode.auto.hint':
+    'Runs everything without asking, even what the Studio classes as dangerous. Only deny rules and the built-in deny list stop a request.',
   'workbench.mode.auto.warningTitle': 'Auto does not stop to ask',
-  'workbench.mode.auto.warning': 'Commands run and files change with nobody looking first. Requests the Studio classes as dangerous are not put to a person either: only deny rules and the built-in deny list stop them. Use it only in a project whose contents you could afford to lose, and only where the owner allows it.',
+  'workbench.mode.auto.warning':
+    'Commands run and files change with nobody looking first. Requests the Studio classes as dangerous are not put to a person either: only deny rules and the built-in deny list stop them. Use it only in a project whose contents you could afford to lose, and only where the owner allows it.',
   'workbench.mode.auto.allow': 'Allow Auto in {project}',
   'workbench.mode.auto.allowedHint': 'Anyone working in this project may choose Auto.',
   'workbench.mode.auto.notAllowedHint': 'Off: a conversation set to Auto behaves like Ask here.',
-  'workbench.mode.auto.ownerOnly': 'The owner has not allowed Auto in {project}, so it cannot be chosen here.',
-  'workbench.mode.auto.downgraded': 'This conversation is set to Auto, but Auto is not allowed in this project: it is running as {mode}.',
+  'workbench.mode.auto.ownerOnly':
+    'The owner has not allowed Auto in {project}, so it cannot be chosen here.',
+  'workbench.mode.auto.downgraded':
+    'This conversation is set to Auto, but Auto is not allowed in this project: it is running as {mode}.',
 
   'workbench.composer.placeholder': 'Message {agent}',
   'workbench.composer.send': 'Send',
@@ -691,7 +773,8 @@ export const en = {
   'workbench.composer.whileRunning': 'While the agent is working',
   'workbench.composer.tooLong': 'This message is longer than {max} characters. Shorten it to send.',
   'workbench.send.offline': 'You are offline. Nothing was sent; your message is still here.',
-  'workbench.send.notCreated': 'The conversation could not be started, so nothing was sent. {reason}',
+  'workbench.send.notCreated':
+    'The conversation could not be started, so nothing was sent. {reason}',
 
   'workbench.attach.add': 'Attach files',
   'workbench.attach.list': 'Attached files',
@@ -701,7 +784,8 @@ export const en = {
   'workbench.attach.uploading': 'Uploading {name}',
   'workbench.attach.failed': 'The upload failed.',
   'workbench.attach.failedNamed': '“{name}” was not uploaded. {reason}',
-  'workbench.attach.failedBlocksSend': 'A file did not upload. Remove it or try it again, then send.',
+  'workbench.attach.failedBlocksSend':
+    'A file did not upload. Remove it or try it again, then send.',
   'workbench.attach.tooLarge': '“{name}” is larger than {size} MB and was not attached.',
   'workbench.attach.empty': '“{name}” is empty and was not attached.',
   'workbench.attach.tooMany.one': 'A message can carry {max} files; {count} was left out.',
@@ -723,10 +807,14 @@ export const en = {
   'workbench.delivery.checking': 'Checking…',
   'workbench.delivery.failed': 'Not sent',
   'workbench.delivery.unconfirmedTitle': 'It is not known whether your message arrived',
-  'workbench.delivery.unconfirmedDetail': 'The server did not acknowledge it. Check before doing anything else — sending it again blindly could run it twice. What you type meanwhile is safe.',
-  'workbench.delivery.unconfirmedOffline': 'The connection dropped before the server acknowledged it. It will be checked when you are back online. What you type meanwhile is safe.',
-  'workbench.delivery.notReceived': 'The server never received it. It is safe to send the original again.',
-  'workbench.delivery.unverifiable': 'Delivery could not be verified, so nothing was sent again. Check once more when the server is reachable.',
+  'workbench.delivery.unconfirmedDetail':
+    'The server did not acknowledge it. Check before doing anything else — sending it again blindly could run it twice. What you type meanwhile is safe.',
+  'workbench.delivery.unconfirmedOffline':
+    'The connection dropped before the server acknowledged it. It will be checked when you are back online. What you type meanwhile is safe.',
+  'workbench.delivery.notReceived':
+    'The server never received it. It is safe to send the original again.',
+  'workbench.delivery.unverifiable':
+    'Delivery could not be verified, so nothing was sent again. Check once more when the server is reachable.',
   'workbench.delivery.check': 'Check delivery',
   'workbench.delivery.checkAgain': 'Check again',
   'workbench.delivery.sendAgain': 'Send the original again',
@@ -734,7 +822,8 @@ export const en = {
   'workbench.delivery.hideOriginal': 'Hide the original',
   'workbench.delivery.attachmentsOnly': '(files only, no text)',
   'workbench.delivery.failedTitle': 'Your message was not sent',
-  'workbench.delivery.failedDetail': '{reason} Nothing was lost: your text and files are back in the message field.',
+  'workbench.delivery.failedDetail':
+    '{reason} Nothing was lost: your text and files are back in the message field.',
 
   'workbench.queue.title': 'Queued messages',
   'workbench.queue.count.one': '{count} message queued',
@@ -840,8 +929,10 @@ export const en = {
   'workbench.runError.server_restart': 'Interrupted by a server restart',
   'workbench.recovery.interrupted': 'This task was interrupted',
   'workbench.recovery.failed': 'This task did not finish',
-  'workbench.recovery.restartDetail': 'The server restarted while it was running. Part of the work may already have been done — look before you continue.',
-  'workbench.recovery.interruptedDetail': 'Part of the work may already have been done — look before you continue.',
+  'workbench.recovery.restartDetail':
+    'The server restarted while it was running. Part of the work may already have been done — look before you continue.',
+  'workbench.recovery.interruptedDetail':
+    'Part of the work may already have been done — look before you continue.',
   'workbench.recovery.more.one': '{count} more',
   'workbench.recovery.more.other': '{count} more',
   'workbench.recovery.view': 'View',
@@ -882,7 +973,8 @@ export const en = {
   'workbench.approval.morePaths.other': 'and {count} more',
   'workbench.approval.dangerous': 'Dangerous',
   'workbench.approval.dangerousGeneric': 'This could do damage that is hard to undo.',
-  'workbench.approval.waitingForOwner': 'Only the owner of this Studio can allow a dangerous request. It is waiting for them; you can still deny it.',
+  'workbench.approval.waitingForOwner':
+    'Only the owner of this Studio can allow a dangerous request. It is waiting for them; you can still deny it.',
   'workbench.approval.notYours': 'This request is not yours to answer.',
   'workbench.approval.alreadyAnswered': 'That request had already been answered.',
   'workbench.approval.pendingBadge': 'Waiting',
@@ -929,8 +1021,10 @@ export const en = {
   'workbench.question.previous': 'Previous',
   'workbench.question.next': 'Next',
   'workbench.question.submit': 'Submit',
-  'workbench.question.malformed': 'The question could not be read. Skip it and the agent decides by itself.',
-  'workbench.question.autoRecommended': 'With no answer by {time}, the recommended options are taken.',
+  'workbench.question.malformed':
+    'The question could not be read. Skip it and the agent decides by itself.',
+  'workbench.question.autoRecommended':
+    'With no answer by {time}, the recommended options are taken.',
   'workbench.question.autoSkipped': 'With no answer by {time}, it is left to the agent.',
   'workbench.question.waiting': 'Waiting for your answer',
   'workbench.question.waitingShort': 'Waiting…',
@@ -946,8 +1040,10 @@ export const en = {
   'workbench.usage.percentFull': '{percent}% full',
   'workbench.usage.ofWindow': '{used} of {window} tokens',
   'workbench.usage.tokensInContext': '{count} tokens in context',
-  'workbench.usage.windowUnknown': 'This agent does not report the size of its window, so there is no percentage.',
-  'workbench.usage.nearlyFull': 'Nearly full: the agent will soon summarise older parts of the conversation to make room.',
+  'workbench.usage.windowUnknown':
+    'This agent does not report the size of its window, so there is no percentage.',
+  'workbench.usage.nearlyFull':
+    'Nearly full: the agent will soon summarise older parts of the conversation to make room.',
   'workbench.usage.session': 'This conversation so far',
   'workbench.usage.input': 'Input',
   'workbench.usage.output': 'Output',
@@ -966,7 +1062,8 @@ export const en = {
   'workbench.rules.intro':
     'These rules are applied to your own runs before anything is asked: what agents may always do, what they are always refused, and what they must always ask about. “Allow and remember” in a conversation adds a rule here.',
   'workbench.rules.empty': 'No rules yet',
-  'workbench.rules.emptyHint': 'Agents ask according to each conversation’s permission mode. Choosing “Allow and remember” on a request saves a rule.',
+  'workbench.rules.emptyHint':
+    'Agents ask according to each conversation’s permission mode. Choosing “Allow and remember” on a request saves a rule.',
   'workbench.rules.add': 'Add rule',
   'workbench.rules.added': 'Rule added',
   'workbench.rules.actions': 'Actions for the rule {rule}',
@@ -977,9 +1074,11 @@ export const en = {
   'workbench.rules.effect.ask': 'Always ask',
   'workbench.rules.effect.deny': 'Always deny',
   'workbench.rules.tool': 'Tool',
-  'workbench.rules.toolHint': 'The tool’s name as the agent calls it, for example Bash or Edit. * matches any run of characters.',
+  'workbench.rules.toolHint':
+    'The tool’s name as the agent calls it, for example Bash or Edit. * matches any run of characters.',
   'workbench.rules.pattern': 'What it acts on',
-  'workbench.rules.patternHint': 'A command such as “git status *”, or a file pattern such as “src/**/*.ts”. Leave empty to cover every use of the tool.',
+  'workbench.rules.patternHint':
+    'A command such as “git status *”, or a file pattern such as “src/**/*.ts”. Leave empty to cover every use of the tool.',
   'workbench.rules.where': 'Applies',
   'workbench.rules.scope.account': 'Everywhere',
   'workbench.rules.scope.projectNamed': 'In {project}',
@@ -1020,12 +1119,14 @@ export const en = {
   'files.row.actions': 'Actions for {name}',
   'files.link.outside': 'leads outside',
   'files.link.missing': 'broken link',
-  'files.link.folderNote': 'This is a link to a folder. Links are listed, not followed — open the folder it points to instead.',
+  'files.link.folderNote':
+    'This is a link to a folder. Links are listed, not followed — open the folder it points to instead.',
   'files.link.outsideNote': 'This link leads outside the project, so it cannot be opened here.',
   'files.link.missingNote': 'This link points at something that no longer exists.',
   'files.tree.label': 'Files of {project}',
   'files.folder.empty': 'Empty folder',
-  'files.folder.truncated': 'This folder holds more than the {shown} entries shown. Search by name to reach the rest.',
+  'files.folder.truncated':
+    'This folder holds more than the {shown} entries shown. Search by name to reach the rest.',
   'files.new.fileName': 'untitled.txt',
   'files.new.folderName': 'new-folder',
   'files.new.fileLabel': 'Name of the new file',
@@ -1037,19 +1138,25 @@ export const en = {
   'files.deleted': 'Deleted {name}',
   'files.delete.fileTitle': 'Delete “{name}”?',
   'files.delete.folderTitle': 'Delete the folder “{name}” and everything in it?',
-  'files.delete.fileMessage': 'The file is removed from the server’s disk. There is no bin to restore it from.',
-  'files.delete.folderMessage': 'The folder and every file and folder inside it are removed from the server’s disk. There is no bin to restore them from.',
+  'files.delete.fileMessage':
+    'The file is removed from the server’s disk. There is no bin to restore it from.',
+  'files.delete.folderMessage':
+    'The folder and every file and folder inside it are removed from the server’s disk. There is no bin to restore them from.',
   'files.delete.linkMessage': 'Only the link is removed. What it points to stays.',
   'files.name.blank': 'A name cannot be blank.',
   'files.name.tooLong': 'That name is too long (255 bytes at most).',
   'files.name.characters': 'A name cannot contain < > : " / \\ | ? * or control characters.',
   'files.name.dots': 'A name cannot consist of dots only.',
   'files.name.spaces': 'A name cannot start or end with a space.',
-  'files.name.reserved': 'That name is reserved by some operating systems (CON, PRN, AUX, NUL, COM1–9, LPT1–9).',
+  'files.name.reserved':
+    'That name is reserved by some operating systems (CON, PRN, AUX, NUL, COM1–9, LPT1–9).',
   'files.name.git': 'That name is reserved for the repository.',
-  'files.upload.tooMany': 'That is {count} files; at most {limit} can be uploaded at once. Nothing was sent.',
-  'files.upload.fileTooLarge': '“{name}” is larger than {limit}, the most one uploaded file may be. Nothing was sent.',
-  'files.upload.totalTooLarge': 'Together these files are larger than {limit}, the most one upload may carry. Nothing was sent.',
+  'files.upload.tooMany':
+    'That is {count} files; at most {limit} can be uploaded at once. Nothing was sent.',
+  'files.upload.fileTooLarge':
+    '“{name}” is larger than {limit}, the most one uploaded file may be. Nothing was sent.',
+  'files.upload.totalTooLarge':
+    'Together these files are larger than {limit}, the most one upload may carry. Nothing was sent.',
   'files.upload.nothing': 'There was nothing to upload.',
   'files.upload.unreadable': 'What was dropped could not be read by the browser.',
   'files.upload.sendingOne': 'Uploading {name} — {percent}%',
@@ -1057,17 +1164,23 @@ export const en = {
   'files.upload.progress': 'Upload progress',
   'files.upload.stored': 'Uploaded {stored} of {requested}.',
   'files.upload.existing.one': '{names} was not uploaded: a file with that name is already there.',
-  'files.upload.existing.other': '{count} files were not uploaded because files with those names are already there ({names}…).',
+  'files.upload.existing.other':
+    '{count} files were not uploaded because files with those names are already there ({names}…).',
   'files.upload.replace.one': 'Replace the existing file',
   'files.upload.replace.other': 'Replace the {count} existing files',
   'files.upload.replace.title.one': 'Replace the existing file?',
   'files.upload.replace.title.other': 'Replace {count} existing files?',
-  'files.upload.replace.message': 'What is on the server now is overwritten by what you upload. This cannot be undone.',
+  'files.upload.replace.message':
+    'What is on the server now is overwritten by what you upload. This cannot be undone.',
   'files.upload.replace.confirm': 'Replace',
-  'files.upload.skipped.invalid_name': '“{name}” was not uploaded: its name cannot be used on the server.',
-  'files.upload.skipped.outside_project': '“{name}” was not uploaded: its path leads outside the project.',
-  'files.upload.skipped.protected': '“{name}” was not uploaded: the repository’s own data cannot be written from here.',
-  'files.upload.skipped.is_directory': '“{name}” was not uploaded: a folder with that name is in the way.',
+  'files.upload.skipped.invalid_name':
+    '“{name}” was not uploaded: its name cannot be used on the server.',
+  'files.upload.skipped.outside_project':
+    '“{name}” was not uploaded: its path leads outside the project.',
+  'files.upload.skipped.protected':
+    '“{name}” was not uploaded: the repository’s own data cannot be written from here.',
+  'files.upload.skipped.is_directory':
+    '“{name}” was not uploaded: a folder with that name is in the way.',
   'files.search.namePlaceholder': 'Find a file by name',
   'files.search.contentPlaceholder': 'Search inside files',
   'files.search.clear': 'Clear the search',
@@ -1078,10 +1191,13 @@ export const en = {
   'files.search.noNames': 'No file or folder is called “{query}”',
   'files.search.noNamesHint': 'Files left out by the project’s ignore rules are not searched.',
   'files.search.noContent': 'No file contains “{query}”',
-  'files.search.noContentHint': 'The text is matched exactly as typed, ignoring upper and lower case.',
+  'files.search.noContentHint':
+    'The text is matched exactly as typed, ignoring upper and lower case.',
   'files.search.lineLabel': '{path}, line {line}',
-  'files.search.contentTruncated': 'Only the first {count} matches are shown. Narrow the search to see the rest.',
-  'files.search.namesTruncated': 'Only the best {count} matches are shown. Type more of the name to narrow it down.',
+  'files.search.contentTruncated':
+    'Only the first {count} matches are shown. Narrow the search to see the rest.',
+  'files.search.namesTruncated':
+    'Only the best {count} matches are shown. Type more of the name to narrow it down.',
   'files.empty.title': 'This project has no files yet',
   'files.empty.description': 'Create a file, upload some, or ask an agent to write the first one.',
   'files.empty.readOnly': 'Files written in this project will show up here.',
@@ -1099,7 +1215,8 @@ export const en = {
   'files.editor.gone': 'This file does not exist',
   'files.editor.notSaved': 'Not saved',
   'files.editor.saveCancelled': 'Saving was cancelled. Your text is still here.',
-  'files.editor.changedElsewhere': 'This file has changed on the server while you were editing. Your text is untouched; saving will ask which version to keep.',
+  'files.editor.changedElsewhere':
+    'This file has changed on the server while you were editing. Your text is untouched; saving will ask which version to keep.',
   'files.editor.hasChanges': 'This file has uncommitted changes',
   'files.editor.view.label': 'What to show',
   'files.editor.view.edit': 'Edit',
@@ -1111,11 +1228,14 @@ export const en = {
   'files.editor.discard.confirm': 'Discard changes',
   'files.editor.discard.keep': 'Keep editing',
   'files.conflict.changed.title': 'This file changed on the server after you opened it',
-  'files.conflict.changed.text': 'Nothing was saved, and your text is still here. Choose which version to keep.',
+  'files.conflict.changed.text':
+    'Nothing was saved, and your text is still here. Choose which version to keep.',
   'files.conflict.gone.title': 'This file was deleted or moved after you opened it',
-  'files.conflict.gone.text': 'Nothing was saved, and your text is still here. Saving puts the file back at this path.',
+  'files.conflict.gone.text':
+    'Nothing was saved, and your text is still here. Saving puts the file back at this path.',
   'files.conflict.exists.title': 'A file with this name already exists',
-  'files.conflict.exists.text': 'Nothing was saved, and your text is still here. Choose which version to keep.',
+  'files.conflict.exists.text':
+    'Nothing was saved, and your text is still here. Choose which version to keep.',
   'files.conflict.loadTheirs': 'Load the server’s version',
   'files.conflict.overwrite': 'Overwrite with mine',
   'files.conflict.recreate': 'Save it here again',
@@ -1123,9 +1243,11 @@ export const en = {
   'files.conflict.loadTheirs.message': 'Your unsaved text in this file will be discarded.',
   'files.conflict.loadTheirs.confirm': 'Discard my text',
   'files.conflict.overwrite.title': 'Overwrite {name} on the server?',
-  'files.conflict.overwrite.message': 'Whatever was written there since you opened the file is replaced by your text.',
+  'files.conflict.overwrite.message':
+    'Whatever was written there since you opened the file is replaced by your text.',
   'files.conflict.overwrite.confirm': 'Overwrite',
-  'files.changes.unsavedNote': 'This shows what is saved on the server. Your unsaved text is not part of it yet.',
+  'files.changes.unsavedNote':
+    'This shows what is saved on the server. Your unsaved text is not part of it yet.',
   'files.changes.binary': 'This file is not text, so its changes cannot be shown line by line.',
   'files.changes.none': 'This file has no uncommitted changes.',
   'files.changes.staged': 'Staged for the next commit, compared with the last commit.',
@@ -1133,17 +1255,23 @@ export const en = {
   'files.changes.label': 'Changes to {name}',
   'files.changes.truncated': 'The changes are longer than can be shown here; the end was cut.',
   'files.tooLarge.title': 'This file is too large to open here',
-  'files.tooLarge.description': 'It is {size}; the editor opens text up to {limit}. Download it to read it.',
+  'files.tooLarge.description':
+    'It is {size}; the editor opens text up to {limit}. Download it to read it.',
   'files.binary.title': 'This file cannot be shown',
-  'files.binary.description': 'It is not text and not a kind of picture, PDF, sound or video the Studio previews. Download it to open it with another program.',
+  'files.binary.description':
+    'It is not text and not a kind of picture, PDF, sound or video the Studio previews. Download it to open it with another program.',
   'files.media.failed': 'The preview could not be loaded',
   'files.media.failedDetail': 'The browser could not show this file. Download it instead.',
-  'files.media.pdfNote': 'Some browsers do not show a PDF inside a protected frame. If the page above is blank, open it in a new tab or download it.',
+  'files.media.pdfNote':
+    'Some browsers do not show a PDF inside a protected frame. If the page above is blank, open it in a new tab or download it.',
   'files.media.openInTab': 'Open in a new tab',
   'errors.project_folder_missing': 'The project’s folder no longer exists on the server.',
-  'errors.protected_path': 'The repository’s own data (.git) cannot be read or changed through the file tools.',
-  'errors.invalid_name': 'That name cannot be used. A name cannot be blank, start or end with a space, consist of dots only, or contain < > : " / \\ | ? * — and a few names are reserved.',
-  'errors.permission_denied': 'The server’s account is not permitted to do that to this file or folder.',
+  'errors.protected_path':
+    'The repository’s own data (.git) cannot be read or changed through the file tools.',
+  'errors.invalid_name':
+    'That name cannot be used. A name cannot be blank, start or end with a space, consist of dots only, or contain < > : " / \\ | ? * — and a few names are reserved.',
+  'errors.permission_denied':
+    'The server’s account is not permitted to do that to this file or folder.',
   'errors.path_outside_root': 'That path leads outside the project.',
   'errors.project_root': 'The project folder itself cannot be changed here.',
   'errors.file_not_found': 'That file or folder does not exist.',
@@ -1151,11 +1279,14 @@ export const en = {
   'errors.not_a_file': 'That is not an ordinary file.',
   'errors.directory_not_empty': 'That folder is not empty.',
   'errors.storage_full': 'The server has no space left for that.',
-  'errors.cross_device': 'That would move the item to a different disk, which is not supported here.',
+  'errors.cross_device':
+    'That would move the item to a different disk, which is not supported here.',
   'errors.invalid_query': 'Search for text on one line.',
-  'errors.not_previewable': 'This kind of file cannot be shown in the browser. Download it instead.',
+  'errors.not_previewable':
+    'This kind of file cannot be shown in the browser. Download it instead.',
   'errors.file_exists': 'A file with that name already exists.',
-  'errors.file_changed': 'The file was changed by someone or something else since you opened it. Nothing was saved.',
+  'errors.file_changed':
+    'The file was changed by someone or something else since you opened it. Nothing was saved.',
   'errors.parent_missing': 'The folder for that does not exist.',
   'errors.already_exists': 'Something with that name already exists there.',
   'errors.invalid_move': 'A folder cannot be moved into itself.',
@@ -1183,21 +1314,27 @@ export const en = {
   'git.diff.folder': 'A new folder. Stage it to see its files one by one.',
   'git.diff.label': 'Changes to {name}',
   'git.state.none.title': 'This folder is not a Git repository',
-  'git.state.none.text': 'Without a repository there is no history to go back to and nothing to commit, branch or push. Initialising creates an empty one here; your files are not touched.',
+  'git.state.none.text':
+    'Without a repository there is no history to go back to and nothing to commit, branch or push. Initialising creates an empty one here; your files are not touched.',
   'git.state.none.action': 'Initialise a repository',
   'git.state.none.done': 'Repository created',
   'git.state.nested.title': 'This folder is part of a larger repository',
-  'git.state.nested.text': 'The repository starts in a folder above this project. The Studio only manages a repository whose top is the project folder, so nothing is shown or changed here.',
+  'git.state.nested.text':
+    'The repository starts in a folder above this project. The Studio only manages a repository whose top is the project folder, so nothing is shown or changed here.',
   'git.state.bare.title': 'This repository has no working files',
-  'git.state.bare.text': 'It is a bare repository — history without a checkout — so there are no changes to show or commit here.',
+  'git.state.bare.text':
+    'It is a bare repository — history without a checkout — so there are no changes to show or commit here.',
   'git.state.untrusted.title': 'Git refuses to use this folder',
-  'git.state.untrusted.text': 'The folder belongs to another system account, and git on the server does not trust it. The Studio never overrides that; it has to be allowed on the server.',
+  'git.state.untrusted.text':
+    'The folder belongs to another system account, and git on the server does not trust it. The Studio never overrides that; it has to be allowed on the server.',
   'git.state.unavailable.title': 'Git is not installed on the server',
-  'git.state.unavailable.text': 'Nothing here can work until git is installed for the account the Studio runs as.',
+  'git.state.unavailable.text':
+    'Nothing here can work until git is installed for the account the Studio runs as.',
   'git.state.serverSays': 'The server says',
   'git.state.recheck': 'Check again',
   'git.operation.title': 'An unfinished {operation} is in the way',
-  'git.operation.text': 'It was started outside the Studio. Finish or abort it in a terminal; until then commits, switches and pulls are refused.',
+  'git.operation.text':
+    'It was started outside the Studio. Finish or abort it in a terminal; until then commits, switches and pulls are refused.',
   'git.operation.merge': 'merge',
   'git.operation.rebase': 'rebase',
   'git.operation.cherry-pick': 'cherry-pick',
@@ -1220,22 +1357,28 @@ export const en = {
   'git.sync.pushed': 'Pushed',
   'git.sync.publish': 'Publish',
   'git.sync.published': 'Published {branch}',
-  'git.sync.noRemote': 'This repository has no remote, so there is nothing to fetch from or push to.',
+  'git.sync.noRemote':
+    'This repository has no remote, so there is nothing to fetch from or push to.',
   'git.sync.pull.title.one': 'Pull {count} commit?',
   'git.sync.pull.title.other': 'Pull {count} commits?',
-  'git.sync.pull.message': 'Your branch moves forward to {upstream}. If the two have diverged, nothing is changed and you are told.',
+  'git.sync.pull.message':
+    'Your branch moves forward to {upstream}. If the two have diverged, nothing is changed and you are told.',
   'git.sync.pullMerge': 'Pull with a merge commit',
   'git.sync.pullMerge.title': 'Pull by merging?',
-  'git.sync.pullMerge.message': 'A merge commit joins {upstream} into your branch. It is only made when the two combine without conflicts; otherwise nothing is changed.',
+  'git.sync.pullMerge.message':
+    'A merge commit joins {upstream} into your branch. It is only made when the two combine without conflicts; otherwise nothing is changed.',
   'git.sync.pullMerge.confirm': 'Merge',
   'git.sync.push.title.one': 'Push {count} commit?',
   'git.sync.push.title.other': 'Push {count} commits?',
-  'git.sync.push.message': 'They go to {upstream}. A push is never forced: if the remote has moved on, it is refused and you are told.',
+  'git.sync.push.message':
+    'They go to {upstream}. A push is never forced: if the remote has moved on, it is refused and you are told.',
   'git.sync.publish.title': 'Publish {branch}?',
-  'git.sync.publish.message': 'The branch is pushed to {remote} and remembered as its upstream, so later pushes and pulls know where to go.',
+  'git.sync.publish.message':
+    'The branch is pushed to {remote} and remembered as its upstream, so later pushes and pulls know where to go.',
   'git.undo': 'Undo the last commit',
   'git.undo.title': 'Undo the last commit?',
-  'git.undo.message': 'The commit is removed from this branch. Its changes are not lost: they stay staged, ready to be committed again.',
+  'git.undo.message':
+    'The commit is removed from this branch. Its changes are not lost: they stay staged, ready to be committed again.',
   'git.undo.confirm': 'Undo commit',
   'git.undo.done': 'Removed commit {oid}; its changes are staged',
   'git.undo.hint': 'Keeps its changes staged',
@@ -1243,10 +1386,12 @@ export const en = {
   'git.undo.detached': 'No branch is checked out',
   'git.undo.noCommits': 'There is no commit yet',
   'git.identity.title': 'Who is committing?',
-  'git.identity.lead': 'Git puts a name and an e-mail address on every commit. These are yours, used for commits you make from the Studio.',
+  'git.identity.lead':
+    'Git puts a name and an e-mail address on every commit. These are yours, used for commits you make from the Studio.',
   'git.identity.name': 'Name on your commits',
   'git.identity.email': 'E-mail on your commits',
-  'git.identity.note': 'Kept with your account in the Studio. The git settings of the server itself are not changed.',
+  'git.identity.note':
+    'Kept with your account in the Studio. The git settings of the server itself are not changed.',
   'git.identity.saved': 'Commit identity saved',
   'git.identity.nameProblem': 'Enter a name without angle brackets or line breaks.',
   'git.identity.emailProblem': 'That does not look like an e-mail address.',
@@ -1258,8 +1403,10 @@ export const en = {
   'git.changes.untracked': 'New files',
   'git.changes.none': 'Nothing has changed',
   'git.changes.noneHint': 'The folder matches the last commit.',
-  'git.changes.conflictedNote': 'Both sides of a merge changed these files. Open each one, settle the marked passages, then stage it.',
-  'git.changes.truncated': 'The list of changes is very long and was cut. Commit or discard some to see the rest.',
+  'git.changes.conflictedNote':
+    'Both sides of a merge changed these files. Open each one, settle the marked passages, then stage it.',
+  'git.changes.truncated':
+    'The list of changes is very long and was cut. Commit or discard some to see the rest.',
   'git.kind.added': 'added',
   'git.kind.modified': 'modified',
   'git.kind.deleted': 'deleted',
@@ -1279,13 +1426,15 @@ export const en = {
   'git.unstageAll': 'Unstage all',
   'git.discard': 'Discard changes',
   'git.discard.title': 'Discard the changes to {name}?',
-  'git.discard.message': 'The file goes back to what is staged or last committed. Everything changed in it since then is lost, and there is no way to get it back.',
+  'git.discard.message':
+    'The file goes back to what is staged or last committed. Everything changed in it since then is lost, and there is no way to get it back.',
   'git.discard.messageDeleted': 'The deleted file is put back as it was last staged or committed.',
   'git.discard.confirm': 'Discard',
   'git.discard.done': 'Discarded the changes to {name}',
   'git.delete': 'Delete the file',
   'git.delete.title': 'Delete {name}?',
-  'git.delete.message': 'Git has never tracked this file, so there is no earlier version anywhere. Deleting it removes it from the disk for good.',
+  'git.delete.message':
+    'Git has never tracked this file, so there is no earlier version anywhere. Deleting it removes it from the disk for good.',
   'git.delete.confirm': 'Delete file',
   'git.delete.done': 'Deleted {name}',
   'git.commit': 'Commit',
@@ -1300,7 +1449,8 @@ export const en = {
   'git.commit.shortcut': 'Commit ({keys})',
   'git.commit.done': 'Committed {oid}: {subject}',
   'git.noCommits.title': 'This repository has no commits yet',
-  'git.noCommits.text': 'Stage what should go into the first commit, or commit everything in the folder at once.',
+  'git.noCommits.text':
+    'Stage what should go into the first commit, or commit everything in the folder at once.',
   'git.noCommits.action': 'Commit everything as the first commit',
   'git.commit.title': 'Commit {oid}',
   'git.commit.by': '{name}, {when}',
@@ -1320,16 +1470,19 @@ export const en = {
   'git.history.end.other': 'That is the whole history: {count} commits.',
   'git.branch.switch': 'Switch',
   'git.branch.switch.title': 'Switch to {name} with uncommitted changes?',
-  'git.branch.switch.message': 'Your uncommitted changes come along when they fit the other branch. If they would be overwritten, nothing is switched and you are told.',
+  'git.branch.switch.message':
+    'Your uncommitted changes come along when they fit the other branch. If they would be overwritten, nothing is switched and you are told.',
   'git.branch.switched': 'Now on {name}',
   'git.branch.checkout': 'Check out',
   'git.branch.delete': 'Delete branch',
   'git.branch.delete.title': 'Delete the branch {name}?',
-  'git.branch.delete.message': 'Only the local branch is deleted. Git refuses when it holds commits that are merged nowhere else, and you will be asked again.',
+  'git.branch.delete.message':
+    'Only the local branch is deleted. Git refuses when it holds commits that are merged nowhere else, and you will be asked again.',
   'git.branch.deleted': 'Deleted the branch {name}',
   'git.branch.deleteNamed': 'Delete the branch {name}',
   'git.branch.force.title': '{name} is not merged. Delete it anyway?',
-  'git.branch.force.message': 'It holds commits that exist on no other branch. Deleting it loses them; nothing in the Studio can bring them back.',
+  'git.branch.force.message':
+    'It holds commits that exist on no other branch. Deleting it loses them; nothing in the Studio can bring them back.',
   'git.branch.force.confirm': 'Delete and lose its commits',
   'git.branch.current': 'current',
   'git.branch.elsewhere': 'in another worktree',
@@ -1361,15 +1514,18 @@ export const en = {
   'git.worktree.count.one': '{count} extra worktree',
   'git.worktree.count.other': '{count} extra worktrees',
   'git.worktree.new': 'New worktree',
-  'git.worktree.noLocation': 'There is no room next to this repository inside a workspace folder, so worktrees cannot be created for it.',
+  'git.worktree.noLocation':
+    'There is no room next to this repository inside a workspace folder, so worktrees cannot be created for it.',
   'git.worktree.new.branch': 'Branch for the worktree',
-  'git.worktree.new.hint': 'An existing branch is checked out as it is; a new one starts from {base}. The folder is created under {location}.',
+  'git.worktree.new.hint':
+    'An existing branch is checked out as it is; a new one starts from {base}. The folder is created under {location}.',
   'git.worktree.new.openAfter': 'Open it as a project afterwards',
   'git.worktree.new.create': 'Create worktree',
   'git.worktree.created': 'Created a worktree for {branch}',
   'git.worktree.createdNew': 'Created the branch {branch} and a worktree for it',
   'git.worktree.empty': 'No extra worktrees',
-  'git.worktree.emptyHint': 'A worktree is a second checkout of this repository on its own branch, in its own folder and as its own project — so two pieces of work, or two agents, do not step on each other.',
+  'git.worktree.emptyHint':
+    'A worktree is a second checkout of this repository on its own branch, in its own folder and as its own project — so two pieces of work, or two agents, do not step on each other.',
   'git.worktree.detached': 'detached at {oid}',
   'git.worktree.here': 'this project',
   'git.worktree.main': 'main checkout',
@@ -1381,71 +1537,99 @@ export const en = {
   'git.worktree.nothingToMerge': 'Nothing to merge: it has no commits its base lacks.',
   'git.worktree.merge': 'Merge back',
   'git.worktree.merge.title': 'Merge the worktree back',
-  'git.worktree.merge.lead': '{count} commit(s) on {branch} go into {into}, in the main checkout. If they conflict, nothing is changed and the files are named.',
+  'git.worktree.merge.lead':
+    '{count} commit(s) on {branch} go into {into}, in the main checkout. If they conflict, nothing is changed and the files are named.',
   'git.worktree.merge.refused': 'Not merged',
   'git.worktree.merge.method': 'How to merge',
   'git.worktree.merge.squash': 'One commit',
   'git.worktree.merge.commit': 'Merge commit',
-  'git.worktree.merge.squashHint': 'All its changes become a single new commit on the receiving branch.',
-  'git.worktree.merge.commitHint': 'Its commits are kept, joined to the receiving branch by a merge commit.',
+  'git.worktree.merge.squashHint':
+    'All its changes become a single new commit on the receiving branch.',
+  'git.worktree.merge.commitHint':
+    'Its commits are kept, joined to the receiving branch by a merge commit.',
   'git.worktree.merge.message': 'Commit message',
   'git.worktree.merge.messageHint': 'Left empty, git writes one that names the branch.',
   'git.worktree.merge.cleanup': 'Afterwards remove the worktree and delete its branch',
-  'git.worktree.merge.cleanupHint': 'The folder of {branch} is removed from the disk and its project is archived; its conversations can be restored.',
+  'git.worktree.merge.cleanupHint':
+    'The folder of {branch} is removed from the disk and its project is archived; its conversations can be restored.',
   'git.worktree.merge.action': 'Merge into {into}',
   'git.worktree.merge.confirmTitle': 'Merge {branch} into {into}?',
   'git.worktree.merge.confirmSquash': 'Its changes become one new commit.',
   'git.worktree.merge.confirmMerge': 'A merge commit is created.',
-  'git.worktree.merge.confirmCleanup': 'Then the worktree folder is removed from the disk and the branch {branch} is deleted.',
+  'git.worktree.merge.confirmCleanup':
+    'Then the worktree folder is removed from the disk and the branch {branch} is deleted.',
   'git.worktree.merged': 'Merged {branch} into {into} as {oid}',
   'git.worktree.cleanupFailed': 'Merged, but the worktree could not be cleaned up',
   'git.worktree.remove': 'Remove',
   'git.worktree.remove.title': 'Remove the worktree {name}?',
-  'git.worktree.remove.message': 'Its folder is removed from the server’s disk and the branch {branch} is deleted when it is fully merged. Its project is archived, so its conversations can be restored. The main checkout is not touched.',
-  'git.worktree.remove.messageDetached': 'Its folder is removed from the server’s disk and its project is archived, so its conversations can be restored. The main checkout is not touched.',
+  'git.worktree.remove.message':
+    'Its folder is removed from the server’s disk and the branch {branch} is deleted when it is fully merged. Its project is archived, so its conversations can be restored. The main checkout is not touched.',
+  'git.worktree.remove.messageDetached':
+    'Its folder is removed from the server’s disk and its project is archived, so its conversations can be restored. The main checkout is not touched.',
   'git.worktree.force.title': '{name} has uncommitted changes. Remove it anyway?',
-  'git.worktree.force.message.one': '{count} uncommitted change in that folder exists nowhere else. Removing the worktree deletes it for good.',
-  'git.worktree.force.message.other': '{count} uncommitted changes in that folder exist nowhere else. Removing the worktree deletes them for good.',
+  'git.worktree.force.message.one':
+    '{count} uncommitted change in that folder exists nowhere else. Removing the worktree deletes it for good.',
+  'git.worktree.force.message.other':
+    '{count} uncommitted changes in that folder exist nowhere else. Removing the worktree deletes them for good.',
   'git.worktree.force.confirm': 'Remove and lose the changes',
   'git.worktree.removed': 'Removed the worktree {name}',
   'git.worktree.branchKept': 'The branch {branch} was kept',
   'errors.git_unavailable': 'Git is not available on the server.',
-  'errors.git_untrusted': 'Git refuses to use this folder because it belongs to another system account.',
+  'errors.git_untrusted':
+    'Git refuses to use this folder because it belongs to another system account.',
   'errors.git_not_a_repository': 'This folder is not a Git repository the Studio can work in.',
-  'errors.git_invalid_ref': 'That name cannot be used for a branch. Use letters, digits and . _ / + - @ = — no spaces, no leading dash, no “..”.',
+  'errors.git_invalid_ref':
+    'That name cannot be used for a branch. Use letters, digits and . _ / + - @ = — no spaces, no leading dash, no “..”.',
   'errors.git_invalid_remote': 'This repository has no remote of that name.',
   'errors.git_unknown_ref': 'There is no branch, tag or commit of that name here.',
-  'errors.git_no_common_history': 'The two branches share no history, so there is nothing to compare.',
+  'errors.git_no_common_history':
+    'The two branches share no history, so there is nothing to compare.',
   'errors.git_no_commits': 'This repository has no commits yet.',
   'errors.git_no_remote': 'This repository has no remote configured.',
   'errors.git_no_upstream': 'This branch has no upstream branch on a remote yet. Publish it first.',
   'errors.git_detached_head': 'No branch is checked out, so this cannot be done here.',
-  'errors.git_auth_failed': 'The remote refused the credentials git has on the server. Sign git in on the server (a credential helper or an SSH key), then try again.',
-  'errors.git_network': 'The remote could not be reached. Check the server’s network and the address of the remote.',
-  'errors.git_remote_not_found': 'The remote repository was not found, or the server is not allowed to read it.',
-  'errors.git_timeout': 'Git did not finish in time and was stopped. Check the repository before trying again.',
-  'errors.git_push_rejected': 'The remote rejected the push: it has commits this branch lacks (non-fast-forward). Pull first, then push again.',
-  'errors.git_diverged': 'This branch and its upstream have diverged: each has commits the other lacks. Nothing was changed.',
-  'errors.git_conflict': 'The changes conflict and cannot be combined automatically. Nothing was changed.',
-  'errors.git_would_overwrite': 'Uncommitted changes in this folder are in the way and would be lost. Commit or discard them first. Nothing was changed.',
-  'errors.git_operation_in_progress': 'An unfinished merge or rebase is in the way. Finish or abort it in a terminal first.',
+  'errors.git_auth_failed':
+    'The remote refused the credentials git has on the server. Sign git in on the server (a credential helper or an SSH key), then try again.',
+  'errors.git_network':
+    'The remote could not be reached. Check the server’s network and the address of the remote.',
+  'errors.git_remote_not_found':
+    'The remote repository was not found, or the server is not allowed to read it.',
+  'errors.git_timeout':
+    'Git did not finish in time and was stopped. Check the repository before trying again.',
+  'errors.git_push_rejected':
+    'The remote rejected the push: it has commits this branch lacks (non-fast-forward). Pull first, then push again.',
+  'errors.git_diverged':
+    'This branch and its upstream have diverged: each has commits the other lacks. Nothing was changed.',
+  'errors.git_conflict':
+    'The changes conflict and cannot be combined automatically. Nothing was changed.',
+  'errors.git_would_overwrite':
+    'Uncommitted changes in this folder are in the way and would be lost. Commit or discard them first. Nothing was changed.',
+  'errors.git_operation_in_progress':
+    'An unfinished merge or rebase is in the way. Finish or abort it in a terminal first.',
   'errors.git_nothing_to_commit': 'There is nothing to commit.',
-  'errors.git_identity_missing': 'Git does not know who is committing. Set your commit name and e-mail first.',
-  'errors.git_commit_rejected': 'The commit was refused, most likely by one of the repository’s commit hooks. Nothing was committed.',
+  'errors.git_identity_missing':
+    'Git does not know who is committing. Set your commit name and e-mail first.',
+  'errors.git_commit_rejected':
+    'The commit was refused, most likely by one of the repository’s commit hooks. Nothing was committed.',
   'errors.git_commit_pushed': 'The latest commit has already been pushed, so it is not undone.',
   'errors.git_branch_exists': 'A branch of that name already exists.',
-  'errors.git_branch_current': 'The branch you are on cannot be deleted. Switch to another branch first.',
-  'errors.git_branch_not_merged': 'That branch holds commits that are merged nowhere else. Deleting it would lose them.',
+  'errors.git_branch_current':
+    'The branch you are on cannot be deleted. Switch to another branch first.',
+  'errors.git_branch_not_merged':
+    'That branch holds commits that are merged nowhere else. Deleting it would lose them.',
   'errors.git_branch_in_use': 'That branch is checked out in another worktree.',
   'errors.git_unknown_path': 'Git does not know a file at that path.',
   'errors.git_not_tracked': 'That file is not tracked by git. Delete it instead.',
   'errors.git_not_untracked': 'Only a file that git does not track can be deleted this way.',
   'errors.git_nothing_to_discard': 'That file has no changes to discard.',
-  'errors.git_worktree_dirty': 'There are uncommitted changes in the way. Commit or discard them first.',
-  'errors.git_worktree_main': 'The main checkout of a repository cannot be removed or merged into itself.',
+  'errors.git_worktree_dirty':
+    'There are uncommitted changes in the way. Commit or discard them first.',
+  'errors.git_worktree_main':
+    'The main checkout of a repository cannot be removed or merged into itself.',
   'errors.git_worktree_exists': 'The folder for that worktree already exists.',
   'errors.git_worktree_unknown': 'That is not a worktree of this repository.',
-  'errors.git_worktree_location': 'There is nowhere inside a workspace folder to put a worktree for this repository.',
+  'errors.git_worktree_location':
+    'There is nowhere inside a workspace folder to put a worktree for this repository.',
   'errors.git_merge_commit': 'The latest commit is a merge. Undoing a merge is not supported here.',
   'errors.git_busy': 'Another git command is running in this repository. Try again in a moment.',
   'errors.git_failed': 'Git could not complete that. The details say what it reported.',
@@ -1463,24 +1647,32 @@ export const en = {
   'terminal.close': 'Close this terminal',
   'terminal.remove': 'Remove this ended terminal',
   'terminal.close.title': 'Close “{title}”?',
-  'terminal.close.message': 'The shell and every program still running in it are ended on the server. Whatever they had not saved is lost.',
+  'terminal.close.message':
+    'The shell and every program still running in it are ended on the server. Whatever they had not saved is lost.',
   'terminal.close.confirm': 'Close terminal',
   'terminal.font.larger': 'Larger text',
   'terminal.font.smaller': 'Smaller text',
   'terminal.empty.title': 'No terminal is open',
-  'terminal.empty.text': '{shell} starts on the server, in the folder of {project}. It keeps running when you leave this page and is here when you come back.',
-  'terminal.empty.reauth': 'Opening one asks for your password first: a terminal can do anything the Studio’s account can.',
+  'terminal.empty.text':
+    '{shell} starts on the server, in the folder of {project}. It keeps running when you leave this page and is here when you come back.',
+  'terminal.empty.reauth':
+    'Opening one asks for your password first: a terminal can do anything the Studio’s account can.',
   'terminal.empty.action': 'Open a terminal',
   'terminal.unavailable.disabled.title': 'Terminals are turned off',
-  'terminal.unavailable.disabled.text': 'Whoever runs this Studio has switched the terminal off for the whole server. Files, Git and the agents work without it.',
+  'terminal.unavailable.disabled.text':
+    'Whoever runs this Studio has switched the terminal off for the whole server. Files, Git and the agents work without it.',
   'terminal.unavailable.owner_only.title': 'The terminal is for the owner',
-  'terminal.unavailable.owner_only.text': 'A terminal runs commands as the account the Studio runs under, with everything that account can reach — so it is not shared with members. Ask the owner to run what you need, or ask an agent.',
+  'terminal.unavailable.owner_only.text':
+    'A terminal runs commands as the account the Studio runs under, with everything that account can reach — so it is not shared with members. Ask the owner to run what you need, or ask an agent.',
   'terminal.unavailable.session_required.title': 'A terminal needs a signed-in browser',
-  'terminal.unavailable.session_required.text': 'It cannot be opened with an API token. Sign in with your password or a passkey and open it again.',
+  'terminal.unavailable.session_required.text':
+    'It cannot be opened with an API token. Sign in with your password or a passkey and open it again.',
   'terminal.unavailable.pty_unavailable.title': 'Terminals cannot run on this server',
-  'terminal.unavailable.pty_unavailable.text': 'The part of the server that starts a terminal could not be loaded on this machine. Nothing is wrong with your account.',
+  'terminal.unavailable.pty_unavailable.text':
+    'The part of the server that starts a terminal could not be loaded on this machine. Nothing is wrong with your account.',
   'terminal.unavailable.recheck': 'Check again',
-  'terminal.type.notReady': 'The terminal was not ready in time, so nothing was typed. Try again once its prompt shows.',
+  'terminal.type.notReady':
+    'The terminal was not ready in time, so nothing was typed. Try again once its prompt shows.',
   'terminal.type.done': 'Typed into the terminal. Press Enter there to run it.',
   'terminal.type.removed': '{count} control character(s) were left out.',
   'terminal.connecting': 'Connecting…',
@@ -1491,22 +1683,28 @@ export const en = {
   'terminal.copied': 'Copied from the terminal',
   'terminal.clearSelection': 'Clear the selection',
   'terminal.urls.label': 'Addresses printed in this terminal',
-  'terminal.urls.substituted': 'Printed as {printed}. “localhost” is the Studio’s machine, so its own address is opened instead.',
+  'terminal.urls.substituted':
+    'Printed as {printed}. “localhost” is the Studio’s machine, so its own address is opened instead.',
   'terminal.ended.exited': 'The program ended.',
   'terminal.ended.closed': 'This terminal was closed.',
   'terminal.ended.idle': 'This terminal was ended because nobody was attached to it for a while.',
-  'terminal.ended.lifetime': 'This terminal reached the longest time a terminal may run and was ended.',
+  'terminal.ended.lifetime':
+    'This terminal reached the longest time a terminal may run and was ended.',
   'terminal.ended.shutdown': 'The server stopped, and this terminal with it.',
-  'terminal.ended.revoked': 'This terminal was ended because your account may no longer use terminals.',
+  'terminal.ended.revoked':
+    'This terminal was ended because your account may no longer use terminals.',
   'terminal.ended.project_removed': 'This terminal was ended because its project was removed.',
   'terminal.ended.failed': 'The program could not be kept running.',
   'terminal.ended.code': 'Exit code {code}.',
-  'terminal.rest.needsIdentity': 'This terminal was opened in another browser. Confirm it is you, and it is attached here too.',
+  'terminal.rest.needsIdentity':
+    'This terminal was opened in another browser. Confirm it is you, and it is attached here too.',
   'terminal.rest.signedOut': 'You are signed out. Sign in again to return to this terminal.',
   'terminal.rest.gone': 'This terminal no longer exists on the server.',
-  'terminal.rest.crowded': 'Too many browsers are attached to this terminal. Close it in one of them, then attach again.',
+  'terminal.rest.crowded':
+    'Too many browsers are attached to this terminal. Close it in one of them, then attach again.',
   'terminal.rest.unavailable': 'The server says terminals cannot be used right now.',
-  'terminal.rest.failed': 'The server refused this connection. Attaching again starts from what it still keeps.',
+  'terminal.rest.failed':
+    'The server refused this connection. Attaching again starts from what it still keeps.',
   'terminal.rest.confirm': 'Confirm it is you',
   'terminal.rest.attachAgain': 'Attach again',
   'terminal.rest.checkAgain': 'Check the terminal again',
@@ -1524,10 +1722,12 @@ export const en = {
   'terminal.keys.end': 'Scroll to the newest output',
   'terminal.paste.title': 'Paste into the terminal',
   'terminal.paste.label': 'Text to paste',
-  'terminal.paste.hint': 'This browser does not hand its clipboard to a page here. Paste into this field, then send.',
+  'terminal.paste.hint':
+    'This browser does not hand its clipboard to a page here. Paste into this field, then send.',
   'terminal.paste.send': 'Send to the terminal',
   'terminal.sheet.end.title': 'End what is running here?',
-  'terminal.sheet.end.message': 'The program in this terminal is still running. Closing ends it; a sign-in that was not finished is abandoned.',
+  'terminal.sheet.end.message':
+    'The program in this terminal is still running. Closing ends it; a sign-in that was not finished is abandoned.',
   'terminal.sheet.end.confirm': 'End it',
   'terminal.sheet.failed': 'The terminal could not be started',
   'terminal.sheet.starting': 'Starting on the server…',
@@ -1538,9 +1738,11 @@ export const en = {
   'accounts.state.missing': 'Not installed',
   'accounts.empty.title': 'No agents are registered',
   'accounts.empty.text': 'This server offers no coding agent and no API model yet.',
-  'accounts.intro': 'What the server reports about each agent’s program and the account it is signed in with. Credentials stay with the agent’s own program on the server; the Studio never sees them.',
+  'accounts.intro':
+    'What the server reports about each agent’s program and the account it is signed in with. Credentials stay with the agent’s own program on the server; the Studio never sees them.',
   'accounts.recheck': 'Check again',
-  'accounts.apiNote': 'A model called over the network with an API key. Its key is managed with the providers, not here.',
+  'accounts.apiNote':
+    'A model called over the network with an API key. Its key is managed with the providers, not here.',
   'accounts.memberNote': 'Only the owner can sign an agent in.',
   'accounts.kind.api': 'API model',
   'accounts.kind.cli': 'Program on the server',
@@ -1550,18 +1752,22 @@ export const en = {
   'accounts.signedIn': 'Signed in',
   'accounts.notSignedIn': 'None',
   'accounts.launcherUnavailable': 'Cannot be started on this server.',
-  'accounts.terminalOff': 'Signing an agent in from here needs the terminal, which is not available on this server. Sign it in from a shell on the server itself.',
+  'accounts.terminalOff':
+    'Signing an agent in from here needs the terminal, which is not available on this server. Sign it in from a shell on the server itself.',
   'accounts.sheet.title': 'Sign in to {agent}',
-  'accounts.sheet.note': 'This is the agent’s own sign-in, running on the server. Follow what it prints; closing this sheet ends it.',
+  'accounts.sheet.note':
+    'This is the agent’s own sign-in, running on the server. Follow what it prints; closing this sheet ends it.',
   'accounts.launcher.claudeLogin': 'Sign in to Claude Code',
   'accounts.launcher.codexLogin': 'Sign in to Codex',
   'accounts.launcher.codexLoginDevice': 'Sign in to Codex with a code (works from a phone)',
   'errors.terminal_disabled': 'Terminals are turned off on this server.',
   'errors.terminal_unavailable': 'Terminals cannot run on this server.',
-  'errors.launcher_unavailable': 'That program cannot be started on this server — most likely it is not installed.',
+  'errors.launcher_unavailable':
+    'That program cannot be started on this server — most likely it is not installed.',
   'errors.ssh_missing': 'The server has no SSH client, so remote machines cannot be reached.',
   'errors.identity_unreadable': 'The key configured for that machine cannot be read by the server.',
-  'errors.remote_hosts_invalid': 'The list of remote machines on the server has a mistake in it, so none is offered until it is fixed.',
+  'errors.remote_hosts_invalid':
+    'The list of remote machines on the server has a mistake in it, so none is offered until it is fixed.',
   'errors.terminal_limit_reached': 'Too many terminals are open. Close one, then open another.',
   'errors.terminal_ended': 'That terminal has ended.',
   'errors.terminal_not_found': 'That terminal no longer exists.',
@@ -1569,7 +1775,8 @@ export const en = {
   'errors.unknown_launcher': 'The server does not know that program.',
   'errors.remote_required': 'That needs a remote machine to run on.',
   'errors.remote_not_expected': 'That does not run on a remote machine.',
-  'errors.multiline_text': 'Only one line can be typed at a time; this has several. Send them one by one.',
+  'errors.multiline_text':
+    'Only one line can be typed at a time; this has several. Send them one by one.',
   'errors.nothing_to_type': 'There was nothing to type.',
   'errors.remote_agents_not_allowed': 'Agents may not be started on that machine; a shell may.',
   'workbench.code.run': 'Run',
@@ -1593,28 +1800,37 @@ export const en = {
   'github.unreadable': 'GitHub could not be read',
   'github.openOnGithub': 'Open on GitHub',
   'github.ownerOnly.title': 'GitHub is the owner’s',
-  'github.ownerOnly.text': 'The Studio reaches GitHub through the owner’s own login on the server. Nothing of it — pull requests, repositories, merging — is lent to other accounts.',
+  'github.ownerOnly.text':
+    'The Studio reaches GitHub through the owner’s own login on the server. Nothing of it — pull requests, repositories, merging — is lent to other accounts.',
   'github.account.tool_missing.title': 'The GitHub tool is not installed on the server',
-  'github.account.tool_missing.text': 'The Studio talks to GitHub only through the gh command-line tool on its own machine.',
+  'github.account.tool_missing.text':
+    'The Studio talks to GitHub only through the gh command-line tool on its own machine.',
   'github.account.signed_out.title': 'The server is not signed in to GitHub',
-  'github.account.signed_out.text': 'Signing in is done in a terminal on the server, never in this browser.',
+  'github.account.signed_out.text':
+    'Signing in is done in a terminal on the server, never in this browser.',
   'github.account.expired.title': 'The server’s GitHub login is no longer accepted',
-  'github.account.expired.text': 'GitHub refuses the stored login. Sign in again from a terminal on the server.',
+  'github.account.expired.text':
+    'GitHub refuses the stored login. Sign in again from a terminal on the server.',
   'github.account.unreachable.title': 'The server cannot reach GitHub',
-  'github.account.unreachable.text': 'This is about the server’s connection, not about your login. Check again in a moment.',
+  'github.account.unreachable.text':
+    'This is about the server’s connection, not about your login. Check again in a moment.',
   'github.account.error.title': 'The GitHub login could not be checked',
-  'github.account.error.text': 'The tool on the server answered in a way the Studio did not expect.',
+  'github.account.error.text':
+    'The tool on the server answered in a way the Studio did not expect.',
   'github.account.serverSays': 'The server says',
   'github.account.recheck': 'Check again',
   'github.account.howTo': 'How to set it up',
-  'github.account.howToText': 'Run this in a terminal on the server, as the account the Studio runs under, then check again:',
+  'github.account.howToText':
+    'Run this in a terminal on the server, as the account the Studio runs under, then check again:',
   'github.account.copyCommand': 'Copy the command',
-  'github.account.tokenNote': 'The Studio only ever calls the tool. It never reads, stores or shows the login’s token.',
+  'github.account.tokenNote':
+    'The Studio only ever calls the tool. It never reads, stores or shows the login’s token.',
   'github.account.signedIn': 'Signed in',
   'github.account.readOnly': 'read-only',
   'github.account.checked': 'checked {when}',
   'github.account.limited.title': 'This login can read but not merge',
-  'github.account.limited.text': 'The server’s GitHub login lacks the permission to write to repositories, so pull requests can be looked at and not merged from here.',
+  'github.account.limited.text':
+    'The server’s GitHub login lacks the permission to write to repositories, so pull requests can be looked at and not merged from here.',
   'github.inbox.filter': 'Which pull requests',
   'github.inbox.all': 'All',
   'github.inbox.review': 'Review',
@@ -1624,8 +1840,10 @@ export const en = {
   'github.inbox.empty.review_requested': 'Nothing is waiting for your review',
   'github.inbox.empty.authored': 'You have no open pull requests',
   'github.inbox.empty.own_repositories': 'No open pull requests in your repositories',
-  'github.inbox.emptyHint': 'Pull requests you opened, are asked to review, or that sit in your own repositories show up here.',
-  'github.inbox.truncated': 'There are more than GitHub returns in one search; the oldest are not listed.',
+  'github.inbox.emptyHint':
+    'Pull requests you opened, are asked to review, or that sit in your own repositories show up here.',
+  'github.inbox.truncated':
+    'There are more than GitHub returns in one search; the oldest are not listed.',
   'github.repo.private': 'private',
   'github.repo.public': 'public',
   'github.repo.fork': 'fork',
@@ -1649,7 +1867,8 @@ export const en = {
   'github.repo.recentMerges': 'Recently merged',
   'github.repo.openMerge': 'Open pull request #{number} on GitHub',
   'github.log.empty': 'Nothing has been attempted yet',
-  'github.log.emptyHint': 'Every merge and fix asked for from the Studio is recorded here with its outcome — the refused ones too.',
+  'github.log.emptyHint':
+    'Every merge and fix asked for from the Studio is recorded here with its outcome — the refused ones too.',
   'github.log.footer': 'Recorded on the server before anything is sent to GitHub.',
   'github.action.merge': 'Merge',
   'github.action.update_branch': 'Update branch',
@@ -1666,7 +1885,8 @@ export const en = {
   'github.method.squash': 'Squash and merge',
   'github.method.squash.hint': 'All its commits become one commit on the base branch.',
   'github.method.merge': 'Merge commit',
-  'github.method.merge.hint': 'Its commits are kept and joined to the base branch by a merge commit.',
+  'github.method.merge.hint':
+    'Its commits are kept and joined to the base branch by a merge commit.',
   'github.method.rebase': 'Rebase and merge',
   'github.method.rebase.hint': 'Its commits are replayed one by one on top of the base branch.',
   'github.verdict.draft': 'draft',
@@ -1680,7 +1900,8 @@ export const en = {
   'github.verdict.blocked': 'blocked',
   'github.verdict.checking': 'being checked',
   'github.verdict.mergeable': 'ready to merge',
-  'github.blocker.incomplete': 'GitHub did not send everything about this pull request — reload and look again',
+  'github.blocker.incomplete':
+    'GitHub did not send everything about this pull request — reload and look again',
   'github.blocker.not_open': 'It is not open',
   'github.blocker.draft': 'It is a draft',
   'github.blocker.no_permission': 'The server’s login may not merge here',
@@ -1743,9 +1964,11 @@ export const en = {
   'github.merge.method': 'How to merge',
   'github.merge.deleteBranch': 'Delete {head} afterwards',
   'github.merge.acknowledge': 'I have seen that checks which are not required are failing',
-  'github.merge.acknowledgeHint': 'Required checks pass. This applies to the commit shown here and lapses if the pull request changes.',
+  'github.merge.acknowledgeHint':
+    'Required checks pass. This applies to the commit shown here and lapses if the pull request changes.',
   'github.merge.autoDelete': 'This repository deletes merged branches by itself.',
-  'github.merge.queueNote': 'The base branch merges through a queue: the pull request is added to it and merged when its turn comes.',
+  'github.merge.queueNote':
+    'The base branch merges through a queue: the pull request is added to it and merged when its turn comes.',
   'github.merge.pendingNote': 'Some checks are still running.',
   'github.merge.refused': 'Not merged',
   'github.merge.unknown': 'It is not known whether this happened',
@@ -1756,7 +1979,8 @@ export const en = {
   'github.merge.branchDeleted': 'The branch {head} was deleted.',
   'github.merge.branchKept': 'The branch {head} could not be deleted and is still there.',
   'github.merge.confirm.title': 'Merge {repository} #{number}?',
-  'github.merge.confirm.squash': 'The commits of {head} (at {sha}) are squashed into one commit on {base}.',
+  'github.merge.confirm.squash':
+    'The commits of {head} (at {sha}) are squashed into one commit on {base}.',
   'github.merge.confirm.merge': '{head} (at {sha}) is joined to {base} with a merge commit.',
   'github.merge.confirm.rebase': 'The commits of {head} (at {sha}) are replayed on top of {base}.',
   'github.merge.confirm.queued': 'It goes through the merge queue.',
@@ -1769,17 +1993,20 @@ export const en = {
   'github.fix.updateBranch': 'Update the branch',
   'github.fix.updateBranchHint': 'Merges {base} into {head} on GitHub.',
   'github.fix.updateBranch.title': 'Update the branch of #{number}?',
-  'github.fix.updateBranch.message': 'GitHub merges {base} into {head} (now at {sha}). Its checks run again.',
+  'github.fix.updateBranch.message':
+    'GitHub merges {base} into {head} (now at {sha}). Its checks run again.',
   'github.fix.markReady': 'Mark as ready for review',
   'github.fix.markReadyHint': 'It stops being a draft.',
   'github.fix.markReady.title': 'Mark #{number} as ready for review?',
-  'github.fix.markReady.message': 'Reviewers may be notified. It can be made a draft again on GitHub.',
+  'github.fix.markReady.message':
+    'Reviewers may be notified. It can be made a draft again on GitHub.',
   'github.fix.approveRuns.one': 'Approve {count} waiting workflow run',
   'github.fix.approveRuns.other': 'Approve {count} waiting workflow runs',
   'github.fix.approveRunsHint': 'Lets code from outside the repository run in its workflows.',
   'github.fix.approveRuns.title.one': 'Approve {count} workflow run?',
   'github.fix.approveRuns.title.other': 'Approve {count} workflow runs?',
-  'github.fix.approveRuns.message': 'This runs code written by someone outside the repository, in workflows that may hold its secrets. Approve only code you have read. Runs:',
+  'github.fix.approveRuns.message':
+    'This runs code written by someone outside the repository, in workflows that may hold its secrets. Approve only code you have read. Runs:',
   'github.fix.approveRuns.confirm': 'Approve and run',
   'github.chip.label': 'Branch {branch}, pull request #{number}: {state}',
   'github.chip.branch': 'Branch {branch}. Open the Git panel',
@@ -1793,52 +2020,68 @@ export const en = {
   'github.tile.open.other': '{count} open',
   'errors.github_tool_missing': 'The GitHub command-line tool (gh) is not installed on the server.',
   'errors.github_signed_out': 'The server is not signed in to GitHub.',
-  'errors.github_expired': 'The server’s GitHub login is no longer accepted. Sign in again on the server.',
+  'errors.github_expired':
+    'The server’s GitHub login is no longer accepted. Sign in again on the server.',
   'errors.github_forbidden': 'The server’s GitHub login is not allowed to do that.',
-  'errors.github_sso_required': 'The organisation requires single sign-on, which the server’s GitHub login has not been authorised for.',
-  'errors.github_rate_limited': 'GitHub is limiting requests from this account for the moment. Try again shortly.',
-  'errors.github_not_found': 'GitHub has no such repository or pull request, or the login may not see it.',
+  'errors.github_sso_required':
+    'The organisation requires single sign-on, which the server’s GitHub login has not been authorised for.',
+  'errors.github_rate_limited':
+    'GitHub is limiting requests from this account for the moment. Try again shortly.',
+  'errors.github_not_found':
+    'GitHub has no such repository or pull request, or the login may not see it.',
   'errors.github_unreachable': 'The server cannot reach GitHub right now.',
   'errors.github_timeout': 'GitHub did not answer in time.',
   'errors.github_busy': 'Too many GitHub requests are in progress. Try again in a moment.',
   'errors.github_failed': 'GitHub could not complete that.',
   'errors.github_merge_refused': 'The pull request was not merged. The details say why.',
-  'errors.github_head_moved': 'The pull request changed since you looked at it. Review it again before merging; nothing was merged.',
+  'errors.github_head_moved':
+    'The pull request changed since you looked at it. Review it again before merging; nothing was merged.',
   'errors.github_method_not_allowed': 'This repository does not allow that merge method.',
   'errors.github_action_in_progress': 'Another action on this pull request is still in progress.',
-  'errors.github_outcome_unknown': 'GitHub did not answer in time. The action may or may not have happened: reload before trying again.',
-  'errors.github_fix_not_applicable': 'That no longer applies to this pull request. Nothing was changed.',
+  'errors.github_outcome_unknown':
+    'GitHub did not answer in time. The action may or may not have happened: reload before trying again.',
+  'errors.github_fix_not_applicable':
+    'That no longer applies to this pull request. Nothing was changed.',
   'projects.page.title': 'Project',
   'projects.page.open': 'Settings and sharing',
-  'projects.page.openHint': 'Links, the agents it offers, what they may do, and who it is shared with.',
+  'projects.page.openHint':
+    'Links, the agents it offers, what they may do, and who it is shared with.',
   'projects.noDescription': 'No description yet.',
   'projects.scratch': 'Scratch workspace',
   'projects.openWorkbench': 'Open in the workbench',
   'projects.editDetails': 'Name, description and icon',
   'projects.archive.title': 'Archive “{name}”?',
-  'projects.archive.message': 'It leaves the home screen and the workbench. Nothing is deleted: its conversations, settings and files stay, and it can be restored from Settings → Projects.',
+  'projects.archive.message':
+    'It leaves the home screen and the workbench. Nothing is deleted: its conversations, settings and files stay, and it can be restored from Settings → Projects.',
   'projects.restore.hint': 'Puts it back on the home screen and in the workbench.',
   'projects.danger.title': 'Archive or remove',
-  'projects.remove.message': 'Removed from the Studio for good: this project’s conversations and their attachments, its schedules, its sharing and its settings. Terminals open in it are ended. Not touched: the folder {folder} and every file in it stay on the server’s disk, and so does anything an agent keeps of its own conversations.',
+  'projects.remove.message':
+    'Removed from the Studio for good: this project’s conversations and their attachments, its schedules, its sharing and its settings. Terminals open in it are ended. Not touched: the folder {folder} and every file in it stay on the server’s disk, and so does anything an agent keeps of its own conversations.',
   'projects.remove.confirm': 'Remove project',
-  'projects.remove.hint': 'Deletes its conversations and settings. Files on disk are never deleted.',
-  'projects.remove.footer': 'Archiving hides a project and keeps everything. Removing deletes what the Studio holds about it — never the folder or its files.',
+  'projects.remove.hint':
+    'Deletes its conversations and settings. Files on disk are never deleted.',
+  'projects.remove.footer':
+    'Archiving hides a project and keeps everything. Removing deletes what the Studio holds about it — never the folder or its files.',
   'projects.about.title': 'About',
   'projects.gone.title': 'This project does not exist',
   'projects.gone.text': 'It may have been removed, or it is not shared with you.',
   'projects.yourAccess.title': 'What you can do here',
   'projects.yourAccess.footer': 'The owner of this Studio decides who may use a project and how.',
   'projects.yourAccess.write': 'You can change this project',
-  'projects.yourAccess.writeText': 'Start conversations with its agents, edit and upload files, stage, commit, switch branches, pull and push, and edit its name, icon and links.',
+  'projects.yourAccess.writeText':
+    'Start conversations with its agents, edit and upload files, stage, commit, switch branches, pull and push, and edit its name, icon and links.',
   'projects.yourAccess.read': 'You can look at this project',
-  'projects.yourAccess.readText': 'Look at its files, changes and history. You cannot start a conversation, change a file or run anything in it. Conversations here are seen only by whoever started them, and by the owner.',
+  'projects.yourAccess.readText':
+    'Look at its files, changes and history. You cannot start a conversation, change a file or run anything in it. Conversations here are seen only by whoever started them, and by the owner.',
   'projects.yourAccess.never': 'Only the owner can',
-  'projects.yourAccess.neverText': 'Open a terminal, use GitHub, choose which agents and features the project offers, share it, archive it or remove it.',
+  'projects.yourAccess.neverText':
+    'Open a terminal, use GitHub, choose which agents and features the project offers, share it, archive it or remove it.',
   'projects.links.title': 'Links',
   'projects.links.edit': 'Edit links',
   'projects.links.recheck': 'Check the links again',
   'projects.links.empty': 'No links yet',
-  'projects.links.emptyHint': 'Add the project’s websites — where it is deployed, its docs, its repository — to see at a glance whether each one answers.',
+  'projects.links.emptyHint':
+    'Add the project’s websites — where it is deployed, its docs, its repository — to see at a glance whether each one answers.',
   'projects.links.emptyReadOnly': 'Websites added to this project show up here.',
   'projects.links.statusFailed': 'Whether the links answer could not be checked just now.',
   'projects.links.unknown': 'Not checked',
@@ -1849,7 +2092,8 @@ export const en = {
   'projects.links.labelPlaceholder': 'Production',
   'projects.links.url': 'Address',
   'projects.links.local': 'A service on this machine or its network',
-  'projects.links.localHint': 'Lets the server check a private address for this link. Leave off for public websites.',
+  'projects.links.localHint':
+    'Lets the server check a private address for this link. Leave off for public websites.',
   'projects.links.localBadge': 'local',
   'projects.links.remove': 'Remove link {number}',
   'projects.links.rowLegend': 'Link {number}',
@@ -1866,45 +2110,60 @@ export const en = {
   'projects.links.problem.scheme': 'Use a full address that starts with http:// or https://.',
   'projects.links.problem.credentials': 'Leave user names and passwords out of the address.',
   'projects.agents.title': 'Agents offered here',
-  'projects.agents.footer': 'An agent switched off cannot start a conversation in this project. With conversations switched on, at least one must stay on.',
+  'projects.agents.footer':
+    'An agent switched off cannot start a conversation in this project. With conversations switched on, at least one must stay on.',
   'projects.agents.saved': 'Agents updated',
   'projects.features.title': 'What this project allows',
-  'projects.features.footer': 'These apply to everyone who uses the project. Only the owner can change them.',
+  'projects.features.footer':
+    'These apply to everyone who uses the project. Only the owner can change them.',
   'projects.feature.turnedOn': 'Switched on: {feature}',
   'projects.feature.turnedOff': 'Switched off: {feature}',
   'projects.feature.assistant': 'Conversations with agents',
-  'projects.feature.assistant.text': 'On: the project appears in the workbench and agents can be asked to work in its folder. Off: its files and Git stay reachable, but no conversation can be started or continued here.',
+  'projects.feature.assistant.text':
+    'On: the project appears in the workbench and agents can be asked to work in its folder. Off: its files and Git stay reachable, but no conversation can be started or continued here.',
   'projects.feature.automation': 'Unattended runs',
-  'projects.feature.automation.text': 'On: lets schedules start agent runs here while nobody is watching. Off: nothing starts by itself in this project.',
+  'projects.feature.automation.text':
+    'On: lets schedules start agent runs here while nobody is watching. Off: nothing starts by itself in this project.',
   'projects.feature.instructions': 'Project instructions',
-  'projects.feature.instructions.text': 'On: load this project’s CLAUDE.md for Claude Code at the start of each conversation. Off: the file is left unread.',
+  'projects.feature.instructions.text':
+    'On: load this project’s CLAUDE.md for Claude Code at the start of each conversation. Off: the file is left unread.',
   'projects.feature.agentCredentials': 'Agents may use this machine’s credentials',
-  'projects.feature.agentCredentials.text': 'On: lets agents use this machine’s SSH keys and tokens — needed for an agent to push or to use GitHub’s tool. An agent can then also read those credentials. Off: such commands fail inside an agent run, even when approved.',
-  'projects.feature.agentCredentials.riskTitle': 'Let agents in “{project}” use this machine’s credentials?',
-  'projects.feature.agentCredentials.riskMessage': 'Agents working in this project will be able to read the SSH and GPG keys, cloud and container sign-ins, the GitHub tool’s token and the Git credentials of the account the Studio runs as — and anything they run can use them. A prompt hidden in a file or a web page could make an agent send them elsewhere. Switch this on only for projects whose contents you trust.',
+  'projects.feature.agentCredentials.text':
+    'On: lets agents use this machine’s SSH keys and tokens — needed for an agent to push or to use GitHub’s tool. An agent can then also read those credentials. Off: such commands fail inside an agent run, even when approved.',
+  'projects.feature.agentCredentials.riskTitle':
+    'Let agents in “{project}” use this machine’s credentials?',
+  'projects.feature.agentCredentials.riskMessage':
+    'Agents working in this project will be able to read the SSH and GPG keys, cloud and container sign-ins, the GitHub tool’s token and the Git credentials of the account the Studio runs as — and anything they run can use them. A prompt hidden in a file or a web page could make an agent send them elsewhere. Switch this on only for projects whose contents you trust.',
   'projects.feature.agentCredentials.riskConfirm': 'Allow',
   'projects.feature.autoMode': 'Auto permission mode',
-  'projects.feature.autoMode.text': 'On: conversations here may use Auto, in which nothing is put to a person first — only deny rules and the built-in deny list stop a request. Off: a conversation set to Auto asks, as in Ask.',
+  'projects.feature.autoMode.text':
+    'On: conversations here may use Auto, in which nothing is put to a person first — only deny rules and the built-in deny list stop a request. Off: a conversation set to Auto asks, as in Ask.',
   'projects.feature.autoMode.riskTitle': 'Allow Auto mode in “{project}”?',
-  'projects.feature.autoMode.riskMessage': 'In Auto an agent runs commands and changes files without asking anyone first — requests the Studio classes as dangerous included. Only deny rules and the built-in deny list stop it. Allow it only where a mistake is cheap to undo.',
+  'projects.feature.autoMode.riskMessage':
+    'In Auto an agent runs commands and changes files without asking anyone first — requests the Studio classes as dangerous included. Only deny rules and the built-in deny list stop it. Allow it only where a mistake is cheap to undo.',
   'projects.feature.autoMode.riskConfirm': 'Allow Auto',
   'projects.sharing.title': 'Shared with',
   'projects.sharing.add': 'Add a person',
-  'projects.sharing.footer': 'Members see only the conversations they started themselves, never anyone else’s. A person with “can view” sees files, changes and history, and so has no conversations here. “Can change” adds starting their own conversations, editing files and committing, pulling and pushing. Neither can open a terminal, use GitHub, change these settings, or archive or remove the project. Owners always see every project.',
+  'projects.sharing.footer':
+    'Members see only the conversations they started themselves, never anyone else’s. A person with “can view” sees files, changes and history, and so has no conversations here. “Can change” adds starting their own conversations, editing files and committing, pulling and pushing. Neither can open a terminal, use GitHub, change these settings, or archive or remove the project. Owners always see every project.',
   'projects.sharing.empty': 'Not shared with anyone. Only owners can open it.',
   'projects.sharing.read': 'Can view',
-  'projects.sharing.readHint': 'Sees files, changes and history; changes nothing, runs nothing, and has no conversations here.',
+  'projects.sharing.readHint':
+    'Sees files, changes and history; changes nothing, runs nothing, and has no conversations here.',
   'projects.sharing.write': 'Can change',
-  'projects.sharing.writeHint': 'Also starts conversations of their own, edits files and commits, pulls and pushes.',
+  'projects.sharing.writeHint':
+    'Also starts conversations of their own, edits files and commits, pulls and pushes.',
   'projects.sharing.accessLabel': 'What they may do',
   'projects.sharing.accessOf': 'What {name} may do',
   'projects.sharing.added': '{name} can now open {project}',
   'projects.sharing.adding': 'Adding…',
   'projects.sharing.nobody': 'Nobody left to add',
-  'projects.sharing.nobodyHint': 'Everyone with an account either has this project already or is an owner. New accounts are made under Settings → People.',
+  'projects.sharing.nobodyHint':
+    'Everyone with an account either has this project already or is an owner. New accounts are made under Settings → People.',
   'projects.sharing.remove': 'Stop sharing',
   'projects.sharing.remove.title': 'Stop sharing {project} with {name}?',
-  'projects.sharing.remove.message': 'The project disappears from their Studio at once. Conversations they started in it stay with the project.',
+  'projects.sharing.remove.message':
+    'The project disappears from their Studio at once. Conversations they started in it stay with the project.',
   'projects.sharing.removed': 'No longer shared with {name}',
   'projects.sharing.actions': 'Actions for {name}',
   'projects.new.mode': 'How to make the project',
@@ -1912,37 +2171,50 @@ export const en = {
   'projects.new.clone': 'Clone a repository',
   'projects.clone.action': 'Clone',
   'projects.clone.url': 'Repository address',
-  'projects.clone.urlHint': 'https://…, ssh://… or user@host:path. No password or token in the address.',
+  'projects.clone.urlHint':
+    'https://…, ssh://… or user@host:path. No password or token in the address.',
   'projects.clone.parent': 'Clone into',
-  'projects.clone.parentHint': 'A folder inside the workspace. Left empty, the first workspace folder is used.',
+  'projects.clone.parentHint':
+    'A folder inside the workspace. Left empty, the first workspace folder is used.',
   'projects.clone.directory': 'Folder name',
-  'projects.clone.directoryHint': 'Left empty, the folder is called “{name}”. It must not exist yet.',
-  'projects.clone.directoryHintEmpty': 'Left empty, the repository’s own name is used. It must not exist yet.',
+  'projects.clone.directoryHint':
+    'Left empty, the folder is called “{name}”. It must not exist yet.',
+  'projects.clone.directoryHintEmpty':
+    'Left empty, the repository’s own name is used. It must not exist yet.',
   'projects.clone.nameHint': 'Left empty, the project is named after its folder.',
-  'projects.clone.credentialsNote': 'A private repository is cloned with whatever git on the server is already signed in with — a credential helper or an SSH key. The Studio stores no repository password or token.',
+  'projects.clone.credentialsNote':
+    'A private repository is cloned with whatever git on the server is already signed in with — a credential helper or an SSH key. The Studio stores no repository password or token.',
   'projects.clone.running': 'Cloning…',
   'projects.clone.starting': 'Starting',
   'projects.clone.progress': 'Clone progress',
   'projects.clone.into': 'Into {folder}',
   'projects.clone.cancel': 'Cancel the clone',
-  'projects.clone.runningNote': 'The clone runs on the server and carries on if this page is closed. Cancelling stops it and removes what was fetched so far.',
+  'projects.clone.runningNote':
+    'The clone runs on the server and carries on if this page is closed. Cancelling stops it and removes what was fetched so far.',
   'projects.clone.done': 'Cloned into the project {name}',
   'projects.clone.failed': 'The repository could not be cloned.',
   'projects.clone.cancelled': 'The clone was cancelled.',
   'projects.clone.nothingLeft': 'No folder was left behind.',
   'projects.clone.problem.empty': 'Give the address of the repository.',
   'projects.clone.problem.spaces': 'A repository address cannot contain spaces.',
-  'projects.clone.problem.scheme': 'Use an address of the form https://host/owner/repository, ssh://host/path or user@host:path. Other kinds of address are not accepted.',
-  'projects.clone.problem.credentials': 'Leave the password or token out of the address. Sign git in on the server instead.',
+  'projects.clone.problem.scheme':
+    'Use an address of the form https://host/owner/repository, ssh://host/path or user@host:path. Other kinds of address are not accepted.',
+  'projects.clone.problem.credentials':
+    'Leave the password or token out of the address. Sign git in on the server instead.',
   'errors.invalid_link': 'One of the links is not a usable http or https address.',
   'errors.too_many_links': 'A project can have at most 8 links.',
   'errors.invalid_agents': 'An agent is listed twice.',
-  'errors.agents_required': 'Keep at least one agent switched on, or switch conversations off for this project.',
+  'errors.agents_required':
+    'Keep at least one agent switched on, or switch conversations off for this project.',
   'errors.too_many_pins': 'Too many projects are pinned.',
-  'errors.invalid_repository_url': 'That is not a repository address the server accepts: use https://…, ssh://… or user@host:path, without a password or token.',
-  'errors.invalid_directory_name': 'The folder name can contain letters, digits, dots, dashes and underscores only.',
-  'errors.target_exists': 'A folder of that name already exists there. Choose another name or another place.',
-  'errors.no_workspace_root': 'No workspace folder is configured on the server, so there is nowhere to clone into.',
+  'errors.invalid_repository_url':
+    'That is not a repository address the server accepts: use https://…, ssh://… or user@host:path, without a password or token.',
+  'errors.invalid_directory_name':
+    'The folder name can contain letters, digits, dots, dashes and underscores only.',
+  'errors.target_exists':
+    'A folder of that name already exists there. Choose another name or another place.',
+  'errors.no_workspace_root':
+    'No workspace folder is configured on the server, so there is nowhere to clone into.',
   'remotes.title': 'Remote machines',
   'remotes.reading': 'Reading the list of machines…',
   'remotes.checking': 'checking',
@@ -1961,43 +2233,59 @@ export const en = {
   'remotes.session.in': 'Open session in {directory}',
   'remotes.session.running': 'Open session',
   'remotes.session.actions': 'Actions for {title}',
-  'remotes.session.closeMessage': 'The connection from the Studio is ended. With tmux on the machine, what runs inside keeps running there; without it, it ends too.',
+  'remotes.session.closeMessage':
+    'The connection from the Studio is ended. With tmux on the machine, what runs inside keeps running there; without it, it ends too.',
   'remotes.open': 'Open a terminal there',
   'remotes.invalid.title': 'The list of machines on the server has a mistake in it',
-  'remotes.invalid.text': 'Until it is corrected no machine is offered. The server says what is wrong, without repeating the value:',
+  'remotes.invalid.text':
+    'Until it is corrected no machine is offered. The server says what is wrong, without repeating the value:',
   'remotes.empty.title': 'No remote machines yet',
-  'remotes.empty.missing': 'The file that lists them does not exist yet. Whoever operates this server creates it — see below.',
-  'remotes.empty.text': 'The file that lists them is empty. Whoever operates this server adds machines to it — see below.',
+  'remotes.empty.missing':
+    'The file that lists them does not exist yet. Whoever operates this server creates it — see below.',
+  'remotes.empty.text':
+    'The file that lists them is empty. Whoever operates this server adds machines to it — see below.',
   'remotes.how.title': 'How machines are added',
-  'remotes.how.text': 'Machines are listed by whoever operates this server, in a file on the server itself. They cannot be added, changed or removed from a browser — so a browser can never choose a host, a user, a key or a command. The file is:',
-  'remotes.how.keys': 'Connections use the server account’s own SSH keys and never ask for a password. The first connection to a machine needs its host key in that account’s known_hosts, unless the operator allows new keys for it in the file.',
+  'remotes.how.text':
+    'Machines are listed by whoever operates this server, in a file on the server itself. They cannot be added, changed or removed from a browser — so a browser can never choose a host, a user, a key or a command. The file is:',
+  'remotes.how.keys':
+    'Connections use the server account’s own SSH keys and never ask for a password. The first connection to a machine needs its host key in that account’s known_hosts, unless the operator allows new keys for it in the file.',
   'remotes.directory.title': 'Open a terminal on {name}',
   'remotes.directory.label': 'Folder to start in',
-  'remotes.directory.hint': 'A full path made of letters, digits and . _ + @ - only. Left empty, the machine’s default is used.',
-  'remotes.directory.problem': 'Use a full path that starts with / and is made of letters, digits and . _ + @ - only: no spaces, no “..”, no part that starts with a dash.',
+  'remotes.directory.hint':
+    'A full path made of letters, digits and . _ + @ - only. Left empty, the machine’s default is used.',
+  'remotes.directory.problem':
+    'Use a full path that starts with / and is made of letters, digits and . _ + @ - only: no spaces, no “..”, no part that starts with a dash.',
   'remotes.directory.open': 'Open',
   'remotes.sheet.title': 'Terminal on {name}',
-  'remotes.sheet.note': 'Done only detaches. The session on {name} keeps running and is listed under the machine to come back to.',
+  'remotes.sheet.note':
+    'Done only detaches. The session on {name} keeps running and is listed under the machine to come back to.',
   'remotes.failure.ssh_missing': 'The server has no SSH client installed.',
-  'remotes.failure.identity_unreadable': 'The key configured for this machine cannot be read by the server.',
+  'remotes.failure.identity_unreadable':
+    'The key configured for this machine cannot be read by the server.',
   'remotes.failure.timeout': 'The machine did not answer in time.',
   'remotes.failure.auth_failed': 'The machine refused the server’s key.',
-  'remotes.failure.host_key_failed': 'The machine’s host key is not known to the server, or it has changed. Its key has to be accepted on the server first.',
+  'remotes.failure.host_key_failed':
+    'The machine’s host key is not known to the server, or it has changed. Its key has to be accepted on the server first.',
   'remotes.failure.dns_failed': 'The machine’s name could not be looked up.',
   'remotes.failure.connection_refused': 'The machine refused the connection.',
   'remotes.failure.network_unreachable': 'There is no network route to the machine.',
   'remotes.failure.unexpected_output': 'The machine answered, but not in the way a check expects.',
   'remotes.failure.ssh_failed': 'The connection failed.',
-  'github.account.recentlyChecked': 'Checked a moment ago. The server looks again at most every few seconds.',
+  'github.account.recentlyChecked':
+    'Checked a moment ago. The server looks again at most every few seconds.',
   'remotes.directory.project': 'For the project',
-  'remotes.directory.projectHint': 'Every terminal belongs to a project. This one is listed with that project’s terminals, and ends if the project is removed.',
-  'remotes.directory.noProject': 'A terminal needs a project to belong to, and there is none yet. Create a project first.',
-  'github.inbox.about.all': 'Open pull requests you opened, were asked to review, or that are in your own repositories.',
+  'remotes.directory.projectHint':
+    'Every terminal belongs to a project. This one is listed with that project’s terminals, and ends if the project is removed.',
+  'remotes.directory.noProject':
+    'A terminal needs a project to belong to, and there is none yet. Create a project first.',
+  'github.inbox.about.all':
+    'Open pull requests you opened, were asked to review, or that are in your own repositories.',
   'github.inbox.about.review_requested': 'Open pull requests waiting for your review.',
   'github.inbox.about.authored': 'Open pull requests you opened.',
   'github.inbox.about.own_repositories': 'Open pull requests in repositories you own.',
   'projects.remove.removing': 'Removing “{name}”…',
-  'accounts.signInHint': 'Signing in runs the agent’s own sign-in in a terminal on the server; what it asks for is up to the agent.',
+  'accounts.signInHint':
+    'Signing in runs the agent’s own sign-in in a terminal on the server; what it asks for is up to the agent.',
   'accounts.serverSays': 'The server says: {message}',
   'projects.sharing.unshare': 'Unshare',
   // ---- notifications ------------------------------------------------------------------------
@@ -2008,60 +2296,82 @@ export const en = {
   'notify.thisDevice': 'This device',
   'notify.state.checking': 'Checking this device…',
   'notify.state.on.title': 'Notifications are on',
-  'notify.state.on.text': 'This device shows a notification when an agent needs you, finishes or fails — also while the app is closed.',
+  'notify.state.on.text':
+    'This device shows a notification when an agent needs you, finishes or fails — also while the app is closed.',
   'notify.state.on.line': 'Reminders reach this device.',
   'notify.state.on.lineMany.one': 'Reminders reach this device and 1 other.',
   'notify.state.on.lineMany.other': 'Reminders reach this device and {count} others.',
   'notify.state.channelOff.title': 'Set up, but switched off',
-  'notify.state.channelOff.text': 'This device is registered, but sending to devices is switched off for your account, so no device gets a notification.',
-  'notify.state.channelOff.line': 'Sending to devices is switched off in your notification settings.',
+  'notify.state.channelOff.text':
+    'This device is registered, but sending to devices is switched off for your account, so no device gets a notification.',
+  'notify.state.channelOff.line':
+    'Sending to devices is switched off in your notification settings.',
   'notify.state.notSubscribed.title': 'Not set up on this device',
-  'notify.state.notSubscribed.text': 'This browser allows notifications, but it is not registered with your account yet.',
+  'notify.state.notSubscribed.text':
+    'This browser allows notifications, but it is not registered with your account yet.',
   'notify.state.notSubscribed.line': 'This device is not set up for notifications yet.',
   'notify.state.notAsked.title': 'Not enabled',
-  'notify.state.notAsked.text': 'Get a notification when an agent needs you, finishes or fails — also while the app is closed. The browser will ask for permission.',
-  'notify.state.notAsked.line': 'Notifications are not enabled: reminders only appear in the inbox.',
+  'notify.state.notAsked.text':
+    'Get a notification when an agent needs you, finishes or fails — also while the app is closed. The browser will ask for permission.',
+  'notify.state.notAsked.line':
+    'Notifications are not enabled: reminders only appear in the inbox.',
   'notify.state.denied.title': 'Blocked in this browser',
-  'notify.state.denied.text': 'Notifications are blocked for this site. To allow them, open the site’s settings (the icon to the left of the address), set Notifications to Allow, and come back — this page updates by itself.',
-  'notify.state.denied.iosText': 'Notifications are turned off for Agent Studio. Open Settings → Notifications → Agent Studio, switch on Allow Notifications, and come back — this page updates by itself.',
-  'notify.state.denied.line': 'Notifications are blocked in this browser. Allow them in the site settings; this updates by itself.',
+  'notify.state.denied.text':
+    'Notifications are blocked for this site. To allow them, open the site’s settings (the icon to the left of the address), set Notifications to Allow, and come back — this page updates by itself.',
+  'notify.state.denied.iosText':
+    'Notifications are turned off for Cloud Harness. Open Settings → Notifications → Cloud Harness, switch on Allow Notifications, and come back — this page updates by itself.',
+  'notify.state.denied.line':
+    'Notifications are blocked in this browser. Allow them in the site settings; this updates by itself.',
   'notify.state.install.title': 'Add to Home Screen first',
-  'notify.state.install.text': 'On iPhone and iPad, notifications work only in Agent Studio added to the Home Screen, on iOS or iPadOS 16.4 or later.',
-  'notify.state.install.line': 'On iPhone or iPad, open Agent Studio from the Home Screen to get notifications.',
+  'notify.state.install.text':
+    'On iPhone and iPad, notifications work only in Cloud Harness added to the Home Screen, on iOS or iPadOS 16.4 or later.',
+  'notify.state.install.line':
+    'On iPhone or iPad, open Cloud Harness from the Home Screen to get notifications.',
   'notify.install.step1': 'Tap Share in the browser’s toolbar.',
   'notify.install.step2': 'Choose “Add to Home Screen”.',
-  'notify.install.step3': 'Open Agent Studio from the Home Screen and come back to this page.',
+  'notify.install.step3': 'Open Cloud Harness from the Home Screen and come back to this page.',
   'notify.state.unsupported.title': 'Not available in this browser',
-  'notify.state.unsupported.text': 'This browser cannot receive web notifications. Everything else works, and what happens still appears in the inbox.',
-  'notify.state.unsupported.line': 'This browser cannot show notifications. Automations still run; reminders appear in the inbox.',
+  'notify.state.unsupported.text':
+    'This browser cannot receive web notifications. Everything else works, and what happens still appears in the inbox.',
+  'notify.state.unsupported.line':
+    'This browser cannot show notifications. Automations still run; reminders appear in the inbox.',
   'notify.state.insecure.title': 'Needs a secure address',
-  'notify.state.insecure.text': 'Browsers allow notifications only on https addresses (or localhost). This page was opened over plain http, so this device cannot receive them here.',
+  'notify.state.insecure.text':
+    'Browsers allow notifications only on https addresses (or localhost). This page was opened over plain http, so this device cannot receive them here.',
   'notify.state.noWorker.title': 'Background worker not running',
-  'notify.state.noWorker.text': 'Notifications reach this device through the app’s background worker, which is not running in this window. Reload the page; a development build has none.',
+  'notify.state.noWorker.text':
+    'Notifications reach this device through the app’s background worker, which is not running in this window. Reload the page; a development build has none.',
   'notify.action.enable': 'Enable notifications',
   'notify.action.enableDevice': 'Enable on this device',
   'notify.action.turnOn': 'Switch sending on',
   'notify.action.test': 'Send test',
   'notify.enable.done': 'This device is set up. A confirmation is on its way.',
-  'notify.enable.denied': 'The browser blocked notifications. Allow them in the site settings to try again.',
-  'notify.enable.dismissed': 'The permission prompt was closed without an answer. Try again when you are ready.',
-  'notify.enable.noWorker': 'The app’s background worker is not running. Reload the page and try again.',
-  'notify.enable.subscribeFailed': 'The browser could not subscribe to its push service. Check the connection and try again.',
-  'notify.enable.registerFailed': 'The device subscribed, but the server did not register it: {reason}',
+  'notify.enable.denied':
+    'The browser blocked notifications. Allow them in the site settings to try again.',
+  'notify.enable.dismissed':
+    'The permission prompt was closed without an answer. Try again when you are ready.',
+  'notify.enable.noWorker':
+    'The app’s background worker is not running. Reload the page and try again.',
+  'notify.enable.subscribeFailed':
+    'The browser could not subscribe to its push service. Check the connection and try again.',
+  'notify.enable.registerFailed':
+    'The device subscribed, but the server did not register it: {reason}',
   'notify.turnedOn': 'Sending to devices is on again.',
   'notify.webPush.title': 'Send to my devices',
   'notify.webPush.devices.one': '1 device will receive notifications',
   'notify.webPush.devices.other': '{count} devices will receive notifications',
   'notify.webPush.none': 'No device is set up yet',
   'notify.devices.header': 'Devices',
-  'notify.devices.footer': 'On iPhone and iPad, only Agent Studio added to the Home Screen can receive notifications (iOS 16.4 or later). Up to {max} devices.',
+  'notify.devices.footer':
+    'On iPhone and iPad, only Cloud Harness added to the Home Screen can receive notifications (iOS 16.4 or later). Up to {max} devices.',
   'notify.device.this': 'This device',
   'notify.device.enabled': 'Enabled {date}',
   'notify.device.delivered': 'last delivered {when}',
   'notify.device.actions': 'Actions for {name}',
   'notify.device.removing': 'Removing…',
   'notify.device.removeTitle': 'Remove “{name}”?',
-  'notify.device.removeThis': 'This browser stops receiving notifications and gives up its subscription, so it does not come back by itself. You can enable it again at any time.',
+  'notify.device.removeThis':
+    'This browser stops receiving notifications and gives up its subscription, so it does not come back by itself. You can enable it again at any time.',
   'notify.device.removeOther': 'That device stops receiving notifications at once.',
   'notify.device.removed': '“{name}” removed',
   'notify.test.title': 'Send a test notification',
@@ -2074,7 +2384,8 @@ export const en = {
   'notify.test.sentTo.other': 'Sent to {count} devices.',
   'notify.test.wait': 'Tests are limited. Try again in {duration}.',
   'notify.test.tooOften': 'Tests are limited. Wait a little and try again.',
-  'notify.test.switchOff': 'Sending to devices is switched off, so only tests get through until you switch it on.',
+  'notify.test.switchOff':
+    'Sending to devices is switched off, so only tests get through until you switch it on.',
   'notify.test.outcome.sent': 'Accepted by its push service',
   'notify.test.outcome.gone': 'Its subscription no longer exists',
   'notify.test.outcome.rejected': 'Refused by its push service',
@@ -2084,32 +2395,40 @@ export const en = {
   'notify.test.outcome.removed': '— removed from the list.',
   'notify.saveFailed': '“{name}” was not saved and is back as it was.',
   'notify.events.header': 'Notify me about',
-  'notify.events.footer': 'An event that is switched off is sent nowhere and not kept. The conversation on your screen never notifies. At most 30 notifications a minute reach your devices; the rest are dropped.',
+  'notify.events.footer':
+    'An event that is switched off is sent nowhere and not kept. The conversation on your screen never notifies. At most 30 notifications a minute reach your devices; the rest are dropped.',
   'notify.event.needsYou': 'Needs you',
   'notify.event.needsYou.text': 'An agent waits for an approval, an answer or a plan to confirm.',
   'notify.event.replyFinished': 'Reply finished',
   'notify.event.replyFinished.text': 'An agent finished a reply you asked for.',
   'notify.event.backgroundFinished': 'Background work finished',
-  'notify.event.backgroundFinished.text': 'Work nobody was watching finished: a message sent later, an automation’s run.',
+  'notify.event.backgroundFinished.text':
+    'Work nobody was watching finished: a message sent later, an automation’s run.',
   'notify.event.failure': 'Failed or interrupted',
-  'notify.event.failure.text': 'A run ended with an error, could not start, or was cut short by a restart.',
+  'notify.event.failure.text':
+    'A run ended with an error, could not start, or was cut short by a restart.',
   'notify.event.automation': 'Automation reminders',
-  'notify.event.automation.text': 'An automation’s reminder, and what became of an automation’s run.',
+  'notify.event.automation.text':
+    'An automation’s reminder, and what became of an automation’s run.',
   'notify.event.plugin': 'Plugins',
   'notify.event.plugin.text': 'A plugin has something to tell you.',
   'notify.privacy.header': 'Lock screen',
   'notify.details.title': 'Show details on the lock screen',
   'notify.details.off': 'Off: says which conversation and what happened — nothing from it.',
   'notify.details.on': 'On: adds one line from the conversation.',
-  'notify.details.footer': 'Off, a notification reads like “Claude finished its reply”. On, it may add the command waiting for approval, the start of your request or an error message — which anyone who can see your lock screen can read. Anything that looks like a password or key is removed first.',
+  'notify.details.footer':
+    'Off, a notification reads like “Claude finished its reply”. On, it may add the command waiting for approval, the start of your request or an error message — which anyone who can see your lock screen can read. Anything that looks like a password or key is removed first.',
   'notify.inApp.header': 'In the app',
   'notify.inApp.title': 'Keep a list in the inbox',
   'notify.inApp.text': 'The inbox keeps what happened, with unread marks.',
-  'notify.inApp.footer': 'Off: nothing new is added to the inbox’s list. The to-do list itself is not affected.',
+  'notify.inApp.footer':
+    'Off: nothing new is added to the inbox’s list. The to-do list itself is not affected.',
   'errors.no_devices': 'Set up notifications on a device first.',
-  'errors.invalid_subscription': 'The browser’s subscription could not be read. Try enabling notifications again.',
+  'errors.invalid_subscription':
+    'The browser’s subscription could not be read. Try enabling notifications again.',
   'errors.unsupported_push_service': 'This browser’s push service is not one the server sends to.',
-  'errors.too_many_devices': 'Your account already has the most devices it can have. Remove one first.',
+  'errors.too_many_devices':
+    'Your account already has the most devices it can have. Remove one first.',
   'errors.device_not_found': 'That device is no longer in the list.',
   'errors.notification_not_found': 'That notification no longer exists.',
   // ---- inbox -----------------------------------------------------------------------------------
@@ -2127,11 +2446,14 @@ export const en = {
   'inbox.tile.clear': 'Nothing waiting',
   'inbox.tile.needsUpdate': 'Needs an update',
   'inbox.group.approvals': 'Awaiting approval',
-  'inbox.group.approvals.footer': 'Each waits for a decision in its conversation. Open it and decide there — nothing in the inbox can approve anything.',
+  'inbox.group.approvals.footer':
+    'Each waits for a decision in its conversation. Open it and decide there — nothing in the inbox can approve anything.',
   'inbox.group.needsHandling': 'Needs handling',
-  'inbox.group.needsHandling.footer': 'Failed or interrupted runs. Opening one shows why it stopped and lets you continue it there. “Mark handled” only puts the row away — nothing is retried, continued or approved.',
+  'inbox.group.needsHandling.footer':
+    'Failed or interrupted runs. Opening one shows why it stopped and lets you continue it there. “Mark handled” only puts the row away — nothing is retried, continued or approved.',
   'inbox.group.results': 'Results to view',
-  'inbox.group.results.footer': 'Finished in the last three days and not looked at yet. Opening the conversation counts as reading it.',
+  'inbox.group.results.footer':
+    'Finished in the last three days and not looked at yet. Opening the conversation counts as reading it.',
   'inbox.group.running': 'In progress',
   'inbox.group.running.footer': 'Still working. They move to “Results to view” when they finish.',
   'inbox.row.open': 'Open conversation: {title}',
@@ -2158,16 +2480,21 @@ export const en = {
   'inbox.ack.allDone.other': '{count} results marked read',
   'inbox.ack.already': 'That was already handled — perhaps on another device.',
   'inbox.ack.unavailable': 'Not available while the list may be out of date.',
-  'inbox.ack.queueWaiting': 'Messages are waiting behind this failed run. Putting it away here would send them, so nothing was changed: open the conversation to continue it or to clear its queue.',
-  'inbox.ack.inProgress': 'This is still running or waiting for an answer, so there is nothing to put away yet. Nothing was changed.',
+  'inbox.ack.queueWaiting':
+    'Messages are waiting behind this failed run. Putting it away here would send them, so nothing was changed: open the conversation to continue it or to clear its queue.',
+  'inbox.ack.inProgress':
+    'This is still running or waiting for an answer, so there is nothing to put away yet. Nothing was changed.',
   'inbox.ack.gone': 'That run is no longer there.',
   'inbox.strip.checked': 'Checked {when}',
   'inbox.strip.checking': 'Checking…',
   'inbox.strip.offline': 'Offline — last checked {when}',
   'inbox.stale.title': 'May be out of date',
-  'inbox.stale.offline': 'There is no network. This is the list from {when}; it is checked again by itself when the network returns. Marking is not available meanwhile.',
-  'inbox.stale.failed': 'The last check failed: {reason} This is the list from {when}. Marking is not available until a check succeeds.',
-  'inbox.stale.reconnecting': 'The live connection to the server is down. This is the list from {when}.',
+  'inbox.stale.offline':
+    'There is no network. This is the list from {when}; it is checked again by itself when the network returns. Marking is not available meanwhile.',
+  'inbox.stale.failed':
+    'The last check failed: {reason} This is the list from {when}. Marking is not available until a check succeeds.',
+  'inbox.stale.reconnecting':
+    'The live connection to the server is down. This is the list from {when}.',
   'inbox.empty.title': 'Nothing waiting',
   'inbox.empty.stale': 'Nothing waiting at the last check',
   'inbox.empty.text': 'Approvals, failed runs and new results from your conversations appear here.',
@@ -2184,17 +2511,20 @@ export const en = {
   'inbox.notes.clearRead': 'Clear read notifications',
   'inbox.notes.clearAll': 'Clear all notifications',
   'inbox.notes.clearAllTitle': 'Clear all notifications?',
-  'inbox.notes.clearAllText': 'Every notification in this list is removed, read or not. The conversations they are about are not affected.',
+  'inbox.notes.clearAllText':
+    'Every notification in this list is removed, read or not. The conversations they are about are not affected.',
   'inbox.notes.cleared.one': '1 notification cleared',
   'inbox.notes.cleared.other': '{count} notifications cleared',
   'inbox.notes.empty': 'No notifications',
-  'inbox.notes.emptyText': 'When an agent needs you, finishes or fails, a line appears here — also when this device does not show notifications.',
+  'inbox.notes.emptyText':
+    'When an agent needs you, finishes or fails, a line appears here — also when this device does not show notifications.',
   'inbox.notes.gone': 'What that notification was about can no longer be opened.',
   'inbox.notes.unavailable': 'no longer available',
   'inbox.notes.more.load': 'Show older',
   'errors.task_not_found': 'That run is no longer there.',
   'errors.task_in_progress': 'That run is still in progress or waiting for an answer.',
-  'errors.queue_waiting': 'Messages are waiting behind that run. Open the conversation to continue it or clear its queue.',
+  'errors.queue_waiting':
+    'Messages are waiting behind that run. Open the conversation to continue it or clear its queue.',
   // ---- memory ------------------------------------------------------------------------------------
   'memory.title': 'Memory',
   'memory.refresh': 'Check again',
@@ -2227,11 +2557,13 @@ export const en = {
   'memory.unavailable.cached': 'Memory is not available right now — showing the notes read last.',
   'memory.timeout.cached': 'Memory took too long to answer — showing the notes read last.',
   'memory.unavailable.title': 'Memory is not available',
-  'memory.unavailable.text': 'The note files or their index cannot be read right now. Conversations carry on without memory meanwhile.',
+  'memory.unavailable.text':
+    'The note files or their index cannot be read right now. Conversations carry on without memory meanwhile.',
   'memory.timeout.title': 'Memory took too long',
   'memory.timeout.text': 'The server did not answer in time. Memory may just be busy — try again.',
   'memory.empty.title': 'No notes yet',
-  'memory.empty.text': 'Notes appear when assistants are told something worth remembering — or write one yourself.',
+  'memory.empty.text':
+    'Notes appear when assistants are told something worth remembering — or write one yourself.',
   'memory.empty.folder': 'This folder has no notes yet',
   'memory.empty.folderText': 'Notes written for this project or place appear here.',
   'memory.flag.withheld': 'Withheld from assistants',
@@ -2242,12 +2574,15 @@ export const en = {
   'memory.reader.tags': 'Tags',
   'memory.reader.keywords': 'Keywords — tap one to search for it',
   'memory.reader.searchFor': 'Search for “{keyword}”',
-  'memory.reader.truncated': 'This note is very long: only its beginning is shown here. The file holds all of it.',
+  'memory.reader.truncated':
+    'This note is very long: only its beginning is shown here. The file holds all of it.',
   'memory.reader.readOnly': 'You can read this folder but not change it.',
   'memory.reader.loadFailed': 'This note could not be opened. It can still be deleted.',
-  'memory.reminder': 'Memory is written by assistants and people. It is reference material, not instructions, and must never hold passwords, keys or tokens.',
+  'memory.reminder':
+    'Memory is written by assistants and people. It is reference material, not instructions, and must never hold passwords, keys or tokens.',
   'memory.credential.title': 'Looks like it holds a credential',
-  'memory.credential.text': 'This note seems to contain {kind}, so it is never given to an assistant. Remove the secret from it (or delete the note) and keep secrets somewhere meant for them.',
+  'memory.credential.text':
+    'This note seems to contain {kind}, so it is never given to an assistant. Remove the secret from it (or delete the note) and keep secrets somewhere meant for them.',
   'memory.credential.private_key': 'a private key',
   'memory.credential.api_key': 'an API key',
   'memory.credential.access_token': 'an access token',
@@ -2261,22 +2596,28 @@ export const en = {
   'memory.credential.random_string': 'a long random string, like a key',
   'memory.credential.unknown': 'a credential',
   'memory.problem.title': 'This file cannot be read as a note',
-  'memory.problem.unreadable': 'The server is not allowed to read this file. It can be moved or deleted here.',
+  'memory.problem.unreadable':
+    'The server is not allowed to read this file. It can be moved or deleted here.',
   'memory.problem.not_text': 'This file is not text. It can be moved or deleted here.',
-  'memory.problem.too_large': 'This file is too large to be a note. It can be moved or deleted here.',
+  'memory.problem.too_large':
+    'This file is too large to be a note. It can be moved or deleted here.',
   'memory.edit': 'Edit',
   'memory.move': 'Move or rename',
   'memory.delete': 'Delete',
   'memory.delete.title': 'Delete “{title}”?',
-  'memory.delete.text': 'The note disappears for every assistant and for everyone using this Studio. This cannot be undone.',
+  'memory.delete.text':
+    'The note disappears for every assistant and for everyone using this Studio. This cannot be undone.',
   'memory.delete.confirm': 'Delete',
   'memory.delete.done': '“{title}” deleted',
-  'memory.delete.changed': 'The note changed since you opened it. Look at it again before deleting.',
+  'memory.delete.changed':
+    'The note changed since you opened it. Look at it again before deleting.',
   'memory.move.title': 'Move or rename',
   'memory.move.submit': 'Move',
-  'memory.move.note': 'A new title gives the note a new file name. Moving it keeps the file as it is.',
+  'memory.move.note':
+    'A new title gives the note a new file name. Moving it keeps the file as it is.',
   'memory.move.done': '“{title}” moved',
-  'memory.move.changed': 'The note changed since you opened it. Close this, look at it again and then move it.',
+  'memory.move.changed':
+    'The note changed since you opened it. Close this, look at it again and then move it.',
   'memory.move.exists': 'A note with that title is already in that folder.',
   'memory.move.subInvalid': 'Use folder names separated by “/”, without dots at the start.',
   'memory.editor.newTitle': 'New note',
@@ -2288,41 +2629,53 @@ export const en = {
   'memory.editor.tags': 'Tags',
   'memory.editor.tagsHint': 'Separated by spaces or commas.',
   'memory.editor.keywords': 'Keywords',
-  'memory.editor.keywordsHint': 'Words people will search for, separated by spaces — useful for languages written without spaces.',
+  'memory.editor.keywordsHint':
+    'Words people will search for, separated by spaces — useful for languages written without spaces.',
   'memory.editor.body': 'Text',
   'memory.editor.bodyHint': 'Markdown. Shown as text: no HTML, no images loaded.',
   'memory.editor.view': 'Write or preview',
   'memory.editor.write': 'Write',
   'memory.editor.preview': 'Preview',
   'memory.editor.previewEmpty': 'Nothing written yet.',
-  'memory.editor.bodyLocked': 'This note is longer than the app can show in full, so its text can only be changed in the file itself. The title, tags and keywords can be changed here.',
+  'memory.editor.bodyLocked':
+    'This note is longer than the app can show in full, so its text can only be changed in the file itself. The title, tags and keywords can be changed here.',
   'memory.editor.bodyLong': 'Notes can be at most {max} characters long.',
   'memory.editor.titleMissing': 'Give the note a title.',
   'memory.editor.titleSlash': 'A title cannot contain slashes.',
   'memory.editor.titleLong': 'Use at most {max} characters.',
-  'memory.editor.noSecrets': 'Never write passwords, keys or tokens into a note: a note that looks like it holds one is refused.',
-  'memory.editor.credential': 'Not saved: the text seems to contain {kind}. Remove it and save again.',
+  'memory.editor.noSecrets':
+    'Never write passwords, keys or tokens into a note: a note that looks like it holds one is refused.',
+  'memory.editor.credential':
+    'Not saved: the text seems to contain {kind}. Remove it and save again.',
   'memory.editor.exists': 'A note with this title is already in that folder. Choose another title.',
-  'memory.editor.folderFull': 'That folder is full ({max} notes). Choose another, or remove old notes first.',
-  'memory.editor.tooLong': 'The note is longer than the app can show in full, so its text was not saved. The title, tags and keywords can still be saved.',
+  'memory.editor.folderFull':
+    'That folder is full ({max} notes). Choose another, or remove old notes first.',
+  'memory.editor.tooLong':
+    'The note is longer than the app can show in full, so its text was not saved. The title, tags and keywords can still be saved.',
   'memory.editor.readOnly': 'You can read this folder but not write in it.',
   'memory.editor.created': 'Note created',
   'memory.editor.saved': 'Note saved',
   'memory.editor.discardTitle': 'Discard your changes?',
   'memory.editor.discardText': 'What you wrote here is lost.',
   'memory.editor.discard': 'Discard',
-  'memory.editor.changedElsewhere': 'This note was just changed somewhere else. Saving will show both versions and ask which to keep.',
-  'memory.editor.deletedElsewhere': 'This note was just deleted somewhere else. Saving will ask what to do with your text.',
+  'memory.editor.changedElsewhere':
+    'This note was just changed somewhere else. Saving will show both versions and ask which to keep.',
+  'memory.editor.deletedElsewhere':
+    'This note was just deleted somewhere else. Saving will ask what to do with your text.',
   'memory.conflict.title': 'This note changed since you opened it',
-  'memory.conflict.text': 'Someone or something — another device, an assistant, an edit of the file — saved a newer version. Nothing of yours was saved yet. Choose which version to keep.',
-  'memory.conflict.gone': 'The note is no longer where it was: it was moved or deleted. Nothing of yours was saved yet.',
+  'memory.conflict.text':
+    'Someone or something — another device, an assistant, an edit of the file — saved a newer version. Nothing of yours was saved yet. Choose which version to keep.',
+  'memory.conflict.gone':
+    'The note is no longer where it was: it was moved or deleted. Nothing of yours was saved yet.',
   'memory.conflict.theirs': 'Their version: “{title}”, saved {when}.',
   'memory.conflict.showTheirs': 'Show their version',
   'memory.conflict.hideTheirs': 'Hide their version',
   'memory.conflict.keepMine': 'Keep mine',
-  'memory.conflict.keepMineText': 'Saves what is on screen. Their version is replaced and its changes are lost.',
+  'memory.conflict.keepMineText':
+    'Saves what is on screen. Their version is replaced and its changes are lost.',
   'memory.conflict.takeTheirs': 'Use theirs',
-  'memory.conflict.takeTheirsText': 'Loads their version into the editor. Your changes are discarded.',
+  'memory.conflict.takeTheirsText':
+    'Loads their version into the editor. Your changes are discarded.',
   'memory.conflict.saveAsNew': 'Save as a new note',
   'memory.conflict.saveAsNewText': 'Keeps your text as a new note in the same folder.',
   'memory.status.label': 'Memory status',
@@ -2332,31 +2685,39 @@ export const en = {
   'memory.status.ok.text.one': '1 note in {folders} folders you can see.',
   'memory.status.ok.text.other': '{count} notes in {folders} folders you can see.',
   'memory.status.stale.title': 'Working, may lag behind',
-  'memory.status.stale.text': 'The search index could not be compared with the note files just now. Recent edits made outside the app may not show yet.',
+  'memory.status.stale.text':
+    'The search index could not be compared with the note files just now. Recent edits made outside the app may not show yet.',
   'memory.status.unreadable.title': 'The note files cannot be read',
-  'memory.status.unreadable.text': 'The server cannot read its memory folder. Assistants work without memory until this is fixed on the server.',
+  'memory.status.unreadable.text':
+    'The server cannot read its memory folder. Assistants work without memory until this is fixed on the server.',
   'memory.status.index.title': 'The search index has a problem',
-  'memory.status.index.text': 'Notes cannot be listed or searched right now. The owner can rebuild the index; the note files themselves are safe.',
+  'memory.status.index.text':
+    'Notes cannot be listed or searched right now. The owner can rebuild the index; the note files themselves are safe.',
   'memory.status.indexed': 'Last indexed',
   'memory.status.never': 'never',
   'memory.status.assistants': 'Assistants',
   'memory.status.assistantsOn': 'may use memory',
   'memory.status.assistantsOff': 'switched off by the owner',
   'memory.status.location': 'Files',
-  'memory.status.withheld.one': '1 note is withheld from assistants because it looks like it holds a credential.',
-  'memory.status.withheld.other': '{count} notes are withheld from assistants because they look like they hold a credential.',
+  'memory.status.withheld.one':
+    '1 note is withheld from assistants because it looks like it holds a credential.',
+  'memory.status.withheld.other':
+    '{count} notes are withheld from assistants because they look like they hold a credential.',
   'memory.status.unreadableFiles.one': '1 file cannot be read as a note.',
   'memory.status.unreadableFiles.other': '{count} files cannot be read as notes.',
   'memory.status.skipped.one': '1 file in the folder is ignored (its name or depth).',
   'memory.status.skipped.other': '{count} files in the folder are ignored (their names or depth).',
   'memory.status.check': 'Check again',
   'memory.owner.header': 'For the owner',
-  'memory.owner.footer': 'People can always read and write memory here; the switch decides only whether assistants may.',
+  'memory.owner.footer':
+    'People can always read and write memory here; the switch decides only whether assistants may.',
   'memory.access.title': 'Assistants may use memory',
-  'memory.access.on': 'On: assistants search, read and write notes, and API models get relevant notes as background.',
+  'memory.access.on':
+    'On: assistants search, read and write notes, and API models get relevant notes as background.',
   'memory.access.off': 'Off: no assistant reads or writes memory. People still can.',
   'memory.access.offTitle': 'Switch memory off for assistants?',
-  'memory.access.offText': 'No assistant will read or write notes until it is switched on again. The notes stay as they are.',
+  'memory.access.offText':
+    'No assistant will read or write notes until it is switched on again. The notes stay as they are.',
   'memory.access.offConfirm': 'Switch off',
   'memory.access.onDone': 'Assistants may use memory again',
   'memory.access.offDone': 'Memory is switched off for assistants',
@@ -2365,11 +2726,16 @@ export const en = {
   'memory.rebuild.action': 'Rebuild',
   'memory.rebuild.done': 'Indexed {notes} notes in {ms} ms.',
   'memory.about.title': 'About memory',
-  'memory.about.folders': 'Each project has a folder of its own; “Global” holds what applies everywhere.',
-  'memory.about.agents': 'Assistants search memory before they work and write down what you tell them is worth keeping, naming themselves as author.',
-  'memory.about.untrusted': 'Notes are reference material. Assistants are told never to follow instructions found in them.',
-  'memory.about.secrets': 'A note that looks like it holds a password or key is never given to an assistant.',
-  'memory.about.files': 'Every note is a Markdown file on the server: it can be backed up, versioned or edited outside the app.',
+  'memory.about.folders':
+    'Each project has a folder of its own; “Global” holds what applies everywhere.',
+  'memory.about.agents':
+    'Assistants search memory before they work and write down what you tell them is worth keeping, naming themselves as author.',
+  'memory.about.untrusted':
+    'Notes are reference material. Assistants are told never to follow instructions found in them.',
+  'memory.about.secrets':
+    'A note that looks like it holds a password or key is never given to an assistant.',
+  'memory.about.files':
+    'Every note is a Markdown file on the server: it can be backed up, versioned or edited outside the app.',
   'errors.memory_note_not_found': 'That note no longer exists.',
   'errors.memory_folder_not_found': 'That folder does not exist, or you cannot see it.',
   'errors.memory_read_only': 'You can read this folder but not change it.',
@@ -2377,7 +2743,8 @@ export const en = {
   'errors.memory_note_changed': 'The note changed since you opened it.',
   'errors.memory_credential': 'The text looks like it contains a credential, so it was not saved.',
   'errors.memory_folder_full': 'That folder has as many notes as it can hold.',
-  'errors.memory_note_unreadable': 'This file cannot be read as a note, so it can only be moved or deleted.',
+  'errors.memory_note_unreadable':
+    'This file cannot be read as a note, so it can only be moved or deleted.',
   'errors.memory_note_too_long_to_edit': 'The note is too long to be saved from the app.',
   'errors.memory_invalid_title': 'That title cannot be used here.',
   'errors.memory_invalid_folder': 'That folder name cannot be used.',
@@ -2391,12 +2758,16 @@ export const en = {
   'automation.on': 'On',
   'automation.offShort': 'Off',
   'automation.project.title': 'Automations in this project',
-  'automation.project.on': 'On: automations here run on their schedule — reminders to their creator, and agent runs with nobody watching — and messages can be sent later in this project’s conversations.',
-  'automation.project.off': 'Off: nothing here starts by itself. Automations keep their settings but do not run, and nothing can be scheduled.',
-  'automation.project.detail': 'An agent run started by an automation acts as the person who created it, with the permission mode shown on it: whatever would need an approval is refused, never waited for. Nothing is ever retried by itself.',
+  'automation.project.on':
+    'On: automations here run on their schedule — reminders to their creator, and agent runs with nobody watching — and messages can be sent later in this project’s conversations.',
+  'automation.project.off':
+    'Off: nothing here starts by itself. Automations keep their settings but do not run, and nothing can be scheduled.',
+  'automation.project.detail':
+    'An agent run started by an automation acts as the person who created it, with the permission mode shown on it: whatever would need an approval is refused, never waited for. Nothing is ever retried by itself.',
   'automation.project.ownerOnly': 'Only the owner of this Studio can switch this.',
   'automation.project.onTitle': 'Allow automations in “{project}”?',
-  'automation.project.onText': 'Automations created here will run on their own — including agent runs nobody watches, limited to the permission mode each one shows. Messages can then be sent later in this project too.',
+  'automation.project.onText':
+    'Automations created here will run on their own — including agent runs nobody watches, limited to the permission mode each one shows. Messages can then be sent later in this project too.',
   'automation.project.onConfirm': 'Allow',
   'automation.project.turnedOn': 'Automations are on for this project',
   'automation.project.turnedOff': 'Automations are off for this project',
@@ -2405,9 +2776,11 @@ export const en = {
   'automation.list.title': 'Automations',
   'automation.list.count': '{count} of {limit}',
   'automation.list.limit': 'A project can have {limit} automations. Delete one to make room.',
-  'automation.list.offNotice': 'Automations are switched off for this project: none of these runs until they are switched on again.',
+  'automation.list.offNotice':
+    'Automations are switched off for this project: none of these runs until they are switched on again.',
   'automation.empty.title': 'No automations yet',
-  'automation.empty.text': 'A reminder at a time you choose, or an agent run on a schedule — say when, and what should happen.',
+  'automation.empty.text':
+    'A reminder at a time you choose, or an agent run on a schedule — say when, and what should happen.',
   'automation.empty.off': 'Switch automations on for this project to create one.',
   'automation.next': 'Next: {when}',
   'automation.waiting': 'Waiting for a run in this project to fail',
@@ -2424,7 +2797,8 @@ export const en = {
   'automation.alreadyRunning': '“{name}” is already running — nothing new was started.',
   'automation.ranNow': '“{name}” ran: {outcome}',
   'automation.deleteTitle': 'Delete “{name}”?',
-  'automation.deleteText': 'The automation and its history are removed. Conversations it started stay.',
+  'automation.deleteText':
+    'The automation and its history are removed. Conversations it started stay.',
   'automation.deleted': '“{name}” deleted',
   'automation.saved': '“{name}” saved',
   'automation.created': '“{name}” created',
@@ -2444,7 +2818,8 @@ export const en = {
   'automation.field.minute': 'Minute of the hour',
   'automation.minuteOption': 'At :{minute}',
   'automation.field.cron': 'Cron expression',
-  'automation.field.cronHint': 'Five fields: minute, hour, day of month, month, day of week. Runs must be at least 5 minutes apart.',
+  'automation.field.cronHint':
+    'Five fields: minute, hour, day of month, month, day of week. Runs must be at least 5 minutes apart.',
   'automation.field.zone': 'Time zone',
   'automation.field.action': 'Action',
   'automation.field.message': 'Message',
@@ -2457,7 +2832,8 @@ export const en = {
   'automation.field.mode': 'Permission mode with nobody watching',
   'automation.field.enabled': 'On',
   'automation.field.enabledOn': 'Runs on its schedule.',
-  'automation.field.enabledOff': 'Saved, but does not run until switched on. “Run now” still works.',
+  'automation.field.enabledOff':
+    'Saved, but does not run until switched on. “Run now” still works.',
   'automation.repeat.once': 'Once',
   'automation.repeat.hourly': 'Every hour',
   'automation.repeat.daily': 'Every day',
@@ -2469,7 +2845,8 @@ export const en = {
   'automation.repeat.eventHint': 'When a run in this project fails or is cut short',
   'automation.action.notify': 'Remind me',
   'automation.action.agent': 'Run an agent',
-  'automation.limits.notify': 'Reaches only you, in the inbox and on devices with notifications on. Nothing is sent to anyone else.',
+  'automation.limits.notify':
+    'Reaches only you, in the inbox and on devices with notifications on. Nothing is sent to anyone else.',
   'automation.agents.loading': 'Reading the agents…',
   'automation.agents.none': 'No agent can be used in this project right now.',
   'automation.agents.unavailable': 'Not available right now',
@@ -2479,13 +2856,16 @@ export const en = {
   'automation.session.new': 'New each time',
   'automation.session.existing': 'Always the same',
   'automation.session.newHint': 'Each run starts a new conversation in this project.',
-  'automation.session.existingHint': 'Each run continues one of your conversations with this agent. If it is busy then, that run is skipped.',
+  'automation.session.existingHint':
+    'Each run continues one of your conversations with this agent. If it is busy then, that run is skipped.',
   'automation.session.choose': 'Choose a conversation',
-  'automation.session.none': 'You have no conversation with this agent in this project yet. Start one in the workbench, or choose “New each time”.',
+  'automation.session.none':
+    'You have no conversation with this agent in this project yet. Start one in the workbench, or choose “New each time”.',
   'automation.guard.actsAs': 'Runs as {name}.',
   'automation.guard.mode': '{mode}: {behaviour}',
   'automation.guard.refused': 'Would be refused right now: {reason}',
-  'automation.guard.unattended': 'Nobody is asked anything while it runs. Whatever would need an approval is denied, and the run says so.',
+  'automation.guard.unattended':
+    'Nobody is asked anything while it runs. Whatever would need an approval is denied, and the run says so.',
   'automation.guard.short': 'Runs as {name} in {mode}.',
   'automation.guard.wouldRefuse': 'Would be refused right now: {reason}',
   'automation.mode.plan': 'Plan',
@@ -2493,10 +2873,13 @@ export const en = {
   'automation.mode.accept-edits': 'Accept edits',
   'automation.mode.auto': 'Auto',
   'automation.behaviour.read-only': 'reads and searches only; everything else is refused.',
-  'automation.behaviour.deny-and-report': 'what needs no approval runs; anything that would need one is denied and reported.',
+  'automation.behaviour.deny-and-report':
+    'what needs no approval runs; anything that would need one is denied and reported.',
   'automation.behaviour.edits-allowed': 'as Ask, and file edits inside the project also run.',
-  'automation.behaviour.auto': 'everything runs except what a deny rule or the hard-deny list forbids.',
-  'automation.refusal.auto-mode-off': 'Not allowed here: the owner has not enabled Auto for this project.',
+  'automation.behaviour.auto':
+    'everything runs except what a deny rule or the hard-deny list forbids.',
+  'automation.refusal.auto-mode-off':
+    'Not allowed here: the owner has not enabled Auto for this project.',
   'automation.refusal.unsupported': 'This agent does not have this mode.',
   'automation.preview.title': 'Next runs',
   'automation.preview.incomplete': 'Fill in when it runs to see the next runs.',
@@ -2585,13 +2968,18 @@ export const en = {
   'automation.later.scheduling': 'Scheduling…',
   'automation.later.scheduled': 'Will be sent {when}',
   'automation.later.pastTime': 'Choose a time in the future.',
-  'automation.later.note': 'It is sent at that time even if no browser is open, as if typed then, with this conversation’s current model and mode. If the agent is busy then, it waits in the queue.',
+  'automation.later.note':
+    'It is sent at that time even if no browser is open, as if typed then, with this conversation’s current model and mode. If the agent is busy then, it waits in the queue.',
   'automation.later.empty': 'Write the message first.',
-  'automation.later.files': 'Send later carries text only. Remove the attached files first, or send now.',
-  'automation.later.quote': 'Send later carries text only. Remove the quotation first, or send now.',
+  'automation.later.files':
+    'Send later carries text only. Remove the attached files first, or send now.',
+  'automation.later.quote':
+    'Send later carries text only. Remove the quotation first, or send now.',
   'automation.later.tooLong': 'A scheduled message can be at most {max} characters long.',
-  'automation.later.offOwner': 'Messages can be sent later only where automations are switched on for the project. You can switch them on on its automations page.',
-  'automation.later.offMember': 'Messages can be sent later only where automations are switched on for the project; the owner of this Studio can switch them on.',
+  'automation.later.offOwner':
+    'Messages can be sent later only where automations are switched on for the project. You can switch them on on its automations page.',
+  'automation.later.offMember':
+    'Messages can be sent later only where automations are switched on for the project; the owner of this Studio can switch them on.',
   'automation.later.openAutomations': 'Open automations',
   'automation.later.listLabel': 'Scheduled messages',
   'automation.later.count.one': '1 scheduled message',
@@ -2603,29 +2991,37 @@ export const en = {
   'automation.later.failedUnknown': 'it could not be sent.',
   'automation.later.cancel': 'Cancel this scheduled message',
   'automation.later.cancelTitle': 'Cancel the scheduled message?',
-  'automation.later.cancelText': 'It was to be sent {when}. It is not sent, and the text is not kept.',
+  'automation.later.cancelText':
+    'It was to be sent {when}. It is not sent, and the text is not kept.',
   'automation.later.cancelConfirm': 'Cancel it',
-  'automation.later.changedMeanwhile': 'That message changed meanwhile — it may already have been sent.',
+  'automation.later.changedMeanwhile':
+    'That message changed meanwhile — it may already have been sent.',
   'errors.automation_disabled': 'Automations are switched off for this project.',
   'errors.project_archived': 'The project is archived.',
-  'errors.automation_limit': 'This project has as many automations as it can have. Delete one first.',
+  'errors.automation_limit':
+    'This project has as many automations as it can have. Delete one first.',
   'errors.time_passed': 'That time has passed. Choose a later one.',
-  'errors.invalid_cron': 'That is not a cron expression. Use five fields: minute, hour, day of month, month, day of week.',
+  'errors.invalid_cron':
+    'That is not a cron expression. Use five fields: minute, hour, day of month, month, day of week.',
   'errors.never_runs': 'That schedule never runs.',
-  'errors.cron_too_frequent': 'That schedule runs too often: runs must be at least 5 minutes apart.',
+  'errors.cron_too_frequent':
+    'That schedule runs too often: runs must be at least 5 minutes apart.',
   'errors.invalid_time_zone': 'That is not a time zone.',
   'errors.invalid_date': 'That date does not exist.',
   'errors.mode_not_allowed': 'That permission mode is not allowed in this project.',
   'errors.session_not_usable': 'That conversation cannot be used for this automation.',
-  'errors.creator_without_access': 'Its creator can no longer change this project, so it cannot be switched on.',
-  'errors.not_your_automation': 'Only the person who created this automation (or the owner) can change it.',
+  'errors.creator_without_access':
+    'Its creator can no longer change this project, so it cannot be switched on.',
+  'errors.not_your_automation':
+    'Only the person who created this automation (or the owner) can change it.',
   'errors.automation_not_found': 'That automation no longer exists.',
   'errors.deferred_not_found': 'That scheduled message no longer exists.',
   'errors.deferred_not_pending': 'That message was already sent or cancelled.',
   'errors.deferred_not_failed': 'Only a message that could not be sent can be dismissed.',
   'errors.send_time_passed': 'That time has passed. Choose a later one.',
   'errors.send_time_too_far': 'A message can be scheduled at most a year ahead.',
-  'errors.too_many_deferred': 'You have as many scheduled messages as you can have. Cancel one first.',
+  'errors.too_many_deferred':
+    'You have as many scheduled messages as you can have. Cancel one first.',
   // ---- usage ---------------------------------------------------------------------------------------
   'usage.title': 'Usage',
   'usage.refresh': 'Read again',
@@ -2655,8 +3051,10 @@ export const en = {
   'usage.cost.none': 'No runs',
   'usage.cost.unknown': 'Unknown',
   'usage.cost.atLeast': 'at least {amount}',
-  'usage.cost.unknownCaveat.one': 'The 1 run has no cost: its agent reports none and its model has no price.',
-  'usage.cost.unknownCaveat.other': 'None of the {count} runs has a cost: their agents report none and their models have no price.',
+  'usage.cost.unknownCaveat.one':
+    'The 1 run has no cost: its agent reports none and its model has no price.',
+  'usage.cost.unknownCaveat.other':
+    'None of the {count} runs has a cost: their agents report none and their models have no price.',
   'usage.cost.partialCaveat.one': '1 run has no cost, so the real amount is higher.',
   'usage.cost.partialCaveat.other': '{count} runs have no cost, so the real amount is higher.',
   'usage.chart.perDay': '{metric} per day',
@@ -2689,17 +3087,20 @@ export const en = {
   'usage.breakdown.removedUser': 'A removed account',
   'usage.breakdown.others.one': '1 more',
   'usage.breakdown.others.other': '{count} more',
-  'usage.reasoningNote': 'Tokens are what the agents reported; reasoning is counted as output. Costs are what agents reported or what list prices give — an estimate, never a bill.',
+  'usage.reasoningNote':
+    'Tokens are what the agents reported; reasoning is counted as output. Costs are what agents reported or what list prices give — an estimate, never a bill.',
   'usage.plan.sectionTitle': 'Plan limits',
   'usage.plan.title': 'Plan limits',
-  'usage.plan.footer': 'What each agent’s own program last said about its account’s limits. The Studio does not ask for these itself: a reading is renewed when the agent next reports during a run.',
+  'usage.plan.footer':
+    'What each agent’s own program last said about its account’s limits. The Studio does not ask for these itself: a reading is renewed when the agent next reports during a run.',
   'usage.plan.noAgents': 'No agent with a plan of its own is set up.',
   'usage.plan.none': 'No reading yet — it appears once {agent} reports its limits during a run.',
   'usage.plan.observed': 'Reported {when}',
   'usage.plan.old': 'May be out of date: reported {when}',
   'usage.plan.resetPassed': 'Out of date: reported {when}, and a window has started again since.',
   'usage.plan.updates': 'Updates when {agent} next reports during a run.',
-  'usage.plan.unavailable': 'This agent is not set up here at the moment; this is its last reading.',
+  'usage.plan.unavailable':
+    'This agent is not set up here at the moment; this is its last reading.',
   'usage.plan.used': '{percent}% used',
   'usage.plan.noFigure': 'No figure reported',
   'usage.plan.resets': 'Starts again {when}',
@@ -2721,7 +3122,8 @@ export const en = {
   'usage.budget.addTitle': 'New budget',
   'usage.budget.editTitle': 'Edit budget',
   'usage.budget.empty': 'No budgets',
-  'usage.budget.emptyText': 'A budget is a monthly mark for one agent or everything, in tokens or dollars. Reaching 80 % and 100 % is announced; nothing is ever stopped.',
+  'usage.budget.emptyText':
+    'A budget is a monthly mark for one agent or everything, in tokens or dollars. Reaching 80 % and 100 % is announced; nothing is ever stopped.',
   'usage.budget.footer': 'Budgets inform: nothing is blocked when one is reached.',
   'usage.budget.everything': 'Everything',
   'usage.budget.for': 'For',
@@ -2751,7 +3153,8 @@ export const en = {
   'usage.budget.saved': 'Budget saved',
   'usage.budget.created': 'Budget added',
   'usage.providers.title': 'API providers',
-  'usage.providers.footer': 'Spend is what the Studio’s records say, at list prices — an estimate to compare with the provider’s own figures.',
+  'usage.providers.footer':
+    'Spend is what the Studio’s records say, at list prices — an estimate to compare with the provider’s own figures.',
   'usage.spend.balance': 'Balance at the provider',
   'usage.spend.check': 'Check',
   'usage.spend.checkAgain': 'Check again',
@@ -2770,14 +3173,17 @@ export const en = {
   'usage.spend.spentUnknown.one': '1 run since, without a known cost',
   'usage.spend.spentUnknown.other': '{count} runs since, without a known cost',
   'usage.spend.noRuns': 'No runs through it since',
-  'usage.spend.otherCurrency': 'Spend is recorded in US dollars, so nothing is subtracted from an amount in {currency}.',
+  'usage.spend.otherCurrency':
+    'Spend is recorded in US dollars, so nothing is subtracted from an amount in {currency}.',
   'usage.spend.unpriced.one': '1 run had no price: the real spend is higher.',
   'usage.spend.unpriced.other': '{count} runs had no price: the real spend is higher.',
-  'usage.spend.scopeEveryone': 'Counts everyone’s runs through this provider — the balance belongs to the one key everybody uses.',
+  'usage.spend.scopeEveryone':
+    'Counts everyone’s runs through this provider — the balance belongs to the one key everybody uses.',
   'usage.spend.scopeOwn': 'Counts your own runs.',
   'usage.spend.saved': 'Amount noted',
   'usage.spend.sheetTitle': 'Note a top-up for {name}',
-  'usage.spend.sheetText': 'Write down what the account held on a day — after a top-up, or from the provider’s own page. Spend is counted down from it.',
+  'usage.spend.sheetText':
+    'Write down what the account held on a day — after a top-up, or from the provider’s own page. Spend is counted down from it.',
   'usage.spend.amount': 'Amount',
   'usage.spend.currency': 'Currency',
   'usage.spend.currencyHint': 'Three letters, like USD.',
@@ -2794,7 +3200,8 @@ export const en = {
   'providers.summary.count.one': '1 provider',
   'providers.summary.count.other': '{count} providers',
   'providers.list.header': 'API providers',
-  'providers.list.footer': 'An API model answers in conversations like the coding agents do, through a provider’s key. Keys are stored encrypted and never shown again.',
+  'providers.list.footer':
+    'An API model answers in conversations like the coding agents do, through a provider’s key. Keys are stored encrypted and never shown again.',
   'providers.problems.header': 'Last check failed',
   'providers.row.keyConfigured': 'key saved',
   'providers.row.keyUnreadable': 'key must be entered again',
@@ -2807,7 +3214,8 @@ export const en = {
   'providers.status.ok': 'Connected',
   'providers.status.failing': 'Failing',
   'providers.member.noneTitle': 'No API models are offered',
-  'providers.member.none': 'The owner of this Studio can add API providers; their models then appear in the workbench’s model menu.',
+  'providers.member.none':
+    'The owner of this Studio can add API providers; their models then appear in the workbench’s model menu.',
   'providers.member.ready': 'Ready to use in the workbench’s model menu.',
   'providers.member.notConfigured': 'Not ready yet: the owner has not saved a key for it.',
   'providers.member.noModels': 'No model is offered yet.',
@@ -2818,7 +3226,8 @@ export const en = {
   'providers.add.kind': 'Start from',
   'providers.add.custom': 'Custom or self-hosted',
   'providers.add.customText': 'Any OpenAI-compatible server',
-  'providers.add.unverified': 'These defaults come from public documentation and are not verified: addresses, model names and context windows change. Check them, or use “Discover models” once the key is saved.',
+  'providers.add.unverified':
+    'These defaults come from public documentation and are not verified: addresses, model names and context windows change. Check them, or use “Discover models” once the key is saved.',
   'providers.add.docs': '{name}’s API documentation',
   'providers.section.connection': 'Connection',
   'providers.section.details': 'Provider',
@@ -2830,15 +3239,20 @@ export const en = {
   'providers.section.remove': 'Remove',
   'providers.field.name': 'Name',
   'providers.field.id': 'Short name',
-  'providers.field.idHint': 'Lower-case letters, digits and dashes; chosen once. Made from the name when left empty.',
+  'providers.field.idHint':
+    'Lower-case letters, digits and dashes; chosen once. Made from the name when left empty.',
   'providers.field.baseUrl': 'Address',
   'providers.field.baseUrlHint': 'The API’s base address; “/chat/completions” is added to it.',
   'providers.field.private': 'Allow addresses on my network',
-  'providers.field.privateText': 'Lets the Studio reach this machine and your private network for this provider — needed for a model server at home, like http://192.168.1.20:8000/v1.',
-  'providers.field.privateWarning': 'Turn this on only for a server you control. Whoever can change this provider could point it at other machines on your network, and what the Studio sends there includes conversations.',
+  'providers.field.privateText':
+    'Lets the Studio reach this machine and your private network for this provider — needed for a model server at home, like http://192.168.1.20:8000/v1.',
+  'providers.field.privateWarning':
+    'Turn this on only for a server you control. Whoever can change this provider could point it at other machines on your network, and what the Studio sends there includes conversations.',
   'providers.field.enabled': 'Offered to everyone',
-  'providers.field.enabledOn': 'On: its models appear in the workbench’s model menu for everyone signed in.',
-  'providers.field.enabledOff': 'Off: it is hidden from the model menu, and conversations with it cannot continue.',
+  'providers.field.enabledOn':
+    'On: its models appear in the workbench’s model menu for everyone signed in.',
+  'providers.field.enabledOff':
+    'Off: it is hidden from the model menu, and conversations with it cannot continue.',
   'providers.field.keyRequired': 'The server needs a key',
   'providers.field.keyRequiredText': 'Off for a model server that takes requests without one.',
   'providers.field.balance': 'Balance',
@@ -2855,16 +3269,20 @@ export const en = {
   'providers.key.placeholderOptional': 'Not needed — optional',
   'providers.key.placeholderRequired': 'Required',
   'providers.key.configured': 'Configured · saved {date}',
-  'providers.key.unreadable': 'A key is saved but can no longer be read (the server’s key changed): enter it again.',
+  'providers.key.unreadable':
+    'A key is saved but can no longer be read (the server’s key changed): enter it again.',
   'providers.key.notNeeded': 'No key needed',
   'providers.key.missing': 'No key saved',
-  'providers.key.willClear': 'Changing the address removes the saved key when you save. Enter the key again here to keep one.',
+  'providers.key.willClear':
+    'Changing the address removes the saved key when you save. Enter the key again here to keep one.',
   'providers.key.willReplace': 'Saving replaces the saved key.',
-  'providers.key.cleared': 'The address changed, so the saved key was removed. Enter the key again.',
+  'providers.key.cleared':
+    'The address changed, so the saved key was removed. Enter the key again.',
   'providers.key.saved': 'Saved, with the new key.',
   'providers.key.remove': 'Remove the key',
   'providers.key.removeTitle': 'Remove the saved key?',
-  'providers.key.removeText': 'Conversations with this provider stop working until a key is saved again.',
+  'providers.key.removeText':
+    'Conversations with this provider stop working until a key is saved again.',
   'providers.key.removed': 'The key was removed.',
   'providers.keyProblem.empty': 'The key is empty.',
   'providers.keyProblem.too_short': 'That is too short to be an API key.',
@@ -2872,7 +3290,8 @@ export const en = {
   'providers.keyProblem.whitespace': 'A key has no spaces or line breaks.',
   'providers.keyProblem.characters': 'That contains characters an API key does not have.',
   'providers.keyProblem.looks_like_url': 'That is an address, not a key.',
-  'providers.keyProblem.sign_in_token': 'That is a sign-in token, not an API key. Create an API key in the provider’s console.',
+  'providers.keyProblem.sign_in_token':
+    'That is a sign-in token, not an API key. Create an API key in the provider’s console.',
   'providers.keyProblem.admin_key': 'That is an organisation admin key. Use an ordinary API key.',
   'providers.keyProblem.other_service': 'That looks like another service’s credential.',
   'providers.keyProblem.other': 'That key cannot be saved.',
@@ -2892,8 +3311,10 @@ export const en = {
   'providers.check.byCompletion': 'checked with a one-word request',
   'providers.check.saveFirst': 'Save your changes before verifying.',
   'providers.discover.run': 'Discover models',
-  'providers.discover.text': 'Asks the provider for its models and adds the new ones, hidden until you offer them.',
-  'providers.discover.textFirst': 'Asks the provider for its models and adds them. With none offered yet, they are offered at once; switch off the ones you don’t want.',
+  'providers.discover.text':
+    'Asks the provider for its models and adds the new ones, hidden until you offer them.',
+  'providers.discover.textFirst':
+    'Asks the provider for its models and adds them. With none offered yet, they are offered at once; switch off the ones you don’t want.',
   'providers.discover.saveFirst': 'Save your changes before discovering models.',
   'providers.discover.needsKey': 'Save the API key first.',
   'providers.discover.added.one': 'Found {found}; 1 new model added.',
@@ -2902,7 +3323,8 @@ export const en = {
   'providers.discover.none.other': 'Found {count} models; nothing new.',
   'providers.discover.skipped.one': '1 model was left out: the catalogue is full.',
   'providers.discover.skipped.other': '{count} models were left out: the catalogue is full.',
-  'providers.catalogue.footer': 'Only offered models appear in the model menu. Prices are used only to estimate costs.',
+  'providers.catalogue.footer':
+    'Only offered models appear in the model menu. Prices are used only to estimate costs.',
   'providers.catalogue.empty': 'No models yet. Add one, or discover them once the key is saved.',
   'providers.catalogue.add': 'Add model',
   'providers.catalogue.default': 'Default',
@@ -2926,24 +3348,30 @@ export const en = {
   'providers.model.idTaken': 'That model is already in the catalogue.',
   'providers.model.name': 'Name in the menu',
   'providers.model.windowLabel': 'Context window (tokens)',
-  'providers.model.windowHint': 'Leave empty when unknown: a small window is assumed for trimming history.',
+  'providers.model.windowHint':
+    'Leave empty when unknown: a small window is assumed for trimming history.',
   'providers.model.windowInvalid': 'A whole number between 1,000 and 20,000,000.',
   'providers.model.imagesLabel': 'Accepts images',
   'providers.model.imagesHint': 'Attached pictures are sent to it.',
   'providers.model.toolsLabel': 'Can use tools',
-  'providers.model.toolsHint': 'Only then does it get the Studio’s tools (files, commands, memory).',
+  'providers.model.toolsHint':
+    'Only then does it get the Studio’s tools (files, commands, memory).',
   'providers.model.prices': 'List prices, US dollars per million tokens',
   'providers.model.priceInput': 'Input',
   'providers.model.priceCached': 'Cached input',
   'providers.model.priceOutput': 'Output',
-  'providers.model.pricesHint': 'Leave all empty when unknown: costs are then shown as unknown, never as zero.',
+  'providers.model.pricesHint':
+    'Leave all empty when unknown: costs are then shown as unknown, never as zero.',
   'providers.model.pricesInvalid': 'Give at least the input and output price, as numbers.',
   'providers.model.offered': 'Offered in the model menu',
-  'providers.spend.footer': 'The balance is read from the provider where it offers a way; the estimate counts down from an amount you noted.',
-  'providers.remove.explain': 'Conversations with it stay readable but cannot continue. Its key goes with it.',
+  'providers.spend.footer':
+    'The balance is read from the provider where it offers a way; the estimate counts down from an amount you noted.',
+  'providers.remove.explain':
+    'Conversations with it stay readable but cannot continue. Its key goes with it.',
   'providers.remove.action': 'Remove “{name}”',
   'providers.remove.title': 'Remove “{name}”?',
-  'providers.remove.text': 'Running conversations with it stop; earlier ones stay readable. The saved key is deleted.',
+  'providers.remove.text':
+    'Running conversations with it stop; earlier ones stay readable. The saved key is deleted.',
   'providers.remove.confirm': 'Remove',
   'providers.remove.done': '“{name}” removed',
   'providers.meta': 'Short name “{id}” · {host}',
@@ -2953,8 +3381,10 @@ export const en = {
   'errors.too_many_providers': 'There are as many providers as there can be.',
   'errors.invalid_models': 'The model list is not valid: check ids, windows and prices.',
   'errors.invalid_url': 'That is not a web address.',
-  'errors.insecure_url': 'Use an https address. Plain http is accepted only for addresses on your own network, with that switched on.',
-  'errors.address_not_allowed': 'That address is on this machine or your private network. Switch on “Allow addresses on my network” to use it.',
+  'errors.insecure_url':
+    'Use an https address. Plain http is accepted only for addresses on your own network, with that switched on.',
+  'errors.address_not_allowed':
+    'That address is on this machine or your private network. Switch on “Allow addresses on my network” to use it.',
   'errors.invalid_api_key': 'That key cannot be saved.',
   'errors.provider_not_configured': 'No API key is saved for this provider.',
   'errors.provider_key_unreadable': 'The saved key can no longer be read. Enter it again.',
@@ -2966,10 +3396,13 @@ export const en = {
   'errors.provider_rejected': 'The provider refused the request.',
   'errors.provider_context_too_long': 'The conversation is too long for this model.',
   'errors.provider_redirected': 'The provider answered with a redirect. Check the address.',
-  'errors.provider_unreachable': 'The provider could not be reached. Check the address and the network.',
-  'errors.provider_address_not_allowed': 'That address is on this machine or your private network, which this provider may not reach.',
+  'errors.provider_unreachable':
+    'The provider could not be reached. Check the address and the network.',
+  'errors.provider_address_not_allowed':
+    'That address is on this machine or your private network, which this provider may not reach.',
   'errors.provider_timeout': 'The provider took too long to answer.',
-  'errors.provider_protocol_error': 'The provider’s answer was not in the expected form. Is it OpenAI-compatible?',
+  'errors.provider_protocol_error':
+    'The provider’s answer was not in the expected form. Is it OpenAI-compatible?',
   'errors.provider_stream_broken': 'The provider’s answer broke off.',
   'errors.provider_empty_answer': 'The provider sent an empty answer.',
   'errors.provider_no_model': 'No model is offered for this provider.',
@@ -2982,9 +3415,11 @@ export const en = {
   'plugins.summary.none': 'None installed',
   'plugins.summary.on': '{on} of {total} on',
   'plugins.installed': 'Installed',
-  'plugins.installedFooter': 'A plugin runs only after you have reviewed what it asks for and allowed it.',
+  'plugins.installedFooter':
+    'A plugin runs only after you have reviewed what it asks for and allowed it.',
   'plugins.empty.title': 'No plugins yet',
-  'plugins.empty.text': 'Plugins add tools for agents, pages and links. Each one is reviewed by you before it runs, and runs apart from the Studio.',
+  'plugins.empty.text':
+    'Plugins add tools for agents, pages and links. Each one is reviewed by you before it runs, and runs apart from the Studio.',
   'plugins.version': 'Version {version}',
   'plugins.unknownAuthor': 'an unnamed author',
   'plugins.serverSays': 'The server says',
@@ -2993,16 +3428,22 @@ export const en = {
   'plugins.source.short.git': 'from Git',
   'plugins.state.running': 'Running',
   'plugins.state.ready': 'On',
-  'plugins.state.readyDetail': 'Its process starts when something first needs it, and stops again after a while unused.',
+  'plugins.state.readyDetail':
+    'Its process starts when something first needs it, and stops again after a while unused.',
   'plugins.state.off': 'Off',
   'plugins.state.crashed': 'Crashed',
-  'plugins.state.crashedDetail': 'Its process failed. It is tried again when next needed; the last lines it wrote are below.',
-  'plugins.state.crashedDisabled': 'Its process failed repeatedly, so it was turned off. The last lines it wrote are below.',
+  'plugins.state.crashedDetail':
+    'Its process failed. It is tried again when next needed; the last lines it wrote are below.',
+  'plugins.state.crashedDisabled':
+    'Its process failed repeatedly, so it was turned off. The last lines it wrote are below.',
   'plugins.state.needsApproval': 'Needs your review',
-  'plugins.state.newDetail': 'It has never been allowed to run. Review what it asks for to turn it on.',
-  'plugins.state.changedDetail': 'It changed since you allowed it, so it is off until you review it again.',
+  'plugins.state.newDetail':
+    'It has never been allowed to run. Review what it asks for to turn it on.',
+  'plugins.state.changedDetail':
+    'It changed since you allowed it, so it is off until you review it again.',
   'plugins.state.blocked': 'Blocked',
-  'plugins.state.blockedDetail': 'This machine can no longer isolate it as well as when you allowed it. Review it again to allow it at the weaker isolation, or restore the sandbox.',
+  'plugins.state.blockedDetail':
+    'This machine can no longer isolate it as well as when you allowed it. Review it again to allow it at the weaker isolation, or restore the sandbox.',
   'plugins.reason.permissions': 'it asks for different permissions',
   'plugins.reason.contributions': 'what it adds changed',
   'plugins.reason.content': 'its files changed',
@@ -3017,15 +3458,20 @@ export const en = {
   'plugins.isolation.otherProcesses': 'the Studio’s other processes',
   'plugins.isolation.kept': 'A plugin is kept from {things}.',
   'plugins.isolation.notKept': 'It is not kept from {things}.',
-  'plugins.isolation.unsandboxedAllowed': 'The operator has allowed plugins with server code to run without isolation.',
+  'plugins.isolation.unsandboxedAllowed':
+    'The operator has allowed plugins with server code to run without isolation.',
   'plugins.permission.notifications': 'Send you notifications',
-  'plugins.permission.notificationsText': 'It can show a notification to whoever is using it. It reads nothing by this.',
+  'plugins.permission.notificationsText':
+    'It can show a notification to whoever is using it. It reads nothing by this.',
   'plugins.permission.projects': 'Read your projects’ files',
-  'plugins.permission.projectsText': 'It can list the projects of whoever uses it and read their files (files that look like credentials are withheld). What it reads it can keep — and send on, if it can also reach the network.',
+  'plugins.permission.projectsText':
+    'It can list the projects of whoever uses it and read their files (files that look like credentials are withheld). What it reads it can keep — and send on, if it can also reach the network.',
   'plugins.permission.host': 'Send requests to {host}',
-  'plugins.permission.hostText': 'The Studio makes https requests to exactly {host} for it. Whatever it sends there — including anything it read — leaves this machine. No other address can be reached this way.',
+  'plugins.permission.hostText':
+    'The Studio makes https requests to exactly {host} for it. Whatever it sends there — including anything it read — leaves this machine. No other address can be reached this way.',
   'plugins.permission.network': 'Unrestricted network access',
-  'plugins.permission.networkText': 'Its process keeps this machine’s network: any address the server can reach, including services on this machine and your local network. Meant for your own private tools.',
+  'plugins.permission.networkText':
+    'Its process keeps this machine’s network: any address the server can reach, including services on this machine and your local network. Meant for your own private tools.',
   'plugins.risk.low': 'Low risk',
   'plugins.risk.medium': 'Medium risk',
   'plugins.risk.high': 'High risk',
@@ -3037,15 +3483,19 @@ export const en = {
   'plugins.tool.readShort': 'Reads',
   'plugins.tool.writeShort': 'Changes',
   'plugins.review.title': 'Review “{name}”',
-  'plugins.review.lead': '{name} {version} by {author}. Allow it only if you trust where it comes from.',
+  'plugins.review.lead':
+    '{name} {version} by {author}. Allow it only if you trust where it comes from.',
   'plugins.review.approve': 'Allow and turn on',
-  'plugins.review.changedSince': 'It changed since you looked at it. Here it is as it now is — look again before allowing it.',
+  'plugins.review.changedSince':
+    'It changed since you looked at it. Here it is as it now is — look again before allowing it.',
   'plugins.review.changedTitle': 'Changed since you allowed it',
   'plugins.review.whatChanged': 'What changed',
   'plugins.review.permissions': 'What it asks for',
-  'plugins.review.noPermissions': 'It asks for no permissions: it can only compute, keep its own storage and write its log.',
+  'plugins.review.noPermissions':
+    'It asks for no permissions: it can only compute, keep its own storage and write its log.',
   'plugins.review.new': 'New',
-  'plugins.review.subsetNote': 'Untick what you do not want to allow. The plugin may not work fully without it.',
+  'plugins.review.subsetNote':
+    'Untick what you do not want to allow. The plugin may not work fully without it.',
   'plugins.review.brings': 'What it adds',
   'plugins.review.noServer': 'No code that runs on the server: only pages and links.',
   'plugins.review.panel': 'A page, “{title}”, {where}',
@@ -3053,21 +3503,27 @@ export const en = {
   'plugins.review.hooks': 'Is told when these happen (identifiers only): {events}',
   'plugins.review.isolation': 'Isolation: {level}',
   'plugins.review.notKept': 'On this machine it is not kept from {things}.',
-  'plugins.review.networkUncontained': 'So it can reach the network whatever permissions you allow here.',
+  'plugins.review.networkUncontained':
+    'So it can reach the network whatever permissions you allow here.',
   'plugins.review.cannotRun': 'It cannot run on this machine',
-  'plugins.review.cannotRunText': 'Plugins with server code need isolation, and this machine has none. An operator can install bubblewrap, or explicitly allow unisolated plugins.',
-  'plugins.review.trust': 'Its pages run in a sealed frame: they cannot read your session or call the Studio except through the few requests the Studio relays for them.',
+  'plugins.review.cannotRunText':
+    'Plugins with server code need isolation, and this machine has none. An operator can install bubblewrap, or explicitly allow unisolated plugins.',
+  'plugins.review.trust':
+    'Its pages run in a sealed frame: they cannot read your session or call the Studio except through the few requests the Studio relays for them.',
   'plugins.enabled': '{name} is on',
   'plugins.disabled': '{name} is off',
   'plugins.update.current': '{name} {version} is already the newest version.',
-  'plugins.update.done': '{name} was updated to {version}. It asks for nothing new, so it stays on.',
+  'plugins.update.done':
+    '{name} was updated to {version}. It asks for nothing new, so it stays on.',
   'plugins.uninstalled': '{name} was uninstalled. What it stored was kept.',
   'plugins.uninstalled.withData': '{name} and what it stored were removed.',
   'plugins.uninstall.title': 'Uninstall “{name}”?',
-  'plugins.uninstall.text': 'Its files are removed, its process stops, and its pages, tabs and links disappear for everyone.',
+  'plugins.uninstall.text':
+    'Its files are removed, its process stops, and its pages, tabs and links disappear for everyone.',
   'plugins.uninstall.deleteData': 'Also delete what it stored',
   'plugins.uninstall.deleteDataOn': 'Its storage and data folder are deleted for good.',
-  'plugins.uninstall.deleteDataOff': 'Its data stays; a plugin installed later with the same id sees it again.',
+  'plugins.uninstall.deleteDataOff':
+    'Its data stays; a plugin installed later with the same id sees it again.',
   'plugins.uninstall.confirm': 'Uninstall',
   'plugins.action.review': 'Review and turn on',
   'plugins.action.enable': 'Turn on',
@@ -3088,18 +3544,22 @@ export const en = {
   'plugins.detail.approved': 'Allowed',
   'plugins.detail.approvedUnder': 'Allowed while plugins ran {level}',
   'plugins.detail.retainedData': 'Kept data',
-  'plugins.detail.retainedDataText': 'It sees data an earlier installation with the same id stored.',
+  'plugins.detail.retainedDataText':
+    'It sees data an earlier installation with the same id stored.',
   'plugins.install.open': 'Install',
   'plugins.install.title': 'Install a plugin',
   'plugins.install.trustTitle': 'Install only plugins you trust',
-  'plugins.install.trust': 'A plugin’s code runs on this server. It stays off until you have reviewed what it asks for.',
+  'plugins.install.trust':
+    'A plugin’s code runs on this server. It stays off until you have reviewed what it asks for.',
   'plugins.install.from': 'Install from',
   'plugins.install.fromFolder': 'Server folder',
   'plugins.install.fromGit': 'Git address',
   'plugins.install.noFolder': 'No plugin folder is set up',
-  'plugins.install.noFolderText': 'An operator can set AGENT_STUDIO_PLUGIN_SOURCE_DIR to a folder of plugins on the server; they are listed here then.',
+  'plugins.install.noFolderText':
+    'An operator can set AGENT_STUDIO_PLUGIN_SOURCE_DIR to a folder of plugins on the server; they are listed here then.',
   'plugins.install.folderEmpty': 'The plugin folder is empty',
-  'plugins.install.folderEmptyText': 'Put a plugin’s folder (with its plugin.json) into the server’s plugin folder to install it from here.',
+  'plugins.install.folderEmptyText':
+    'Put a plugin’s folder (with its plugin.json) into the server’s plugin folder to install it from here.',
   'plugins.install.folderFooter': 'Folders in the plugin folder the operator set up on the server.',
   'plugins.install.invalid': 'Not a plugin that can be installed.',
   'plugins.install.installed': 'Installed',
@@ -3170,7 +3630,8 @@ export const en = {
   'errors.source_dir_not_configured': 'Installing from a server folder is turned off.',
   'errors.source_not_found': 'There is no such folder in the plugin folder.',
   'errors.studio_too_old': 'This plugin needs a newer Studio.',
-  'errors.isolation_changed': 'How plugins are isolated here changed since you looked. Review it again.',
+  'errors.isolation_changed':
+    'How plugins are isolated here changed since you looked. Review it again.',
   'errors.no_sandbox': 'This machine cannot isolate plugins with server code.',
   'errors.permission_not_requested': 'That permission was not asked for by the plugin.',
   'errors.project_not_expected': 'Only a project tab is opened for a project.',
@@ -3182,11 +3643,13 @@ export const en = {
   'collab.menu.askHint': 'One question, answered side by side',
   'collab.menu.running': 'Everything running',
   'collab.handoff.title': 'Continue with another agent',
-  'collab.handoff.lead': 'A new conversation begins in this project with the agent you choose. It is given a brief of this conversation with {agent}; this one stays as it is.',
+  'collab.handoff.lead':
+    'A new conversation begins in this project with the agent you choose. It is given a brief of this conversation with {agent}; this one stays as it is.',
   'collab.handoff.busyTitle': 'A reply is still running here',
   'collab.handoff.busy': 'Wait until it has finished, or stop it, then hand the conversation over.',
   'collab.handoff.who': 'Who continues',
-  'collab.handoff.block.sameAgent': 'Already this conversation’s agent — change only the model in the conversation itself.',
+  'collab.handoff.block.sameAgent':
+    'Already this conversation’s agent — change only the model in the conversation itself.',
   'collab.handoff.block.notOffered': 'Not offered in this project.',
   'collab.handoff.block.notInstalled': 'Not installed on the server.',
   'collab.handoff.block.notSignedIn': 'Not signed in on the server.',
@@ -3195,25 +3658,32 @@ export const en = {
   'collab.handoff.brief': 'What it is told',
   'collab.handoff.digest': 'The digest',
   'collab.handoff.summary': 'A summary',
-  'collab.handoff.digestText': 'Built by rule from this conversation — what you asked, what the agent concluded, the files it changed, the commands it ran, what is left — with credentials removed. No model reads it first.',
-  'collab.handoff.summaryText': 'An agent reads the digest and writes a shorter summary, read-only and in up to a minute and a half; what it uses counts toward its usage. If it cannot, the digest is given instead.',
-  'collab.handoff.noWriters': 'No agent here can write a summary right now: it needs one that is signed in and can work read-only.',
+  'collab.handoff.digestText':
+    'Built by rule from this conversation — what you asked, what the agent concluded, the files it changed, the commands it ran, what is left — with credentials removed. No model reads it first.',
+  'collab.handoff.summaryText':
+    'An agent reads the digest and writes a shorter summary, read-only and in up to a minute and a half; what it uses counts toward its usage. If it cannot, the digest is given instead.',
+  'collab.handoff.noWriters':
+    'No agent here can write a summary right now: it needs one that is signed in and can work read-only.',
   'collab.handoff.writer': 'Written by',
   'collab.handoff.writerModel': 'With the model',
   'collab.handoff.writerDefaultModel': 'Its default',
   'collab.handoff.note': 'A note for the new agent',
-  'collab.handoff.noteStart': 'Sent as the first message. Without one, the agent is asked to continue where this left off.',
+  'collab.handoff.noteStart':
+    'Sent as the first message. Without one, the agent is asked to continue where this left off.',
   'collab.handoff.noteDraft': 'Left in the new conversation’s message field, for you to send.',
   'collab.handoff.when': 'When it starts',
   'collab.handoff.openOnly': 'I will write first',
   'collab.handoff.startNow': 'Start now',
-  'collab.handoff.openText': 'The new conversation opens with its brief; nothing is sent until you send it.',
-  'collab.handoff.startText': 'The first message goes out at once, and the new agent starts working.',
+  'collab.handoff.openText':
+    'The new conversation opens with its brief; nothing is sent until you send it.',
+  'collab.handoff.startText':
+    'The first message goes out at once, and the new agent starts working.',
   'collab.handoff.submit': 'Continue with {agent}',
   'collab.handoff.submitGeneric': 'Continue',
   'collab.handoff.sending': 'Handing over…',
   'collab.handoff.writing': 'Writing the summary…',
-  'collab.handoff.writingText': 'The summary can take up to a minute and a half. If it takes longer, the digest is used.',
+  'collab.handoff.writingText':
+    'The summary can take up to a minute and a half. If it takes longer, the digest is used.',
   'collab.handoff.openLatest': 'Open the latest',
   'collab.handoff.problem.noAgent': 'Choose who continues.',
   'collab.handoff.problem.blockedAgent': 'That agent cannot continue this conversation.',
@@ -3221,7 +3691,8 @@ export const en = {
   'collab.handoff.problem.noteTooLong': 'The note is too long.',
   'collab.handoff.done': 'Continued with {agent}',
   'collab.handoff.digestUsed': 'The summary could not be written, so the digest was given instead.',
-  'collab.handoff.notStarted': 'The first message could not be sent. It waits in the message field.',
+  'collab.handoff.notStarted':
+    'The first message could not be sent. It waits in the message field.',
   'collab.notice.received': 'Continued from a conversation with {agent}',
   'collab.notice.sent': 'Continued with {agent} in a new conversation',
   'collab.notice.viewBrief': 'View brief',
@@ -3233,7 +3704,8 @@ export const en = {
   'collab.brief.digest': 'A digest the Studio built by rule from the earlier conversation.',
   'collab.brief.summaryBy': 'A summary {agent} wrote from the earlier conversation.',
   'collab.brief.unknownKind': 'What the new agent was given, as recorded in this conversation.',
-  'collab.brief.summaryFallback': 'A summary was asked for but not written ({reason}); this is the digest.',
+  'collab.brief.summaryFallback':
+    'A summary was asked for but not written ({reason}); this is the digest.',
   'collab.brief.noReason': 'no reason given',
   'collab.brief.note': 'Your note',
   'collab.chain.label': 'This conversation’s chain',
@@ -3250,7 +3722,8 @@ export const en = {
   'collab.task.title': 'Task',
   'collab.task.newTitle': 'Ask several agents',
   'collab.task.ask': 'Ask several agents',
-  'collab.task.lead': 'The same question goes to each agent, in a conversation of its own. You see their answers side by side — and can have one more agent compare them.',
+  'collab.task.lead':
+    'The same question goes to each agent, in a conversation of its own. You see their answers side by side — and can have one more agent compare them.',
   'collab.task.project': 'Project',
   'collab.task.noProjects': 'There is no project where you can start conversations.',
   'collab.task.prompt': 'What to ask',
@@ -3263,33 +3736,41 @@ export const en = {
   'collab.task.modeOf': 'Permission mode of agent {number}',
   'collab.task.removeParticipant': 'Remove agent {number}',
   'collab.task.addParticipant': 'Add an agent',
-  'collab.task.noAgents': 'No agent can take part here right now: none is offered, installed and signed in.',
+  'collab.task.noAgents':
+    'No agent can take part here right now: none is offered, installed and signed in.',
   'collab.task.unavailable': 'Cannot take part: {agents}.',
   'collab.task.where': 'Where they work',
   'collab.task.shared': 'One folder',
   'collab.task.worktrees': 'A worktree each',
-  'collab.task.sharedText': 'All work in the project’s own folder, so every one of them only plans — reads and searches, changes nothing. Several agents changing one folder at once would overwrite each other.',
-  'collab.task.worktreesText': 'Each gets a Git worktree and a branch of its own, made from the project’s current commit (uncommitted changes are not in it), and may change files there in its permission mode. Nothing is merged by itself: you compare and decide.',
+  'collab.task.sharedText':
+    'All work in the project’s own folder, so every one of them only plans — reads and searches, changes nothing. Several agents changing one folder at once would overwrite each other.',
+  'collab.task.worktreesText':
+    'Each gets a Git worktree and a branch of its own, made from the project’s current commit (uncommitted changes are not in it), and may change files there in its permission mode. Nothing is merged by itself: you compare and decide.',
   'collab.task.worktreesShort': 'worktrees',
   'collab.task.sharedShort': 'one folder',
   'collab.task.worktreesOwnerOnly': 'Only the owner of this Studio can give each agent a worktree.',
   'collab.task.synthesis': 'Compare the answers',
-  'collab.task.synthesisText': 'When all have finished, one more agent reads the answers, read-only, and says how they differ and which it would take.',
+  'collab.task.synthesisText':
+    'When all have finished, one more agent reads the answers, read-only, and says how they differ and which it would take.',
   'collab.task.synthesisAgent': 'Compared by',
   'collab.task.submit': 'Ask {count} agents',
   'collab.task.starting': 'Starting…',
   'collab.task.started': '{count} agents are on it',
-  'collab.task.deleteNote': 'Each agent’s conversation stays yours, also if you delete the task later.',
+  'collab.task.deleteNote':
+    'Each agent’s conversation stays yours, also if you delete the task later.',
   'collab.task.problem.noProject': 'Choose a project.',
   'collab.task.problem.noPrompt': 'Write what to ask.',
   'collab.task.problem.promptTooLong': 'The question is too long.',
   'collab.task.problem.titleTooLong': 'The name is too long.',
   'collab.task.problem.tooFew': 'Ask at least two agents.',
   'collab.task.problem.tooMany': 'Ask at most six agents.',
-  'collab.task.problem.participantUnusable': 'One of the agents cannot take part here. Choose another.',
+  'collab.task.problem.participantUnusable':
+    'One of the agents cannot take part here. Choose another.',
   'collab.task.problem.worktreesOwnerOnly': 'Only the owner can give each agent a worktree.',
-  'collab.task.problem.synthesisUnusable': 'The agent chosen to compare cannot work read-only here. Choose another.',
-  'collab.task.problem.needsRepository': '{project} cannot give each agent a worktree: that needs a Git repository with at least one commit. Choose One folder, or set up Git in the project first.',
+  'collab.task.problem.synthesisUnusable':
+    'The agent chosen to compare cannot work read-only here. Choose another.',
+  'collab.task.problem.needsRepository':
+    '{project} cannot give each agent a worktree: that needs a Git repository with at least one commit. Choose One folder, or set up Git in the project first.',
   'collab.task.state.running': 'Working',
   'collab.task.state.attention': 'Needs you',
   'collab.task.state.completed': 'Done',
@@ -3297,18 +3778,22 @@ export const en = {
   'collab.task.progress': '{ended} of {total} finished',
   'collab.task.startedAt': 'started {when}',
   'collab.task.status': 'How the task stands',
-  'collab.task.attentionText': 'An agent waits for an approval, or one failed or was interrupted. Open its conversation to answer, continue or dismiss it.',
+  'collab.task.attentionText':
+    'An agent waits for an approval, or one failed or was interrupted. Open its conversation to answer, continue or dismiss it.',
   'collab.task.asked': 'Asked',
   'collab.task.answers': 'Answers',
   'collab.task.stopAll': 'Stop all',
   'collab.task.stop': 'Stop',
   'collab.task.stopTitle': 'Stop this task?',
-  'collab.task.stopText': 'Every agent still working on it stops. What they have written so far is kept, and so are their conversations.',
+  'collab.task.stopText':
+    'Every agent still working on it stops. What they have written so far is kept, and so are their conversations.',
   'collab.task.stopped': 'Stopped',
   'collab.task.delete': 'Delete task',
   'collab.task.deleteTitle': 'Delete “{title}”?',
-  'collab.task.deleteText.one': 'Only the task goes. Its conversation is kept and stays in the workbench.',
-  'collab.task.deleteText.other': 'Only the task goes. Its {count} conversations are kept and stay in the workbench.',
+  'collab.task.deleteText.one':
+    'Only the task goes. Its conversation is kept and stays in the workbench.',
+  'collab.task.deleteText.other':
+    'Only the task goes. Its {count} conversations are kept and stay in the workbench.',
   'collab.task.deleted.one': 'Task deleted. Its conversation was kept.',
   'collab.task.deleted.other': 'Task deleted. Its {count} conversations were kept.',
   'collab.task.keptNote': 'Deleting the task keeps every conversation in it.',
@@ -3317,7 +3802,8 @@ export const en = {
   'collab.participant.starting': 'Starting',
   'collab.participant.running': 'Working',
   'collab.participant.waiting': 'Needs you',
-  'collab.participant.waitingText': 'It waits for an approval, a plan or an answer in its conversation.',
+  'collab.participant.waitingText':
+    'It waits for an approval, a plan or an answer in its conversation.',
   'collab.participant.completed': 'Done',
   'collab.participant.failed': 'Failed',
   'collab.participant.stopped': 'Stopped',
@@ -3332,7 +3818,8 @@ export const en = {
   'collab.synthesis.note': 'Why: {note}',
   'collab.answer.more': 'Show the whole answer',
   'collab.answer.less': 'Show less',
-  'collab.answer.truncated': 'Only the first part is shown here; the whole answer is in its conversation.',
+  'collab.answer.truncated':
+    'Only the first part is shown here; the whole answer is in its conversation.',
   'collab.answer.partial': 'The run ended before the agent had finished.',
   'collab.answer.none': 'It finished without a final answer.',
   'collab.duration.took': 'took {duration}',
@@ -3352,9 +3839,11 @@ export const en = {
   'collab.tasks.allProjects': 'All projects',
   'collab.tasks.none': 'No multi-agent tasks yet',
   'collab.tasks.noneOpen': 'Nothing in progress',
-  'collab.tasks.noneText': 'Ask several agents the same question from a project or a conversation’s “…” menu, and compare what they say.',
+  'collab.tasks.noneText':
+    'Ask several agents the same question from a project or a conversation’s “…” menu, and compare what they say.',
   'collab.tasks.older': 'Show older tasks',
-  'collab.tasks.projectEmpty': 'None yet. Ask several agents the same question and compare their answers.',
+  'collab.tasks.projectEmpty':
+    'None yet. Ask several agents the same question and compare their answers.',
   'collab.tasks.projectEmptyReadOnly': 'None yet.',
   'collab.tasks.allOfProject': 'All tasks of this project',
   'collab.origin.interactive': 'You asked',
@@ -3367,12 +3856,14 @@ export const en = {
   'collab.running.title': 'Running',
   'collab.running.refresh': 'Check again',
   'collab.running.waiting': 'Waiting for you',
-  'collab.running.waitingFooter': 'Each waits for an approval, a plan or an answer in its conversation.',
+  'collab.running.waitingFooter':
+    'Each waits for an approval, a plan or an answer in its conversation.',
   'collab.running.working': 'Working',
   'collab.running.tasks': 'Multi-agent tasks in progress',
   'collab.running.tasksLink': 'Every task, finished ones too',
   'collab.running.empty': 'Nothing is running',
-  'collab.running.emptyText': 'Conversations, automations, scheduled messages and tasks show up here while they work.',
+  'collab.running.emptyText':
+    'Conversations, automations, scheduled messages and tasks show up here while they work.',
   'collab.running.starting': 'starting',
   'collab.running.for': 'for {duration}',
   'collab.running.approvals.one': '{count} request waits',
@@ -3403,13 +3894,19 @@ export const en = {
   'collab.errors.taskNotFound': 'That task no longer exists.',
   'collab.errors.requestConflict': 'That request was already used for something else. Try again.',
   'collab.errors.requestInProgress': 'That is already under way. Give it a moment.',
-  'collab.errors.projectRequired': 'Only a conversation in a project can be handed to another agent.',
-  'errors.same_agent': 'That is already this conversation’s agent. To change only the model, choose it in the conversation.',
-  'errors.not_latest_in_chain': 'This conversation was already handed on. Only the latest part of a conversation can be handed over again.',
+  'collab.errors.projectRequired':
+    'Only a conversation in a project can be handed to another agent.',
+  'errors.same_agent':
+    'That is already this conversation’s agent. To change only the model, choose it in the conversation.',
+  'errors.not_latest_in_chain':
+    'This conversation was already handed on. Only the latest part of a conversation can be handed over again.',
   'errors.handoff_in_progress': 'This conversation is being handed over already.',
-  'errors.too_many_tasks': 'You have as many multi-agent tasks in progress as you can. Wait for one to finish, or stop one.',
-  'errors.task_needs_repository': 'Separate worktrees need the project to be a Git repository with at least one commit.',
-  'errors.mode_requires_worktrees': 'In one shared folder every agent only plans. Other modes need a worktree each.',
+  'errors.too_many_tasks':
+    'You have as many multi-agent tasks in progress as you can. Wait for one to finish, or stop one.',
+  'errors.task_needs_repository':
+    'Separate worktrees need the project to be a Git repository with at least one commit.',
+  'errors.mode_requires_worktrees':
+    'In one shared folder every agent only plans. Other modes need a worktree each.',
   'errors.task_running': 'Agents are still working on this task. Stop it first.',
   'home.edit.start': 'Edit home screen',
   'home.edit.hide': 'Hide {name}',
@@ -3426,10 +3923,12 @@ export const en = {
   'home.edit.newPageHint': 'Drop here to begin a new page',
   'home.link.open': '{name}, opens in a new tab',
   'home.layout.unreadableTitle': 'The saved arrangement could not be read',
-  'home.layout.unreadable': 'The standard arrangement is shown instead. What is saved stays as it is until you change the arrangement.',
+  'home.layout.unreadable':
+    'The standard arrangement is shown instead. What is saved stays as it is until you change the arrangement.',
   'home.look.title': 'On this device',
   'home.look.names': 'Show names',
-  'home.look.namesText': 'Under each tile. Without them, a tile still says its name to a screen reader and as a tooltip.',
+  'home.look.namesText':
+    'Under each tile. Without them, a tile still says its name to a screen reader and as a tooltip.',
   'home.look.large': 'Large icons',
   'home.look.largeText': 'Bigger tiles, fewer to a row.',
   'home.look.footer': 'These belong to this device; the arrangement follows you to every device.',
@@ -3481,7 +3980,8 @@ export const en = {
   'home.widget.staleSince': 'from {when}',
   'home.widget.unreadable': 'Not readable right now',
   'home.widget.usage': 'Usage',
-  'home.widget.usageText': 'How much of each agent’s plan or budget is used — or what it used this month.',
+  'home.widget.usageText':
+    'How much of each agent’s plan or budget is used — or what it used this month.',
   'home.widget.usageNone': 'No agent has been used yet.',
   'home.widget.usageQuota': '{percent} of {window} used',
   'home.widget.usageBudget': '{percent} of the budget',
@@ -3507,7 +4007,8 @@ export const en = {
   'home.widget.linksNone': 'The plugin has no links any more.',
   'home.settings.title': 'Home screen',
   'home.settings.arrangement': 'Arrangement',
-  'home.settings.arrangementFooter': 'Order, folders, hidden tiles, names and widgets follow you to every device.',
+  'home.settings.arrangementFooter':
+    'Order, folders, hidden tiles, names and widgets follow you to every device.',
   'home.settings.folders': 'Folders',
   'home.settings.foldersValue': '{folders} with {tiles} tiles',
   'home.settings.hidden': 'Hidden tiles',
@@ -3516,17 +4017,21 @@ export const en = {
   'home.settings.namesAction': 'Restore default names',
   'home.settings.namesHint': 'Every tile gets its own name back. Folder names stay.',
   'home.settings.namesTitle': 'Restore the default names?',
-  'home.settings.namesText': 'Every renamed tile gets its own name back, on every device. Folder names are not changed.',
+  'home.settings.namesText':
+    'Every renamed tile gets its own name back, on every device. Folder names are not changed.',
   'home.settings.namesConfirm': 'Restore names',
   'home.settings.namesDone': 'Default names restored',
   'home.settings.resetAction': 'Reset home layout',
-  'home.settings.resetHint': 'Order, folders, hidden tiles and pages go back to the standard arrangement.',
+  'home.settings.resetHint':
+    'Order, folders, hidden tiles and pages go back to the standard arrangement.',
   'home.settings.resetTitle': 'Reset the home layout?',
-  'home.settings.resetText': 'Order, folders, hidden tiles and page starts go back to the standard arrangement on every device. Names, widgets and projects are not affected.',
+  'home.settings.resetText':
+    'Order, folders, hidden tiles and page starts go back to the standard arrangement on every device. Names, widgets and projects are not affected.',
   'home.settings.resetConfirm': 'Reset layout',
   'home.settings.resetDone': 'Home layout reset',
   'onboarding.title': 'Welcome',
-  'onboarding.caption': 'A few things that make the Studio ready to use. Every step can be skipped.',
+  'onboarding.caption':
+    'A few things that make the Studio ready to use. Every step can be skipped.',
   'onboarding.stepsLabel': 'Steps',
   'onboarding.stepOf': 'Step {index} of {total}',
   'onboarding.stepDone': 'Done',
@@ -3537,19 +4042,23 @@ export const en = {
   'onboarding.notAgain': 'Don’t show the guide again',
   'onboarding.putAway': 'The guide is put away. Find it again in Settings → Getting started.',
   'onboarding.identity.title': 'Who commits',
-  'onboarding.identity.lead': 'The name and e-mail written into the commits you make from the Studio’s Git panel.',
-  'onboarding.identity.fromHost': 'Filled in from what Git on the server would use. Change it if it should be you.',
+  'onboarding.identity.lead':
+    'The name and e-mail written into the commits you make from the Studio’s Git panel.',
+  'onboarding.identity.fromHost':
+    'Filled in from what Git on the server would use. Change it if it should be you.',
   'onboarding.identity.already': 'You saved these before; change them if you like.',
   'onboarding.identity.name': 'Name',
   'onboarding.identity.email': 'E-mail',
-  'onboarding.identity.emailHint': 'Shown in the commit history to everyone who can see the repository.',
+  'onboarding.identity.emailHint':
+    'Shown in the commit history to everyone who can see the repository.',
   'onboarding.identity.save': 'Save and continue',
   'onboarding.identity.saved': 'Commit identity saved',
   'onboarding.identity.nameMissing': 'Enter a name.',
   'onboarding.identity.nameInvalid': 'A name cannot contain angle brackets or line breaks.',
   'onboarding.identity.emailInvalid': 'That does not look like an e-mail address.',
   'onboarding.agents.title': 'Agent accounts',
-  'onboarding.agents.lead': 'Which coding agents are installed on the server and signed in. Sign one in here, or later in Settings → Agent accounts.',
+  'onboarding.agents.lead':
+    'Which coding agents are installed on the server and signed in. Sign one in here, or later in Settings → Agent accounts.',
   'onboarding.project.title': 'A first project',
   'onboarding.project.lead': 'A project is a folder on the server that agents work in.',
   'onboarding.project.have.one': 'You have {count} project already.',
@@ -3557,16 +4066,20 @@ export const en = {
   'onboarding.project.create': 'New project…',
   'onboarding.project.created': '{name} is ready',
   'onboarding.notifications.title': 'Notifications on this device',
-  'onboarding.notifications.lead': 'Be told on this device when an agent needs you or has finished — even with the Studio closed.',
+  'onboarding.notifications.lead':
+    'Be told on this device when an agent needs you or has finished — even with the Studio closed.',
   'onboarding.notifications.later': 'Next, without notifications',
   'onboarding.done.title': 'All set',
   'onboarding.done.text': 'The Studio is ready. Everything here can be changed later in Settings.',
-  'onboarding.done.someSkipped': 'What you skipped can be done later in Settings → Getting started.',
+  'onboarding.done.someSkipped':
+    'What you skipped can be done later in Settings → Getting started.',
   'onboarding.done.home': 'Go to the home screen',
   'onboarding.card.title': 'Set up your Studio',
   'onboarding.card.titleContinue': 'Finish setting up',
-  'onboarding.card.owner': 'Commit identity, agent accounts, a first project, notifications — a few minutes, each step skippable.',
-  'onboarding.card.member': 'Your commit identity and notifications on this device — a minute, each step skippable.',
+  'onboarding.card.owner':
+    'Commit identity, agent accounts, a first project, notifications — a few minutes, each step skippable.',
+  'onboarding.card.member':
+    'Your commit identity and notifications on this device — a minute, each step skippable.',
   'onboarding.card.progress': '{done} of {total} steps behind you.',
   'onboarding.card.start': 'Start',
   'onboarding.card.continue': 'Continue',

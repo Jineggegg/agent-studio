@@ -17,6 +17,7 @@ import type { NotificationContent, PushDelivery } from './content.js';
 import { type NotificationRow, NotificationStore } from './notifications.js';
 import type { NotificationSwitches } from './preferences.js';
 import type { DeliveryReport, PushChannel } from './push.js';
+import type { ExternalChannels } from './external-channels.js';
 
 /**
  * Why nothing was raised.
@@ -33,6 +34,7 @@ export interface Raised {
   readonly skipped: NotRaised | null;
   /** The stored notification, when the in-app channel is on. */
   readonly notification: Notification | null;
+  readonly external?: Promise<number>;
   /** What became of the push; resolves when the push services have answered. Null when Web Push is off. */
   readonly push: Promise<DeliveryReport> | null;
 }
@@ -45,6 +47,7 @@ export interface NotifyResult {
    */
   readonly status: 'delivered' | 'not-delivered' | NotRaised;
   readonly inApp: boolean;
+  readonly externalAccepted?: number;
   readonly push: DeliveryReport | null;
 }
 
@@ -55,7 +58,11 @@ export interface NotifyResult {
  * preferences; none is built in this release.
  */
 export interface DeliveryChannel {
-  deliver(userId: string, content: NotificationContent, options: { showDetails: boolean; delivery?: PushDelivery }): Promise<DeliveryReport>;
+  deliver(
+    userId: string,
+    content: NotificationContent,
+    options: { showDetails: boolean; delivery?: PushDelivery },
+  ): Promise<DeliveryReport>;
 }
 
 /**
@@ -68,12 +75,20 @@ export class NotificationCenter {
   readonly #switches: NotificationSwitches;
   readonly #push: PushChannel;
   readonly #now: () => number;
+  readonly #external: ExternalChannels | undefined;
 
-  constructor(deps: { context: ModuleContext; switches: NotificationSwitches; push: PushChannel; now: () => number }) {
+  constructor(deps: {
+    context: ModuleContext;
+    switches: NotificationSwitches;
+    push: PushChannel;
+    now: () => number;
+    external?: ExternalChannels;
+  }) {
     this.#context = deps.context;
     this.#switches = deps.switches;
     this.#push = deps.push;
     this.#now = deps.now;
+    this.#external = deps.external;
     this.store = new NotificationStore(deps.context.db);
   }
 
@@ -85,17 +100,27 @@ export class NotificationCenter {
    * can be awaited through `push`. Nothing here throws for a reason a
    * notification could have: a failure to notify must never fail what caused it.
    */
-  raise(userId: string, content: NotificationContent, options: { delivery?: PushDelivery } = {}): Raised {
+  raise(
+    userId: string,
+    content: NotificationContent,
+    options: { delivery?: PushDelivery } = {},
+  ): Raised {
     const none = (skipped: NotRaised): Raised => ({ skipped, notification: null, push: null });
     const principal = this.#context.services.agents.principalFor(userId);
     if (!principal) return none('no-recipient');
     // A project the user cannot see (any more) produces nothing for them.
-    if (content.projectId !== null && !this.#canSee(principal, content.projectId)) return none('no-access');
+    if (content.projectId !== null && !this.#canSee(principal, content.projectId))
+      return none('no-access');
 
     const preferences = this.#switches.read(userId);
     const event = NOTIFICATION_EVENT_OF_KIND[content.kind];
     if (event !== null && !preferences.events[event]) return none('event-off');
-    if (!preferences.channels.inApp && !preferences.channels.webPush) return none('channels-off');
+    if (
+      !preferences.channels.inApp &&
+      !preferences.channels.webPush &&
+      !this.#external?.enabled(userId)
+    )
+      return none('channels-off');
 
     let notification: Notification | null = null;
     if (preferences.channels.inApp) {
@@ -119,23 +144,41 @@ export class NotificationCenter {
         notification = this.#present(principal, row, new Map());
         this.#announce(userId, 'added', notification);
       } catch (error) {
-        this.#context.log.error({ userId, kind: content.kind, err: describeError(error) }, 'storing a notification failed');
+        this.#context.log.error(
+          { userId, kind: content.kind, err: describeError(error) },
+          'storing a notification failed',
+        );
       }
     }
 
     const push = preferences.channels.webPush
-      ? this.#push.deliver(userId, content, { showDetails: preferences.showDetails, ...(options.delivery ? { delivery: options.delivery } : {}) })
+      ? this.#push.deliver(userId, content, {
+          showDetails: preferences.showDetails,
+          ...(options.delivery ? { delivery: options.delivery } : {}),
+        })
       : null;
-    return { skipped: null, notification, push };
+    const external = this.#external?.deliver(userId, content, preferences.showDetails);
+    return { skipped: null, notification, push, ...(external ? { external } : {}) };
   }
 
   /** As {@link raise}, for callers that record what became of it. */
-  async notify(userId: string, content: NotificationContent, options: { delivery?: PushDelivery } = {}): Promise<NotifyResult> {
+  async notify(
+    userId: string,
+    content: NotificationContent,
+    options: { delivery?: PushDelivery } = {},
+  ): Promise<NotifyResult> {
     const raised = this.raise(userId, content, options);
     if (raised.skipped !== null) return { status: raised.skipped, inApp: false, push: null };
     const push = raised.push === null ? null : await raised.push;
     const inApp = raised.notification !== null;
-    return { status: inApp || (push?.accepted ?? 0) > 0 ? 'delivered' : 'not-delivered', inApp, push };
+    const externalAccepted = (await raised.external) ?? 0;
+    return {
+      status:
+        inApp || (push?.accepted ?? 0) > 0 || externalAccepted > 0 ? 'delivered' : 'not-delivered',
+      inApp,
+      push,
+      ...(externalAccepted ? { externalAccepted } : {}),
+    };
   }
 
   #canSee(principal: Principal, projectId: string): boolean {
@@ -143,7 +186,11 @@ export class NotificationCenter {
     return projects.find(projectId) !== null && projects.accessOf(principal, projectId) !== null;
   }
 
-  #announce(userId: string, reason: 'added' | 'read' | 'removed', notification?: Notification): void {
+  #announce(
+    userId: string,
+    reason: 'added' | 'read' | 'removed',
+    notification?: Notification,
+  ): void {
     this.#context.bus.publish(userTopic(userId), INBOX_EVENT.notificationsChanged, {
       unread: this.store.unread(userId),
       reason,
@@ -165,7 +212,8 @@ export class NotificationCenter {
       return value;
     };
     let available = true;
-    if (row.project_id !== null) available = check(`p:${row.project_id}`, () => this.#canSee(principal, row.project_id!));
+    if (row.project_id !== null)
+      available = check(`p:${row.project_id}`, () => this.#canSee(principal, row.project_id!));
     if (available && row.session_id !== null) {
       available = check(`s:${row.session_id}`, () => {
         try {
@@ -213,7 +261,8 @@ export class NotificationCenter {
   }
 
   markRead(principal: Principal, id: string): { changed: number; unread: number } {
-    if (!this.store.find(principal.userId, id)) throw notFound('No such notification.', 'notification_not_found');
+    if (!this.store.find(principal.userId, id))
+      throw notFound('No such notification.', 'notification_not_found');
     const changed = this.store.markRead(principal.userId, id, this.#now()) ? 1 : 0;
     if (changed > 0) this.#announce(principal.userId, 'read');
     return { changed, unread: this.store.unread(principal.userId) };
@@ -227,11 +276,13 @@ export class NotificationCenter {
 
   /** A kind of notification about a session has been dealt with (its approval was answered, say): it is read for everyone. */
   settle(sessionId: string, kind: NotificationKind): void {
-    for (const userId of this.store.markKindRead(sessionId, kind, this.#now())) this.#announce(userId, 'read');
+    for (const userId of this.store.markKindRead(sessionId, kind, this.#now()))
+      this.#announce(userId, 'read');
   }
 
   remove(principal: Principal, id: string): { changed: number; unread: number } {
-    if (!this.store.remove(principal.userId, id)) throw notFound('No such notification.', 'notification_not_found');
+    if (!this.store.remove(principal.userId, id))
+      throw notFound('No such notification.', 'notification_not_found');
     this.#announce(principal.userId, 'removed');
     return { changed: 1, unread: this.store.unread(principal.userId) };
   }

@@ -1,8 +1,8 @@
 {
   "name": "@agent-studio/plugin-sdk",
-  "version": "2.0.0-beta.3",
+  "version": "2.0.0-beta.4",
   "private": true,
-  "description": "Types and a small runtime for writing Agent Cloud Studio plugins.",
+  "description": "Types and a small runtime for writing Cloud Harness plugins.",
   "license": "MIT",
   "type": "module",
   "exports": {
@@ -16,7 +16,10 @@
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "src/*.js"],
+  "files": [
+    "dist",
+    "src/*.js"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json"

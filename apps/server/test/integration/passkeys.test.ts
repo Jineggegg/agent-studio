@@ -69,6 +69,36 @@ describe('registering a passkey', () => {
     expect(replay.body).toMatchObject({ error: { code: 'passkey_rejected' } });
   });
 
+  it('registers only one credential when verification of the same challenge overlaps', async () => {
+    const owner = await t.owner();
+    const options = (await owner.post<CreationOptions>('/api/auth/passkeys/registration-options')).body;
+    const responses = [new SoftAuthenticator(), new SoftAuthenticator()].map((device) => device.create(options, TEST_ORIGIN));
+    const digest = globalThis.crypto.subtle.digest.bind(globalThis.crypto.subtle);
+    let release!: () => void;
+    const bothChecking = new Promise<void>((resolve) => { release = resolve; });
+    let checks = 0;
+    // RP ID hashing follows the challenge check. Hold each request's first real
+    // digest until both have checked the still-unused nonce.
+    const hasher = vi.spyOn(globalThis.crypto.subtle, 'digest').mockImplementation(async (...args) => {
+      const result = await digest(...args);
+      checks += 1;
+      if (checks === 2) release();
+      await bothChecking;
+      return result;
+    });
+    try {
+      const attempts = await Promise.all(responses.map((response) => owner.post('/api/auth/passkeys/registration', { response })));
+      expect(attempts.map((response) => response.status).sort()).toEqual([201, 400]);
+      expect(attempts.find((response) => response.status === 400)?.body).toMatchObject({
+        error: { code: 'passkey_rejected' },
+      });
+      expect((await owner.get<{ passkeys: Passkey[] }>('/api/auth/passkeys')).body.passkeys).toHaveLength(1);
+    } finally {
+      release();
+      hasher.mockRestore();
+    }
+  });
+
   it('does not accept a challenge issued to another session or for another purpose', async () => {
     const laptop = await t.owner();
     const phone = await t.signIn('owner');
@@ -125,6 +155,75 @@ describe('signing in with a passkey', () => {
     expect((await attempt(device.get(await loginOptions(), TEST_ORIGIN, { origin: 'https://evil.example' }))).status).toBe(401);
     expect((await attempt(device.get(await loginOptions(), TEST_ORIGIN, { userVerified: false }))).status).toBe(401);
     expect((await attempt(device.get({ ...(await loginOptions()), challenge: 'bm90LWEtcmVhbC1jaGFsbGVuZ2U' }, TEST_ORIGIN))).status).toBe(401);
+  });
+
+  it('does not consume a challenge after an invalid signature', async () => {
+    const device = new SoftAuthenticator();
+    await register(await t.owner(), device);
+    const options = await loginOptions();
+    const invalid = await t.anonymous().post('/api/auth/passkeys/login', {
+      response: device.get(options, TEST_ORIGIN, { tamper: true }),
+    });
+    expect(invalid.status).toBe(401);
+    expect(invalid.body).toMatchObject({ error: { code: 'invalid_credentials' } });
+    const valid = await t.anonymous().post('/api/auth/passkeys/login', {
+      response: device.get(options, TEST_ORIGIN),
+    });
+    expect(valid.status).toBe(200);
+  });
+
+  it('accepts a valid assertion only once when signature verification overlaps', async () => {
+    const device = new SoftAuthenticator();
+    await register(await t.owner(), device);
+    const assertion = device.get(await loginOptions(), TEST_ORIGIN);
+    const verify = globalThis.crypto.subtle.verify.bind(globalThis.crypto.subtle);
+    let release!: () => void;
+    const bothVerified = new Promise<void>((resolve) => { release = resolve; });
+    let completed = 0;
+    // Keep both real signature verifications pending until both requests have
+    // checked the challenge. This reproduces the race without timing sleeps.
+    const verifier = vi.spyOn(globalThis.crypto.subtle, 'verify').mockImplementation(async (...args) => {
+      const valid = await verify(...args);
+      completed += 1;
+      if (completed === 2) release();
+      await bothVerified;
+      return valid;
+    });
+    try {
+      const attempts = await Promise.all([
+        t.anonymous().post('/api/auth/passkeys/login', { response: assertion }),
+        t.anonymous().post('/api/auth/passkeys/login', { response: assertion }),
+      ]);
+      expect(verifier).toHaveBeenCalledTimes(2);
+      expect(attempts.map((response) => response.status).sort()).toEqual([200, 401]);
+      expect(attempts.find((response) => response.status === 401)?.body).toMatchObject({
+        error: { code: 'invalid_credentials' },
+      });
+    } finally {
+      release();
+      verifier.mockRestore();
+    }
+  });
+
+  it('refuses a challenge that expires while its signature is being verified', async () => {
+    const device = new SoftAuthenticator();
+    await register(await t.owner(), device);
+    const assertion = device.get(await loginOptions(), TEST_ORIGIN);
+    const verify = globalThis.crypto.subtle.verify.bind(globalThis.crypto.subtle);
+    const verifier = vi.spyOn(globalThis.crypto.subtle, 'verify').mockImplementation(async (...args) => {
+      const valid = await verify(...args);
+      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() + 61_000 });
+      return valid;
+    });
+    try {
+      const result = await t.anonymous().post('/api/auth/passkeys/login', { response: assertion });
+      expect(verifier).toHaveBeenCalledOnce();
+      expect(result.status).toBe(401);
+      expect(result.body).toMatchObject({ error: { code: 'invalid_credentials' } });
+    } finally {
+      verifier.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
   it('refuses a challenge older than a minute', async () => {

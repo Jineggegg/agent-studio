@@ -8,6 +8,7 @@ import { registerAutomationRoutes } from './routes.js';
 import { AUTOMATION_MIGRATIONS } from './schema.js';
 import { AutomationService, type RunEnded } from './service.js';
 import { AutomationStore } from './store.js';
+import { registerReminderTools } from './reminders.js';
 
 /**
  * Automations and deferred messages.
@@ -126,7 +127,10 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): S
         try {
           handler(event);
         } catch (error) {
-          context.log.error({ type: event.type, err: redactSecrets(describeError(error)) }, 'the automation module failed to handle an event');
+          context.log.error(
+            { type: event.type, err: redactSecrets(describeError(error)) },
+            'the automation module failed to handle an event',
+          );
         }
       };
       const unsubscribe = [
@@ -136,7 +140,12 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): S
             const data = event.data as Omit<RunEnded, 'status'> & { status?: RunEnded['status'] };
             if (event.type === 'run.started') deferred.runStarted(data);
             else if (event.type === 'run.finished' || event.type === 'run.interrupted') {
-              const ended: RunEnded = { ...data, status: event.type === 'run.interrupted' ? 'interrupted' : (data.status ?? 'failed'), error: data.error ?? null };
+              const ended: RunEnded = {
+                ...data,
+                status:
+                  event.type === 'run.interrupted' ? 'interrupted' : (data.status ?? 'failed'),
+                error: data.error ?? null,
+              };
               automations.runEnded(ended);
               deferred.runEnded(ended);
             }
@@ -146,20 +155,39 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): S
           'notice',
           guard((event) => {
             const data = event.data as { runId?: unknown; code?: unknown };
-            if (event.topic.startsWith('session:') && data.code === 'approval_skipped' && typeof data.runId === 'string') automations.approvalSkipped(data.runId);
+            if (
+              event.topic.startsWith('session:') &&
+              data.code === 'approval_skipped' &&
+              typeof data.runId === 'string'
+            )
+              automations.approvalSkipped(data.runId);
           }),
         ),
         context.bus.on(
           'project.membership.changed',
           guard((event) => {
-            const { projectId, userId, access } = event.data as { projectId: string; userId: string; access: ProjectAccess | null };
+            const { projectId, userId, access } = event.data as {
+              projectId: string;
+              userId: string;
+              access: ProjectAccess | null;
+            };
             automations.accessChanged(projectId, userId, access);
           }),
         ),
       ];
 
-      instances.set(context, { automations, deferred, tick, unsubscribe, first: null, timer: null, passing: null, stopped: false });
+      instances.set(context, {
+        automations,
+        deferred,
+        tick,
+        unsubscribe,
+        first: null,
+        timer: null,
+        passing: null,
+        stopped: false,
+      });
       registerAutomationRoutes(context, { automations, deferred });
+      registerReminderTools(context, automations, now);
       context.http.app.addHook('onClose', async () => {
         await shutDown(context);
       });
@@ -173,7 +201,10 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): S
         instance.automations.recover();
         await instance.deferred.recover();
       } catch (error) {
-        context.log.error({ err: redactSecrets(describeError(error)) }, 'recovering automations failed');
+        context.log.error(
+          { err: redactSecrets(describeError(error)) },
+          'recovering automations failed',
+        );
       }
 
       const tickMs = options.tickMs ?? DEFAULT_TICK_MS;
@@ -183,7 +214,12 @@ export function createAutomationModule(options: AutomationModuleOptions = {}): S
         if (instance.stopped || instance.passing) return;
         instance.passing = instance
           .tick()
-          .catch((error: unknown) => context.log.error({ err: redactSecrets(describeError(error)) }, 'a scheduler pass failed'))
+          .catch((error: unknown) =>
+            context.log.error(
+              { err: redactSecrets(describeError(error)) },
+              'a scheduler pass failed',
+            ),
+          )
           .finally(() => {
             instance.passing = null;
           });

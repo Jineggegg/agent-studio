@@ -1,7 +1,33 @@
+import { ExternalConversations } from './ExternalConversations';
+import { ConversationGroupFilter } from './ConversationGroups';
 import type { Agent, MessageSearchHit, Project, Session } from '@agent-studio/protocol';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, ArchiveRestore, ChevronLeft, ChevronsUpDown, MessagesSquare, PanelLeftClose, Pencil, Pin, PinOff, Search, Settings2, SquarePen, Trash2, X } from 'lucide-react';
-import { type ReactNode, type Ref, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import {
+  Archive,
+  ArchiveRestore,
+  ChevronLeft,
+  ChevronsUpDown,
+  MessagesSquare,
+  PanelLeftClose,
+  Pencil,
+  Pin,
+  PinOff,
+  Search,
+  Settings2,
+  SquarePen,
+  Trash2,
+  X,
+} from 'lucide-react';
+import {
+  type ReactNode,
+  type Ref,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useNavigate } from 'react-router';
 import { useStaleness } from '@/data/connection';
 import { describeError } from '@/data/errors';
@@ -10,14 +36,50 @@ import { type MessageKey, useT } from '@/i18n';
 import { projectSettingsPath } from '@/registry';
 import { useCanHover, usePageVisible } from '@/platform/media';
 import type { BackAction } from '@/shell/back';
-import { ActivityMark, Badge, Button, DelayedSkeleton, EmptyState, ErrorState, Glyph, List, ListRow, Menu, type RowAction, SegmentedControl, Skeleton, Spinner, StaleNotice, confirm, isImeConfirm, toTint, toast } from '@/ui';
+import {
+  ActivityMark,
+  Badge,
+  Button,
+  DelayedSkeleton,
+  EmptyState,
+  ErrorState,
+  Glyph,
+  List,
+  ListRow,
+  Menu,
+  type RowAction,
+  SegmentedControl,
+  Skeleton,
+  Spinner,
+  StaleNotice,
+  confirm,
+  isImeConfirm,
+  toTint,
+  toast,
+} from '@/ui';
 import { type ChainSummary, collapseChains, rowStandsFor } from '@/features/collab/handoff/chains';
 import { projectSymbol } from '@/features/home/icons';
 import { workbenchApi } from '../api';
 import { AgentMark, ShortcutHint, shortcutText } from '../chat/parts';
 import type { ListScope } from '../device';
-import { type SectionKind, groupSessions, projectMark, projectMarks, rowTimeStyle, sessionMark, sortTime } from './grouping';
-import { type SessionListParams, flattenSessions, removeSession, upsertSession, useActivity, useSessionList, workbenchKeys } from './queries';
+import {
+  type SectionKind,
+  groupSessions,
+  projectMark,
+  projectMarks,
+  rowTimeStyle,
+  sessionMark,
+  sortTime,
+} from './grouping';
+import {
+  type SessionListParams,
+  flattenSessions,
+  removeSession,
+  upsertSession,
+  useActivity,
+  useSessionList,
+  workbenchKeys,
+} from './queries';
 
 export interface SessionListHandle {
   focusSearch(): void;
@@ -67,7 +129,13 @@ function useNow(intervalMs: number): number {
   return now;
 }
 
-function RenameField({ initial, onDone }: { initial: string; onDone: (title: string | null) => void }) {
+function RenameField({
+  initial,
+  onDone,
+}: {
+  initial: string;
+  onDone: (title: string | null) => void;
+}) {
   const t = useT();
   const [value, setValue] = useState(initial);
   const field = useRef<HTMLInputElement>(null);
@@ -114,7 +182,16 @@ interface RowProps {
   chain?: ChainSummary | undefined;
 }
 
-function SessionRow({ session, open, now, agents, projectName, archivedView, onOpen, chain }: RowProps) {
+function SessionRow({
+  session,
+  open,
+  now,
+  agents,
+  projectName,
+  archivedView,
+  onOpen,
+  chain,
+}: RowProps) {
   const t = useT();
   const user = useUser();
   const queryClient = useQueryClient();
@@ -124,7 +201,9 @@ function SessionRow({ session, open, now, agents, projectName, archivedView, onO
   const agent = agents.find((entry) => entry.id === session.agentId);
   const when = sortTime(session);
 
-  const change = async (changes: Parameters<typeof workbenchApi.updateSession>[1]): Promise<Session | null> => {
+  const change = async (
+    changes: Parameters<typeof workbenchApi.updateSession>[1],
+  ): Promise<Session | null> => {
     try {
       const updated = await workbenchApi.updateSession(session.id, changes);
       upsertSession(queryClient, updated);
@@ -146,7 +225,9 @@ function SessionRow({ session, open, now, agents, projectName, archivedView, onO
   const remove = async () => {
     const confirmed = await confirm({
       title: t('workbench.session.delete.title', { title: session.title }),
-      message: archivedView ? t('workbench.session.delete.message') : t('workbench.session.delete.messageWithArchive'),
+      message: archivedView
+        ? t('workbench.session.delete.message')
+        : t('workbench.session.delete.messageWithArchive'),
       confirmLabel: t('workbench.session.delete'),
       tone: 'danger',
     });
@@ -163,17 +244,55 @@ function SessionRow({ session, open, now, agents, projectName, archivedView, onO
   if (mine && !archivedView) {
     actions.push(
       session.pinned
-        ? { id: 'unpin', label: t('workbench.session.unpin'), icon: <PinOff size={18} />, onSelect: () => void change({ pinned: false }) }
-        : { id: 'pin', label: t('workbench.session.pin'), icon: <Pin size={18} />, tone: 'accent', onSelect: () => void change({ pinned: true }) },
-      { id: 'rename', label: t('workbench.session.rename'), icon: <Pencil size={18} />, onSelect: () => setRenaming(true) },
+        ? {
+            id: 'unpin',
+            label: t('workbench.session.unpin'),
+            icon: <PinOff size={18} />,
+            onSelect: () => void change({ pinned: false }),
+          }
+        : {
+            id: 'pin',
+            label: t('workbench.session.pin'),
+            icon: <Pin size={18} />,
+            tone: 'accent',
+            onSelect: () => void change({ pinned: true }),
+          },
+      {
+        id: 'rename',
+        label: t('workbench.session.rename'),
+        icon: <Pencil size={18} />,
+        onSelect: () => setRenaming(true),
+      },
     );
     // A session with a run in progress cannot be archived: the server would refuse, so it is not offered.
-    if (session.activeRunId === null) actions.push({ id: 'archive', label: t('workbench.session.archive'), icon: <Archive size={18} />, tone: 'warning', onSelect: () => void archive() });
+    if (session.activeRunId === null)
+      actions.push({
+        id: 'archive',
+        label: t('workbench.session.archive'),
+        icon: <Archive size={18} />,
+        tone: 'warning',
+        onSelect: () => void archive(),
+      });
   }
-  if (mine && archivedView) actions.push({ id: 'restore', label: t('workbench.session.restore'), icon: <ArchiveRestore size={18} />, tone: 'accent', onSelect: () => void change({ archived: false }) });
-  actions.push({ id: 'delete', label: t('workbench.session.delete'), icon: <Trash2 size={18} />, tone: 'danger', onSelect: () => void remove() });
+  if (mine && archivedView)
+    actions.push({
+      id: 'restore',
+      label: t('workbench.session.restore'),
+      icon: <ArchiveRestore size={18} />,
+      tone: 'accent',
+      onSelect: () => void change({ archived: false }),
+    });
+  actions.push({
+    id: 'delete',
+    label: t('workbench.session.delete'),
+    icon: <Trash2 size={18} />,
+    tone: 'danger',
+    onSelect: () => void remove(),
+  });
 
-  const chained = chain ? t('collab.chain.row', { count: t.number(Math.max(2, chain.count)) }) : null;
+  const chained = chain
+    ? t('collab.chain.row', { count: t.number(Math.max(2, chain.count)) })
+    : null;
   const leading = (
     <span className="wb-list__agent">
       {chained ? (
@@ -193,8 +312,12 @@ function SessionRow({ session, open, now, agents, projectName, archivedView, onO
     <span className="wb-list__subtitle">
       <span className="u-truncate">{projectName ?? agent?.displayName ?? session.agentId}</span>
       {session.hasDraft && !open && <Badge tone="accent">{t('workbench.session.draft')}</Badge>}
-      {session.pinned && (session.activeRunId !== null || archivedView) && <Pin size={12} aria-label={t('workbench.list.pinned')} />}
-      {mark !== 'running' && <time className="wb-list__time u-tabular">{t.date(when, rowTimeStyle(when, now))}</time>}
+      {session.pinned && (session.activeRunId !== null || archivedView) && (
+        <Pin size={12} aria-label={t('workbench.list.pinned')} />
+      )}
+      {mark !== 'running' && (
+        <time className="wb-list__time u-tabular">{t.date(when, rowTimeStyle(when, now))}</time>
+      )}
     </span>
   );
 
@@ -232,13 +355,26 @@ function SessionRow({ session, open, now, agents, projectName, archivedView, onO
   );
 }
 
-function ProjectSwitcher({ project, projects, openSessionId, onChoose }: { project: Project | null; projects: readonly Project[]; openSessionId: string | null; onChoose: (projectId: string) => void }) {
+function ProjectSwitcher({
+  project,
+  projects,
+  openSessionId,
+  onChoose,
+}: {
+  project: Project | null;
+  projects: readonly Project[];
+  openSessionId: string | null;
+  onChoose: (projectId: string) => void;
+}) {
   const t = useT();
   const navigate = useNavigate();
   const anchor = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const activity = useActivity();
-  const marks = useMemo(() => projectMarks(activity.data, openSessionId), [activity.data, openSessionId]);
+  const marks = useMemo(
+    () => projectMarks(activity.data, openSessionId),
+    [activity.data, openSessionId],
+  );
   if (!project) return null;
   // Closed, the switcher only says that something is going on *elsewhere*.
   const elsewhere = (() => {
@@ -255,10 +391,27 @@ function ProjectSwitcher({ project, projects, openSessionId, onChoose }: { proje
   const settingsPath = projectSettingsPath(project.id);
   return (
     <>
-      <button ref={anchor} type="button" className="wb-switcher" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} aria-label={t('workbench.project.switch', { project: project.name })}>
+      <button
+        ref={anchor}
+        type="button"
+        className="wb-switcher"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        aria-label={t('workbench.project.switch', { project: project.name })}
+      >
         <Glyph icon={<Icon size={17} />} tint={toTint(project.icon.color)} size={28} />
         <span className="wb-switcher__name u-truncate">{project.name}</span>
-        {elsewhere && <ActivityMark kind={elsewhere} label={elsewhere === 'attention' ? t('workbench.project.elsewhereAttention') : t('workbench.project.elsewhereUnseen')} />}
+        {elsewhere && (
+          <ActivityMark
+            kind={elsewhere}
+            label={
+              elsewhere === 'attention'
+                ? t('workbench.project.elsewhereAttention')
+                : t('workbench.project.elsewhereUnseen')
+            }
+          />
+        )}
         <ChevronsUpDown size={16} aria-hidden="true" />
       </button>
       <Menu
@@ -273,7 +426,16 @@ function ProjectSwitcher({ project, projects, openSessionId, onChoose }: { proje
             return {
               id: entry.id,
               label: entry.name,
-              ...(mark ? { hint: mark === 'attention' ? t('activity.attention') : mark === 'running' ? t('activity.running') : t('activity.unseen') } : {}),
+              ...(mark
+                ? {
+                    hint:
+                      mark === 'attention'
+                        ? t('activity.attention')
+                        : mark === 'running'
+                          ? t('activity.running')
+                          : t('activity.unseen'),
+                  }
+                : {}),
               icon: <EntryIcon size={18} />,
               checked: entry.id === project.id,
               onSelect: () => entry.id !== project.id && onChoose(entry.id),
@@ -283,7 +445,12 @@ function ProjectSwitcher({ project, projects, openSessionId, onChoose }: { proje
           ...(settingsPath
             ? [
                 { separator: true as const, id: 'separator-settings' },
-                { id: 'project-settings', label: t('workbench.project.settings', { project: project.name }), icon: <Settings2 size={18} />, onSelect: () => void navigate(settingsPath) },
+                {
+                  id: 'project-settings',
+                  label: t('workbench.project.settings', { project: project.name }),
+                  icon: <Settings2 size={18} />,
+                  onSelect: () => void navigate(settingsPath),
+                },
               ]
             : []),
         ]}
@@ -308,13 +475,30 @@ function Highlighted({ hit }: { hit: MessageSearchHit }) {
  * ones first, then pinned, then by the day the user last spoke in them; kept
  * current from the live connection, so two devices show the same list.
  */
-export function SessionList({ scope, onScopeChange, project, projects, agents, openSessionId, newChatOpen, newChatHasDraft, onOpenSession, onNewChat, onChooseProject, onHide, presentation, back, ref }: SessionListProps) {
+export function SessionList({
+  scope,
+  onScopeChange,
+  project,
+  projects,
+  agents,
+  openSessionId,
+  newChatOpen,
+  newChatHasDraft,
+  onOpenSession,
+  onNewChat,
+  onChooseProject,
+  onHide,
+  presentation,
+  back,
+  ref,
+}: SessionListProps) {
   const t = useT();
   const canHover = useCanHover();
   const searchField = useRef<HTMLInputElement>(null);
   const [typed, setTyped] = useState('');
   const [query, setQuery] = useState('');
   const [archivedView, setArchivedView] = useState(false);
+  const [groupId, setGroupId] = useState('');
   const now = useNow(30_000);
 
   useImperativeHandle(ref, () => ({ focusSearch: () => searchField.current?.focus() }), []);
@@ -326,26 +510,47 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
   }, [typed]);
 
   const projectId = scope === 'project' ? (project?.id ?? null) : null;
-  const params: SessionListParams = useMemo(() => ({ projectId, archived: archivedView ? 'only' : 'exclude', q: query }), [projectId, archivedView, query]);
+  const params: SessionListParams = useMemo(
+    () => ({
+      projectId,
+      archived: archivedView ? 'only' : 'exclude',
+      q: query,
+      ...(groupId ? { groupId } : {}),
+    }),
+    [projectId, archivedView, query, groupId],
+  );
   const enabled = scope === 'all' || projectId !== null;
   const list = useSessionList(params, { enabled });
-  const archived = useSessionList({ projectId, archived: 'only', q: '' }, { enabled: enabled && !archivedView });
+  const archived = useSessionList(
+    { projectId, archived: 'only', q: '' },
+    { enabled: enabled && !archivedView },
+  );
   const staleness = useStaleness(list);
   const loaded = useMemo(() => flattenSessions(list.data), [list.data]);
   // Conversations handed from one agent to another are one entry: the newest of their chain (features/collab).
   const { sessions, chains } = useMemo(() => collapseChains(loaded), [loaded]);
-  const sections = useMemo(() => (archivedView ? [] : groupSessions(sessions, now)), [archivedView, sessions, now]);
+  const sections = useMemo(
+    () => (archivedView ? [] : groupSessions(sessions, now)),
+    [archivedView, sessions, now],
+  );
   const archivedCount = flattenSessions(archived.data).length;
-  const projectNames = useMemo(() => new Map(projects.map((entry) => [entry.id, entry.name])), [projects]);
+  const projectNames = useMemo(
+    () => new Map(projects.map((entry) => [entry.id, entry.name])),
+    [projects],
+  );
 
   const hits = useQuery({
     queryKey: workbenchKeys.search(query, projectId),
-    queryFn: ({ signal }) => workbenchApi.search(query, projectId, signal).then((result) => result.hits),
+    queryFn: ({ signal }) =>
+      workbenchApi.search(query, projectId, signal).then((result) => result.hits),
     enabled: enabled && query.length >= 2 && !archivedView,
     staleTime: 15_000,
   });
 
-  const open = useCallback((session: Pick<Session, 'id' | 'projectId'>, seq?: number) => onOpenSession(session, seq), [onOpenSession]);
+  const open = useCallback(
+    (session: Pick<Session, 'id' | 'projectId'>, seq?: number) => onOpenSession(session, seq),
+    [onOpenSession],
+  );
   const row = (session: Session) => (
     <SessionRow
       key={session.id}
@@ -353,7 +558,9 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
       open={rowStandsFor(session.id, chains.get(session.id), openSessionId)}
       now={now}
       agents={agents}
-      projectName={scope === 'all' && session.projectId ? (projectNames.get(session.projectId) ?? null) : null}
+      projectName={
+        scope === 'all' && session.projectId ? (projectNames.get(session.projectId) ?? null) : null
+      }
       archivedView={archivedView}
       onOpen={() => open(session)}
       chain={chains.get(session.id)}
@@ -377,7 +584,14 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
       </DelayedSkeleton>
     );
   } else if (!list.data) {
-    body = <ErrorState compact error={list.error} onRetry={() => void list.refetch()} retrying={list.isFetching} />;
+    body = (
+      <ErrorState
+        compact
+        error={list.error}
+        onRetry={() => void list.refetch()}
+        retrying={list.isFetching}
+      />
+    );
   } else if (sessions.length === 0 && (hits.data?.length ?? 0) === 0) {
     body = query ? (
       <EmptyState
@@ -390,7 +604,11 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
               {t('workbench.list.clearSearch')}
             </Button>
             {list.hasNextPage && (
-              <Button variant="plain" onClick={() => void list.fetchNextPage()} loading={list.isFetchingNextPage}>
+              <Button
+                variant="plain"
+                onClick={() => void list.fetchNextPage()}
+                loading={list.isFetchingNextPage}
+              >
                 {t('workbench.list.loadEarlier')}
               </Button>
             )}
@@ -400,17 +618,33 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
     ) : archivedView ? (
       <EmptyState compact icon={<Archive size={26} />} title={t('workbench.list.noArchived')} />
     ) : (
-      <EmptyState compact icon={<MessagesSquare size={26} />} title={t('workbench.list.empty')} description={t('workbench.list.emptyHint')} />
+      <EmptyState
+        compact
+        icon={<MessagesSquare size={26} />}
+        title={t('workbench.list.empty')}
+        description={t('workbench.list.emptyHint')}
+      />
     );
   } else {
     body = (
       <>
         {staleness.stale && <StaleNotice since={staleness.since} />}
-        {archivedView ? <List aria-label={t('workbench.list.archived')}>{sessions.map(row)}</List> : sections.map((section) => (
-          <List key={section.kind} header={section.kind === 'running' ? t('workbench.list.runningCount', { count: t.number(section.sessions.length) }) : t(SECTION_TITLES[section.kind])}>
-            {section.sessions.map(row)}
-          </List>
-        ))}
+        {archivedView ? (
+          <List aria-label={t('workbench.list.archived')}>{sessions.map(row)}</List>
+        ) : (
+          sections.map((section) => (
+            <List
+              key={section.kind}
+              header={
+                section.kind === 'running'
+                  ? t('workbench.list.runningCount', { count: t.number(section.sessions.length) })
+                  : t(SECTION_TITLES[section.kind])
+              }
+            >
+              {section.sessions.map(row)}
+            </List>
+          ))
+        )}
         {hits.data && hits.data.length > 0 && (
           <List header={t('workbench.list.inMessages')}>
             {hits.data.map((hit) => (
@@ -430,8 +664,18 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
         )}
         {list.hasNextPage && (
           <div className="wb-list__more">
-            {list.isFetchNextPageError && <p role="alert">{t('workbench.list.moreFailed', { reason: describeError(list.error, t) })}</p>}
-            <Button variant="plain" block onClick={() => void list.fetchNextPage()} loading={list.isFetchingNextPage} loadingLabel={t('common.loading')}>
+            {list.isFetchNextPageError && (
+              <p role="alert">
+                {t('workbench.list.moreFailed', { reason: describeError(list.error, t) })}
+              </p>
+            )}
+            <Button
+              variant="plain"
+              block
+              onClick={() => void list.fetchNextPage()}
+              loading={list.isFetchingNextPage}
+              loadingLabel={t('common.loading')}
+            >
               {list.isFetchNextPageError ? t('common.retry') : t('workbench.list.loadEarlier')}
             </Button>
           </div>
@@ -444,15 +688,30 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
     <div className="wb-list" data-presentation={presentation}>
       <div className="wb-list__head">
         {back ? (
-          <button type="button" className="wb-list__back" onClick={back.go} aria-label={back.accessibleLabel}>
+          <button
+            type="button"
+            className="wb-list__back"
+            onClick={back.go}
+            aria-label={back.accessibleLabel}
+          >
             <ChevronLeft size={22} strokeWidth={2.2} aria-hidden="true" />
             <span className="u-truncate">{back.label}</span>
           </button>
         ) : (
           <span />
         )}
-        <button type="button" className="wb-bar-button" onClick={onHide} aria-label={presentation === 'sheet' ? t('common.close') : t('workbench.list.hide')} title={presentation === 'sheet' ? t('common.close') : t('workbench.list.hide')}>
-          {presentation === 'sheet' ? <X size={21} aria-hidden="true" /> : <PanelLeftClose size={21} aria-hidden="true" />}
+        <button
+          type="button"
+          className="wb-bar-button"
+          onClick={onHide}
+          aria-label={presentation === 'sheet' ? t('common.close') : t('workbench.list.hide')}
+          title={presentation === 'sheet' ? t('common.close') : t('workbench.list.hide')}
+        >
+          {presentation === 'sheet' ? (
+            <X size={21} aria-hidden="true" />
+          ) : (
+            <PanelLeftClose size={21} aria-hidden="true" />
+          )}
         </button>
       </div>
       <div className="wb-list__tools">
@@ -465,7 +724,14 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
             { value: 'all', label: t('workbench.scope.all') },
           ]}
         />
-        {scope === 'project' && <ProjectSwitcher project={project} projects={projects} openSessionId={openSessionId} onChoose={onChooseProject} />}
+        {scope === 'project' && (
+          <ProjectSwitcher
+            project={project}
+            projects={projects}
+            openSessionId={openSessionId}
+            onChoose={onChooseProject}
+          />
+        )}
         {/* Its shortcut is too long to sit beside the words in a narrow column: it is in the tooltip instead. */}
         <button
           type="button"
@@ -473,20 +739,28 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
           onClick={onNewChat}
           aria-current={newChatOpen ? 'page' : undefined}
           aria-keyshortcuts="Control+Shift+O Meta+Shift+O"
-          title={canHover ? `${t('workbench.new')} (${shortcutText(['mod', 'shift', 'o'])})` : undefined}
+          title={
+            canHover ? `${t('workbench.new')} (${shortcutText(['mod', 'shift', 'o'])})` : undefined
+          }
           data-autofocus=""
         >
           <SquarePen size={18} aria-hidden="true" />
           <span>{t('workbench.new')}</span>
-          {newChatHasDraft && !newChatOpen && <Badge tone="accent">{t('workbench.session.draft')}</Badge>}
+          {newChatHasDraft && !newChatOpen && (
+            <Badge tone="accent">{t('workbench.session.draft')}</Badge>
+          )}
         </button>
+        <ExternalConversations projectId={project?.id ?? null} />
+        <ConversationGroupFilter value={groupId} onChange={setGroupId} />
         <div className="wb-list__search">
           <Search size={17} aria-hidden="true" />
           <input
             ref={searchField}
             type="search"
             value={typed}
-            placeholder={archivedView ? t('workbench.list.searchArchived') : t('workbench.list.search')}
+            placeholder={
+              archivedView ? t('workbench.list.searchArchived') : t('workbench.list.search')
+            }
             aria-label={t('workbench.list.search')}
             enterKeyHint="search"
             onChange={(event) => setTyped(event.target.value)}
@@ -500,9 +774,18 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
               }
             }}
           />
-          {typed === '' ? <ShortcutHint keys={['mod', 'k']} /> : list.isFetching ? <Spinner size={15} /> : null}
+          {typed === '' ? (
+            <ShortcutHint keys={['mod', 'k']} />
+          ) : list.isFetching ? (
+            <Spinner size={15} />
+          ) : null}
           {typed !== '' && (
-            <button type="button" className="wb-chip-close" onClick={() => setTyped('')} aria-label={t('workbench.list.clearSearch')}>
+            <button
+              type="button"
+              className="wb-chip-close"
+              onClick={() => setTyped('')}
+              aria-label={t('workbench.list.clearSearch')}
+            >
               <X size={15} aria-hidden="true" />
             </button>
           )}
@@ -510,7 +793,11 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
       </div>
       <div className="wb-list__scroll u-scroll">
         {archivedView && (
-          <button type="button" className="wb-list__section-back" onClick={() => setArchivedView(false)}>
+          <button
+            type="button"
+            className="wb-list__section-back"
+            onClick={() => setArchivedView(false)}
+          >
             <ChevronLeft size={18} aria-hidden="true" />
             {t('workbench.list.archivedBack')}
           </button>
@@ -518,7 +805,13 @@ export function SessionList({ scope, onScopeChange, project, projects, agents, o
         {body}
         {!archivedView && archivedCount > 0 && (
           <List>
-            <ListRow leading={<Archive size={18} />} title={t('workbench.list.archived')} value={t.number(archivedCount)} chevron onPress={() => setArchivedView(true)} />
+            <ListRow
+              leading={<Archive size={18} />}
+              title={t('workbench.list.archived')}
+              value={t.number(archivedCount)}
+              chevron
+              onPress={() => setArchivedView(true)}
+            />
           </List>
         )}
       </div>

@@ -27,9 +27,10 @@ import { providerBalanceSchema, providerIdSchema } from './providers.js';
  *   owner — and an estimate: an amount the user noted on a date ("I topped up
  *   20 on the 3rd") minus what the Studio's records say was spent since.
  * - **Budgets** (`/api/usage/budgets`) are a user's own monthly marks. They
- *   inform; nothing is ever blocked by one.
+ *   inform by default. An explicitly enabled request gate stops new requests
+ *   once recorded usage reaches the amount; it does not reserve future spend.
  *
- * Everything is advisory. A figure that is stale or estimated says so.
+ * A figure that is stale, partial or estimated says so.
  *
  * Whose usage: a user sees their own. The instance owner may ask for
  * everybody's (`scope=all`), broken down per user, and for a project's total.
@@ -296,7 +297,9 @@ export const agentQuotaSchema = z.object({
   /** Whether usage beyond the plan is being drawn on, when the program says. */
   usingOverage: z.boolean().nullable(),
   /** Pay-as-you-go credits of the account, when the program reports them. */
-  credits: z.object({ hasCredits: z.boolean(), unlimited: z.boolean(), balance: z.string().nullable() }).nullable(),
+  credits: z
+    .object({ hasCredits: z.boolean(), unlimited: z.boolean(), balance: z.string().nullable() })
+    .nullable(),
 });
 export type AgentQuota = z.infer<typeof agentQuotaSchema>;
 
@@ -312,7 +315,9 @@ export type QuotaResponse = z.infer<typeof quotaResponseSchema>;
 // ---------------------------------------------------------------------------
 
 /** Three capital letters. Only a note in `USD` yields an estimate of what is left: spend is recorded in US dollars. */
-export const currencyCodeSchema = z.string().regex(/^[A-Z]{3}$/, 'Use a three-letter currency code such as USD.');
+export const currencyCodeSchema = z
+  .string()
+  .regex(/^[A-Z]{3}$/, 'Use a three-letter currency code such as USD.');
 
 /** "I had this much on that day." */
 export const providerNoteSchema = z.object({
@@ -380,7 +385,7 @@ export type BudgetMetric = z.infer<typeof budgetMetricSchema>;
 /**
  * `ok`        below 80 %.
  * `warning`   80 % or more.
- * `exceeded`  100 % or more. Nothing is blocked: a budget informs.
+ * `exceeded`  100 % or more. New requests are blocked only when `enforce` is enabled.
  */
 export const budgetStateSchema = z.enum(['ok', 'warning', 'exceeded']);
 export type BudgetState = z.infer<typeof budgetStateSchema>;
@@ -393,6 +398,8 @@ export const budgetSchema = z.object({
   metric: budgetMetricSchema,
   /** Tokens, or US dollars, per calendar month. */
   amount: z.number().positive(),
+  /** Opt-in gate on new requests, based on recorded usage; never a precise spending cap. */
+  enforce: z.boolean().default(false),
   /** The zone the month is cut in. */
   timeZone: z.string(),
   /** The month the progress is for: `2026-10`. */
@@ -426,12 +433,21 @@ export const createBudgetRequestSchema = z.strictObject({
   metric: budgetMetricSchema,
   amount: budgetAmount,
   timeZone: timeZoneSchema.default('UTC'),
+  enforce: z.boolean().default(false),
 });
 export type CreateBudgetRequest = z.infer<typeof createBudgetRequestSchema>;
 
 export const updateBudgetRequestSchema = z
-  .strictObject({ amount: budgetAmount.optional(), timeZone: timeZoneSchema.optional() })
-  .refine((value) => value.amount !== undefined || value.timeZone !== undefined, { message: 'Nothing to change.' });
+  .strictObject({
+    amount: budgetAmount.optional(),
+    timeZone: timeZoneSchema.optional(),
+    enforce: z.boolean().optional(),
+  })
+  .refine(
+    (value) =>
+      value.amount !== undefined || value.timeZone !== undefined || value.enforce !== undefined,
+    { message: 'Nothing to change.' },
+  );
 export type UpdateBudgetRequest = z.infer<typeof updateBudgetRequestSchema>;
 
 // ---------------------------------------------------------------------------
@@ -459,14 +475,24 @@ export const usageSummaryAgentSchema = z.object({
   /** English, ready to show; the structured fields let a client say it in its own words. */
   line: z.string(),
   /** For `basis: 'quota'`: the window the fraction is of. */
-  window: z.object({ id: z.string(), label: z.string(), resetsAt: timestampSchema.nullable() }).nullable(),
+  window: z
+    .object({ id: z.string(), label: z.string(), resetsAt: timestampSchema.nullable() })
+    .nullable(),
   /** The state of the plan-window reading (also when the tile is based on something else). */
   quotaState: quotaFreshnessSchema,
   staleReason: z.string().nullable(),
   observedAt: timestampSchema.nullable(),
   /** The caller's own usage of this agent in the current month and day of `timeZone`. */
-  month: z.object({ totalTokens: z.number().int().nonnegative(), cost: usageCostSchema, runs: z.number().int().nonnegative() }),
-  today: z.object({ totalTokens: z.number().int().nonnegative(), cost: usageCostSchema, runs: z.number().int().nonnegative() }),
+  month: z.object({
+    totalTokens: z.number().int().nonnegative(),
+    cost: usageCostSchema,
+    runs: z.number().int().nonnegative(),
+  }),
+  today: z.object({
+    totalTokens: z.number().int().nonnegative(),
+    cost: usageCostSchema,
+    runs: z.number().int().nonnegative(),
+  }),
 });
 export type UsageSummaryAgent = z.infer<typeof usageSummaryAgentSchema>;
 
@@ -495,7 +521,10 @@ export const USAGE_EVENT = {
 } as const;
 
 export const usageEventSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal(USAGE_EVENT.quotaChanged), data: z.object({ quota: agentQuotaSchema }) }),
+  z.object({
+    type: z.literal(USAGE_EVENT.quotaChanged),
+    data: z.object({ quota: agentQuotaSchema }),
+  }),
   z.object({
     type: z.literal(USAGE_EVENT.budgetChanged),
     data: z.object({
@@ -507,7 +536,10 @@ export const usageEventSchema = z.discriminatedUnion('type', [
       threshold: z.union([z.literal(80), z.literal(100)]).nullable(),
     }),
   }),
-  z.object({ type: z.literal(USAGE_EVENT.providerNoteChanged), data: z.object({ providerId: providerIdSchema, note: providerNoteSchema.nullable() }) }),
+  z.object({
+    type: z.literal(USAGE_EVENT.providerNoteChanged),
+    data: z.object({ providerId: providerIdSchema, note: providerNoteSchema.nullable() }),
+  }),
 ]);
 export type UsageEvent = z.infer<typeof usageEventSchema>;
 

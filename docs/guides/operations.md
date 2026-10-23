@@ -78,7 +78,7 @@ first. Stopping interrupts them.
 
 Browsers that have the app open notice the new version within a few minutes
 (they check `/version.json`). A page that has been left alone reloads by
-itself; otherwise "Agent Studio was updated — Refresh to use the new version."
+itself; otherwise "Cloud Harness was updated — Refresh to use the new version."
 **Settings → About → Check for a newer version** checks at once.
 
 When you upgrade Claude Code or Codex themselves, nothing needs restarting:
@@ -147,14 +147,14 @@ set -a; . ~/.config/agent-studio.env; set +a     # if you keep the settings in a
 node apps/server/dist/main.js status
 ```
 
-| Command | What it does |
-|---|---|
-| `status` | Asks the server's health route and reads the data directory. Prints `Server: answering at …` or `not answering at …`, `Data: …` and `Accounts: …` ("none — first-run setup is pending" before setup). Exit code 0 when the server answers, 1 when not. |
-| `setup-token` | Prints the pending one-time setup token, or says "There is no pending setup token: either setup is complete or the server has not been started yet." (exit code 1). |
+| Command                     | What it does                                                                                                                                                                                                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                    | Asks the server's health route and reads the data directory. Prints `Server: answering at …` or `not answering at …`, `Data: …` and `Accounts: …` ("none — first-run setup is pending" before setup). Exit code 0 when the server answers, 1 when not.                |
+| `setup-token`               | Prints the pending one-time setup token, or says "There is no pending setup token: either setup is complete or the server has not been started yet." (exit code 1).                                                                                                   |
 | `reset-password <username>` | Asks for a new password (not shown as you type; or reads the first line of standard input) of 12 to 256 characters, sets it, **signs the account out everywhere, revokes all its API tokens, enables the account if it was disabled**, and clears every sign-in lock. |
-| `unlock` | Clears every stored sign-in lock and identity-confirmation lock, for all accounts. Prints "Nothing was locked." or how many were cleared. |
-| `version` | Prints the version. |
-| `help` | Lists the commands. |
+| `unlock`                    | Clears every stored sign-in lock and identity-confirmation lock, for all accounts. Prints "Nothing was locked." or how many were cleared.                                                                                                                             |
+| `version`                   | Prints the version.                                                                                                                                                                                                                                                   |
+| `help`                      | Lists the commands.                                                                                                                                                                                                                                                   |
 
 These work while the service runs and while it is stopped, and only for
 someone who already has a shell on the machine as the service account.
@@ -240,15 +240,15 @@ allowed by Auto.
 As the owner, **Settings → About** starts with "Things to know about this
 installation" when there is something. Each warning has **How to fix it**.
 
-| Warning | Fix |
-|---|---|
-| "This Studio accepts unencrypted connections from other machines." | `AGENT_STUDIO_HOST` is not a loopback address and there is no TLS certificate. Bind to `127.0.0.1` and put a tunnel or TLS proxy in front, or set `AGENT_STUDIO_TLS_CERT` and `AGENT_STUDIO_TLS_KEY`. |
-| "Sign-ins through http://… are not encrypted by the browser." | A public origin uses `http`. Cookies cannot be `Secure` there and passkeys do not work. Acceptable only on a network that encrypts itself (a mesh VPN); otherwise serve it over https. |
-| "Proxy headers are trusted, but no public address is configured." | Turn `AGENT_STUDIO_TRUST_PROXY` off, or list the address the proxy serves in `AGENT_STUDIO_PUBLIC_ORIGINS`. |
-| "Agents run without a sandbox, so an approved command could read the Studio's own data." | See [The sandbox is off](#the-sandbox-is-off). |
-| "The key that protects stored credentials lives in the data directory." | Information. Fine for a personal machine; supply `AGENT_STUDIO_MASTER_KEY` from a secret manager to keep the key apart from the data and its backups. |
-| "Other accounts on this machine can read the Studio's data directory." | `chmod 700` the data directory. |
-| "This Studio runs as root, so every agent and terminal does too." | Run the service under an unprivileged account. |
+| Warning                                                                                  | Fix                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "This Studio accepts unencrypted connections from other machines."                       | `AGENT_STUDIO_HOST` is not a loopback address and there is no TLS certificate. Bind to `127.0.0.1` and put a tunnel or TLS proxy in front, or set `AGENT_STUDIO_TLS_CERT` and `AGENT_STUDIO_TLS_KEY`. |
+| "Sign-ins through http://… are not encrypted by the browser."                            | A public origin uses `http`. Cookies cannot be `Secure` there and passkeys do not work. Acceptable only on a network that encrypts itself (a mesh VPN); otherwise serve it over https.                |
+| "Proxy headers are trusted, but no public address is configured."                        | Turn `AGENT_STUDIO_TRUST_PROXY` off, or list the address the proxy serves in `AGENT_STUDIO_PUBLIC_ORIGINS`.                                                                                           |
+| "Agents run without a sandbox, so an approved command could read the Studio's own data." | See [The sandbox is off](#the-sandbox-is-off).                                                                                                                                                        |
+| "The key that protects stored credentials lives in the data directory."                  | Information. Fine for a personal machine; supply `AGENT_STUDIO_MASTER_KEY` from a secret manager to keep the key apart from the data and its backups.                                                 |
+| "Other accounts on this machine can read the Studio's data directory."                   | `chmod 700` the data directory.                                                                                                                                                                       |
+| "This Studio runs as root, so every agent and terminal does too."                        | Run the service under an unprivileged account.                                                                                                                                                        |
 
 The About page also shows the version, the build, how long the server has been
 running, the sandbox and terminal state, and for the owner the Node.js version,
@@ -369,13 +369,13 @@ the sandbox on, or move the files in `~/.codex/rules/` away.
 
 The Terminal panel says why:
 
-| It says | Cause and fix |
-|---|---|
-| "Terminals are turned off" | `AGENT_STUDIO_TERMINAL=off`. Remove it and restart, if you want terminals. |
-| "The terminal is for the owner" | You are a member. Members never get a terminal. |
-| "A terminal needs a signed-in browser" | You are using an API token. |
-| "Terminals cannot run on this server" | The terminal library could not be loaded: there is no prebuilt binary for this platform, or optional dependencies were left out at install (`npm ci --omit=optional`). Run `npm ci` without that option. |
-| "Too many terminals are open." | 16 per person, 32 per server. Close one. |
+| It says                                | Cause and fix                                                                                                                                                                                            |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Terminals are turned off"             | `AGENT_STUDIO_TERMINAL=off`. Remove it and restart, if you want terminals.                                                                                                                               |
+| "The terminal is for the owner"        | You are a member. Members never get a terminal.                                                                                                                                                          |
+| "A terminal needs a signed-in browser" | You are using an API token.                                                                                                                                                                              |
+| "Terminals cannot run on this server"  | The terminal library could not be loaded: there is no prebuilt binary for this platform, or optional dependencies were left out at install (`npm ci --omit=optional`). Run `npm ci` without that option. |
+| "Too many terminals are open."         | 16 per person, 32 per server. Close one.                                                                                                                                                                 |
 
 Opening a terminal asks for your password when you signed in more than 15
 minutes ago. A terminal that keeps "Connecting…" usually means WebSockets do
@@ -420,3 +420,18 @@ Open `/reset.html` on your Studio's address (for example
 cached for the app and its background worker; nothing on the server changes
 and you stay signed in. **Settings → About → Clear cached files** does the same
 from inside the app.
+
+## Optional Chromium runtime
+
+Browser automation is disabled until the operator sets
+`CLOUD_HARNESS_CHROMIUM` to a canonical absolute Chromium executable path.
+Use a system executable under `/usr` or a dedicated runtime under
+`/opt/cloud-harness-chromium`. Symlink paths and arbitrary host directories are
+refused. Linux bubblewrap is required; there is no unsandboxed fallback. The
+browser has an isolated network namespace and its allowed HTTPS requests pass
+through the server's guarded transport. Do not put account profiles or personal
+data in the Chromium runtime directory.
+
+The `CLOUD_HARNESS_*` and compatibility `AGENT_STUDIO_*` configuration namespaces
+cannot be added to child environment passthrough. Browser configuration is an
+operator setting, not a browser-editable preference.

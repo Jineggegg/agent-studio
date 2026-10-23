@@ -1,4 +1,20 @@
-import { Archive, Bell, FolderOpen, Globe, Inbox, Languages, Moon, Pencil, Pin, Plus, RefreshCw, Rocket, Settings, Sun, Trash2 } from 'lucide-react';
+import {
+  Archive,
+  Bell,
+  FolderOpen,
+  Globe,
+  Inbox,
+  Languages,
+  Moon,
+  Pencil,
+  Pin,
+  Plus,
+  RefreshCw,
+  Rocket,
+  Settings,
+  Sun,
+  Trash2,
+} from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { ApiError } from '@/data/http';
 import { applyLanguagePreference, useLanguage, useT } from '@/i18n';
@@ -122,7 +138,17 @@ const COLOR_TOKENS = [
   '--color-info',
 ];
 
-const TYPE_ROLES = ['text-display', 'text-title-1', 'text-title-2', 'text-title-3', 'text-headline', 'text-body', 'text-callout', 'text-footnote', 'text-caption'];
+const TYPE_ROLES = [
+  'text-display',
+  'text-title-1',
+  'text-title-2',
+  'text-title-3',
+  'text-headline',
+  'text-body',
+  'text-callout',
+  'text-footnote',
+  'text-caption',
+];
 
 export default function ComponentGallery() {
   const t = useT();
@@ -146,9 +172,31 @@ export default function ComponentGallery() {
   const [submitted, setSubmitted] = useState<string | null>(null);
 
   const rowActions = [
-    { id: 'pin', label: 'Pin', icon: <Pin size={18} />, tone: 'accent' as const, onSelect: () => toast.info('Pinned') },
-    { id: 'archive', label: 'Archive', icon: <Archive size={18} />, tone: 'warning' as const, onSelect: () => toast.show({ title: 'Archived', action: { label: 'Undo', onSelect: () => toast.success('Restored') } }) },
-    { id: 'delete', label: 'Delete', icon: <Trash2 size={18} />, tone: 'danger' as const, onSelect: () => toast.error('Deleted (not really)') },
+    {
+      id: 'pin',
+      label: 'Pin',
+      icon: <Pin size={18} />,
+      tone: 'accent' as const,
+      onSelect: () => toast.info('Pinned'),
+    },
+    {
+      id: 'archive',
+      label: 'Archive',
+      icon: <Archive size={18} />,
+      tone: 'warning' as const,
+      onSelect: () =>
+        toast.show({
+          title: 'Archived',
+          action: { label: 'Undo', onSelect: () => toast.success('Restored') },
+        }),
+    },
+    {
+      id: 'delete',
+      label: 'Delete',
+      icon: <Trash2 size={18} />,
+      tone: 'danger' as const,
+      onSelect: () => toast.error('Deleted (not really)'),
+    },
   ];
 
   return (
@@ -158,13 +206,26 @@ export default function ComponentGallery() {
       width="wide"
       actions={
         <>
-          <IconButton label="Switch language" icon={<Languages size={21} />} onClick={() => applyLanguagePreference(language === 'en' ? 'zh-CN' : 'en')} />
-          <IconButton label="Switch theme" icon={theme === 'dark' ? <Sun size={21} /> : <Moon size={21} />} onClick={() => applyThemePreference(theme === 'dark' ? 'light' : 'dark', { crossFade: true })} />
+          <IconButton
+            label="Switch language"
+            icon={<Languages size={21} />}
+            onClick={() => applyLanguagePreference(language === 'en' ? 'zh-CN' : 'en')}
+          />
+          <IconButton
+            label="Switch theme"
+            icon={theme === 'dark' ? <Sun size={21} /> : <Moon size={21} />}
+            onClick={() =>
+              applyThemePreference(theme === 'dark' ? 'light' : 'dark', { crossFade: true })
+            }
+          />
         </>
       }
     >
       <div className="gallery">
-        <Section title="Colour" note="Semantic tokens. Components never use raw values; the theme redefines these.">
+        <Section
+          title="Colour"
+          note="Semantic tokens. Components never use raw values; the theme redefines these."
+        >
           <div className="gallery__swatches">
             {COLOR_TOKENS.map((token) => (
               <div key={token} className="gallery__swatch">
@@ -188,7 +249,10 @@ export default function ComponentGallery() {
           ))}
         </Section>
 
-        <Section title="Button" note="One primary per view. Destructive is never the loudest. Small is drawn small but still 44 px to the finger.">
+        <Section
+          title="Button"
+          note="One primary per view. Destructive is never the loudest. Small is drawn small but still 44 px to the finger."
+        >
           <Row label="Variants">
             <Button variant="primary">Primary</Button>
             <Button variant="tinted">Tinted</Button>
@@ -236,7 +300,10 @@ export default function ComponentGallery() {
           </Row>
         </Section>
 
-        <Section title="TextField and TextArea" note="16 px text (no iOS zoom). Enter during input-method composition never submits.">
+        <Section
+          title="TextField and TextArea"
+          note="16 px text (no iOS zoom). Enter during input-method composition never submits."
+        >
           <Form
             className="gallery__form"
             onSubmit={() => {
@@ -244,13 +311,50 @@ export default function ComponentGallery() {
               toast.success(`Submitted: ${text || '(empty)'}`);
             }}
           >
-            <TextField label="Name" value={text} onChange={setText} hint="Press Enter to submit — try it while composing Chinese." placeholder="Type here" />
-            <TextField label="With an error" value={text} onChange={setText} error="That name is taken." />
-            <TextField label="Password" type="password" value={secret} onChange={setSecret} autoComplete="off" />
-            <TextField label="Path" mono optional value="~/projects/agent-studio" onChange={() => undefined} />
-            <TextField label="Disabled" value="Cannot be changed" onChange={() => undefined} disabled />
-            <TextArea label="Notes" optional value={notes} onChange={setNotes} autoGrow hint="Grows with its text up to eight lines." />
-            <p className="text-footnote text-secondary">Last submitted: {submitted ?? 'nothing yet'}</p>
+            <TextField
+              label="Name"
+              value={text}
+              onChange={setText}
+              hint="Press Enter to submit — try it while composing Chinese."
+              placeholder="Type here"
+            />
+            <TextField
+              label="With an error"
+              value={text}
+              onChange={setText}
+              error="That name is taken."
+            />
+            <TextField
+              label="Password"
+              type="password"
+              value={secret}
+              onChange={setSecret}
+              autoComplete="off"
+            />
+            <TextField
+              label="Path"
+              mono
+              optional
+              value="~/projects/agent-studio"
+              onChange={() => undefined}
+            />
+            <TextField
+              label="Disabled"
+              value="Cannot be changed"
+              onChange={() => undefined}
+              disabled
+            />
+            <TextArea
+              label="Notes"
+              optional
+              value={notes}
+              onChange={setNotes}
+              autoGrow
+              hint="Grows with its text up to eight lines."
+            />
+            <p className="text-footnote text-secondary">
+              Last submitted: {submitted ?? 'nothing yet'}
+            </p>
           </Form>
         </Section>
 
@@ -262,8 +366,18 @@ export default function ComponentGallery() {
             <Switch checked={false} onChange={() => undefined} disabled label="Disabled off" />
           </Row>
           <div className="gallery__form">
-            <Checkbox checked={checked.read} onChange={(read) => setChecked((current) => ({ ...current, read }))} label="Read" hint="See projects and conversations." />
-            <Checkbox checked={checked.write} onChange={(write) => setChecked((current) => ({ ...current, write }))} label="Write" hint="Start work and change things." />
+            <Checkbox
+              checked={checked.read}
+              onChange={(read) => setChecked((current) => ({ ...current, read }))}
+              label="Read"
+              hint="See projects and conversations."
+            />
+            <Checkbox
+              checked={checked.write}
+              onChange={(write) => setChecked((current) => ({ ...current, write }))}
+              label="Write"
+              hint="Start work and change things."
+            />
             <Checkbox checked onChange={() => undefined} label="Disabled" disabled />
             <SegmentedControl
               label="Range"
@@ -293,34 +407,106 @@ export default function ComponentGallery() {
               variant="filled"
               align="start"
               items={[
-                { id: 'rename', label: 'Rename', icon: <Pencil size={18} />, onSelect: () => toast.info('Rename') },
-                { id: 'open', label: 'Open in new tab', icon: <Globe size={18} />, hint: 'Leaves the app', onSelect: () => toast.info('Open') },
+                {
+                  id: 'rename',
+                  label: 'Rename',
+                  icon: <Pencil size={18} />,
+                  onSelect: () => toast.info('Rename'),
+                },
+                {
+                  id: 'open',
+                  label: 'Open in new tab',
+                  icon: <Globe size={18} />,
+                  hint: 'Leaves the app',
+                  onSelect: () => toast.info('Open'),
+                },
                 { id: 'separator', separator: true },
-                { id: 'delete', label: 'Delete', icon: <Trash2 size={18} />, tone: 'danger', onSelect: () => toast.error('Delete') },
+                {
+                  id: 'delete',
+                  label: 'Delete',
+                  icon: <Trash2 size={18} />,
+                  tone: 'danger',
+                  onSelect: () => toast.error('Delete'),
+                },
               ]}
             />
-            <span className="text-footnote text-secondary">A popover here on tablet and wide; a bottom sheet on a phone.</span>
+            <span className="text-footnote text-secondary">
+              A popover here on tablet and wide; a bottom sheet on a phone.
+            </span>
           </Row>
         </Section>
 
-        <Section title="List and ListRow" note="Slide a row towards the leading edge to reveal its actions; the “…” button offers the same without swiping.">
-          <List header="Sessions" headerAction={<Button variant="plain" size="sm">Show all</Button>} footer="A footer explains what the rows above do.">
-            <ListRow leading={<Glyph icon={<Inbox size={18} />} tint="red" />} title="Navigates" subtitle="Has a chevron, goes somewhere" value="3" to="/dev/components" />
-            <ListRow leading={<Glyph icon={<Rocket size={18} />} tint="teal" />} title="Swipe me" subtitle="Pin · Archive · Delete" trailing={<ActivityMark kind="running" />} actions={rowActions} onPress={() => toast.info('Row pressed')} />
-            <ListRow leading={<Glyph icon={<Bell size={18} />} tint="amber" />} title="With a switch" subtitle="The whole row is the label" control={<Switch checked={on} onChange={setOn} />} />
-            <ListRow leading={<Glyph icon={<Settings size={18} />} tint="slate" />} title="Selected" value="Current" selected onPress={() => undefined} />
+        <Section
+          title="List and ListRow"
+          note="Slide a row towards the leading edge to reveal its actions; the “…” button offers the same without swiping."
+        >
+          <List
+            header="Sessions"
+            headerAction={
+              <Button variant="plain" size="sm">
+                Show all
+              </Button>
+            }
+            footer="A footer explains what the rows above do."
+          >
+            <ListRow
+              leading={<Glyph icon={<Inbox size={18} />} tint="red" />}
+              title="Navigates"
+              subtitle="Has a chevron, goes somewhere"
+              value="3"
+              to="/dev/components"
+            />
+            <ListRow
+              leading={<Glyph icon={<Rocket size={18} />} tint="teal" />}
+              title="Swipe me"
+              subtitle="Pin · Archive · Delete"
+              trailing={<ActivityMark kind="running" />}
+              actions={rowActions}
+              onPress={() => toast.info('Row pressed')}
+            />
+            <ListRow
+              leading={<Glyph icon={<Bell size={18} />} tint="amber" />}
+              title="With a switch"
+              subtitle="The whole row is the label"
+              control={<Switch checked={on} onChange={setOn} />}
+            />
+            <ListRow
+              leading={<Glyph icon={<Settings size={18} />} tint="slate" />}
+              title="Selected"
+              value="Current"
+              selected
+              onPress={() => undefined}
+            />
             <ListRow title="Static, no leading" value="Read-only value" />
             <ListRow title="Disabled" onPress={() => undefined} disabled />
             <ListRow title="Destructive" tone="danger" onPress={() => setConfirming(true)} />
           </List>
         </Section>
 
-        <Section title="NavigationBar" note="Screens get this from <Screen>; shown here on its own.">
+        <Section
+          title="NavigationBar"
+          note="Screens get this from <Screen>; shown here on its own."
+        >
           <div className="gallery__frame">
-            <NavigationBar title="Title" back={{ label: 'Projects', onPress: () => toast.info('Back') }} trailing={<IconButton label="Refresh" icon={<RefreshCw size={21} />} />} raised titleIsHeading={false} />
+            <NavigationBar
+              title="Title"
+              back={{ label: 'Projects', onPress: () => toast.info('Back') }}
+              trailing={<IconButton label="Refresh" icon={<RefreshCw size={21} />} />}
+              raised
+              titleIsHeading={false}
+            />
           </div>
           <div className="gallery__frame">
-            <NavigationBar title="Conversation" subtitle="agent-studio" back={{ label: 'Home', accessibleLabel: 'Back to Home', onPress: () => toast.info('Back') }} raised={false} />
+            <NavigationBar
+              title="Conversation"
+              subtitle="agent-studio"
+              back={{
+                label: 'Home',
+                accessibleLabel: 'Back to Home',
+                onPress: () => toast.info('Back'),
+              }}
+              raised={false}
+            />
           </div>
         </Section>
 
@@ -342,7 +528,10 @@ export default function ComponentGallery() {
           </div>
         </Section>
 
-        <Section title="Sheet and ConfirmDialog" note="Bottom sheet with drag-to-dismiss on phone, centred dialog otherwise. Focus is trapped and returned; Escape and the backdrop close; no history entry.">
+        <Section
+          title="Sheet and ConfirmDialog"
+          note="Bottom sheet with drag-to-dismiss on phone, centred dialog otherwise. Focus is trapped and returned; Escape and the backdrop close; no history entry."
+        >
           <Row>
             <Button onClick={() => setSheet('sm')}>Small</Button>
             <Button onClick={() => setSheet('md')}>Medium</Button>
@@ -353,9 +542,13 @@ export default function ComponentGallery() {
             </Button>
             <Button
               onClick={() =>
-                void confirm({ title: 'Reset the layout?', message: 'Order and folders return to their defaults on every device. Names are not affected.', confirmLabel: 'Reset', tone: 'danger' }).then((yes) =>
-                  toast.info(yes ? 'Confirmed' : 'Cancelled'),
-                )
+                void confirm({
+                  title: 'Reset the layout?',
+                  message:
+                    'Order and folders return to their defaults on every device. Names are not affected.',
+                  confirmLabel: 'Reset',
+                  tone: 'danger',
+                }).then((yes) => toast.info(yes ? 'Confirmed' : 'Cancelled'))
               }
             >
               confirm() promise
@@ -377,7 +570,10 @@ export default function ComponentGallery() {
             }
           >
             <div className="gallery__form">
-              <p className="text-secondary">Tab stays inside. Try Escape, the backdrop, or — on a phone — dragging the handle down.</p>
+              <p className="text-secondary">
+                Tab stays inside. Try Escape, the backdrop, or — on a phone — dragging the handle
+                down.
+              </p>
               <TextField label="A field" value={text} onChange={setText} />
               <ListRow title="A switch inside" control={<Switch checked={on} onChange={setOn} />} />
               <Button onClick={() => setConfirming(true)}>Open a dialog on top</Button>
@@ -398,22 +594,55 @@ export default function ComponentGallery() {
           />
         </Section>
 
-        <Section title="Toast" note="Plain 3 s · with an action or detail 6 s · warnings and errors 7 s · persistent until acted on.">
+        <Section
+          title="Toast"
+          note="Plain 3 s · with an action or detail 6 s · warnings and errors 7 s · persistent until acted on."
+        >
           <Row>
             <Button onClick={() => toast.info('Copied to clipboard')}>Info</Button>
             <Button onClick={() => toast.success('Project created')}>Success</Button>
             <Button onClick={() => toast.warning('Connection is slow')}>Warning</Button>
-            <Button onClick={() => toast.error('Could not save', { detail: 'The server did not answer.' })}>Error</Button>
-            <Button onClick={() => toast.show({ title: 'Session archived', action: { label: 'Undo', onSelect: () => toast.success('Restored') } })}>With Undo</Button>
-            <Button onClick={() => toast.show({ id: 'gallery-update', title: 'Agent Studio was updated', detail: 'Refresh to use the new version.', duration: 'persistent', action: { label: 'Refresh', onSelect: () => undefined } })}>
+            <Button
+              onClick={() =>
+                toast.error('Could not save', { detail: 'The server did not answer.' })
+              }
+            >
+              Error
+            </Button>
+            <Button
+              onClick={() =>
+                toast.show({
+                  title: 'Session archived',
+                  action: { label: 'Undo', onSelect: () => toast.success('Restored') },
+                })
+              }
+            >
+              With Undo
+            </Button>
+            <Button
+              onClick={() =>
+                toast.show({
+                  id: 'gallery-update',
+                  title: 'Cloud Harness was updated',
+                  detail: 'Refresh to use the new version.',
+                  duration: 'persistent',
+                  action: { label: 'Refresh', onSelect: () => undefined },
+                })
+              }
+            >
               Persistent
             </Button>
           </Row>
         </Section>
 
-        <Section title="Loading" note="Skeletons appear only after 140 ms. The progress line is for work the user started.">
+        <Section
+          title="Loading"
+          note="Skeletons appear only after 140 ms. The progress line is for work the user started."
+        >
           <Row>
-            <Button onClick={() => setLoading((value) => !value)}>{loading ? 'Stop' : 'Show'} skeletons</Button>
+            <Button onClick={() => setLoading((value) => !value)}>
+              {loading ? 'Stop' : 'Show'} skeletons
+            </Button>
             <Button
               onClick={() => {
                 const done = progress.start();
@@ -440,25 +669,48 @@ export default function ComponentGallery() {
             <div style={{ flex: 1, minWidth: 160 }}>
               <ProgressLine inline active value={determinate} label="Build progress" />
             </div>
-            <Button size="sm" onClick={() => setDeterminate((value) => (value >= 1 ? 0 : Math.min(1, value + 0.2)))}>
+            <Button
+              size="sm"
+              onClick={() => setDeterminate((value) => (value >= 1 ? 0 : Math.min(1, value + 0.2)))}
+            >
               +20%
             </Button>
           </Row>
         </Section>
 
-        <Section title="EmptyState and ErrorState" note="A failed read is never shown as “nothing here”. Gone and unreachable are different: only one of them offers Retry.">
+        <Section
+          title="EmptyState and ErrorState"
+          note="A failed read is never shown as “nothing here”. Gone and unreachable are different: only one of them offers Retry."
+        >
           <div className="gallery__states">
             <div className="gallery__card">
-              <EmptyState icon={<Inbox size={28} />} title="Nothing needs you" description="Approvals, questions and finished runs will appear here." action={<Button variant="tinted">Open the workbench</Button>} compact />
+              <EmptyState
+                icon={<Inbox size={28} />}
+                title="Nothing needs you"
+                description="Approvals, questions and finished runs will appear here."
+                action={<Button variant="tinted">Open the workbench</Button>}
+                compact
+              />
             </div>
             <div className="gallery__card">
-              <ErrorState error={new ApiError(404, 'not_found', 'Not found.')} actions={<Button variant="tinted">Start a new session</Button>} compact />
+              <ErrorState
+                error={new ApiError(404, 'not_found', 'Not found.')}
+                actions={<Button variant="tinted">Start a new session</Button>}
+                compact
+              />
             </div>
             <div className="gallery__card">
-              <ErrorState error={new ApiError(0, 'network_error', 'Failed to fetch')} onRetry={() => toast.info('Retrying')} compact />
+              <ErrorState
+                error={new ApiError(0, 'network_error', 'Failed to fetch')}
+                onRetry={() => toast.info('Retrying')}
+                compact
+              />
             </div>
             <div className="gallery__card">
-              <ErrorState error={new ApiError(403, 'owner_required', 'Only the owner can do that.')} compact />
+              <ErrorState
+                error={new ApiError(403, 'owner_required', 'Only the owner can do that.')}
+                compact
+              />
             </div>
           </div>
         </Section>
@@ -470,12 +722,23 @@ export default function ComponentGallery() {
               Sign in again to carry on where you were.
             </Banner>
             <Banner tone="success">Saved.</Banner>
-            <Banner tone="warning" action={<Button variant="plain" size="sm">Retry</Button>}>
+            <Banner
+              tone="warning"
+              action={
+                <Button variant="plain" size="sm">
+                  Retry
+                </Button>
+              }
+            >
               Showing the projects from the last successful read.
             </Banner>
             <Banner tone="danger">That username or password is not correct.</Banner>
             <div>
-              <StaleNotice /> <StaleNotice since={Date.now() - 7 * 60_000} reason="The server could not be reached." />
+              <StaleNotice />{' '}
+              <StaleNotice
+                since={Date.now() - 7 * 60_000}
+                reason="The server could not be reached."
+              />
             </div>
           </div>
         </Section>
@@ -505,11 +768,14 @@ export default function ComponentGallery() {
           <Row label="Logo">
             <LogoMark size={40} />
             <LogoMark size={40} plated />
-            <LogoMark size={72} plated label="Agent Studio" />
+            <LogoMark size={72} plated label="Cloud Harness" />
           </Row>
         </Section>
 
-        <Section title="Markdown and CodeBlock" note="For untrusted text: raw HTML dropped, links made safe, remote images not fetched until tapped.">
+        <Section
+          title="Markdown and CodeBlock"
+          note="For untrusted text: raw HTML dropped, links made safe, remote images not fetched until tapped."
+        >
           <div className="gallery__card gallery__card--prose">
             <Markdown>{SAMPLE_MARKDOWN}</Markdown>
           </div>

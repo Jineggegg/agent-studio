@@ -452,3 +452,9 @@
   justify-content: center;
   margin-top: var(--space-3);
 }
+
+.aut-proposal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
