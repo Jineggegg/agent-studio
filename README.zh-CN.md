@@ -1,61 +1,150 @@
 # Cloud Harness
 
-**自托管的 AI 工作空间：把 Agent、项目和日常工具放在一起，手机、平板和电脑都能用。**
+**你的 Agent，你的项目，随手就能接着做。**
 
-Cloud Harness 跑在你自己的机器上（工作站、家用服务器或 VPS），和你已经在用的 Agent 命令行工具放在一起，提供一个为触摸设计的 Web 应用：在 iPhone、iPad 或电脑浏览器里指挥它们干活。Agent 操作的是**你的**文件、用的是**你的**登录；手机只和你自己的服务器通信。
+为 Claude Code、Codex 和 API 模型准备的自托管工作空间。在电脑上开始任务，
+用 iPad 查看进度，再从手机继续。对话、项目文件与共享记忆集中在你自己的服务器上。
 
-```
-手机 / 平板 / 电脑 ──HTTPS──▶ 你的服务器（Cloud Harness）──▶ Claude Code CLI · Codex CLI · 模型 API
-```
+[English](README.md) · [截图导览](docs/guides/showcase.zh-CN.md) · [快速开始](#快速开始) · [版本下载](https://github.com/Jineggegg/cloud-harness/releases) · [安全说明](SECURITY.md)
 
-[English](README.md) · [使用指南（英文）](docs/guides/README.md) · [架构](docs/architecture/ARCHITECTURE.md) · [安全](SECURITY.md) · [进度](docs/STATUS.md)
+![Cloud Harness 在电脑、平板和手机上的响应式工作空间](docs/assets/screenshots/devices.zh-CN.png)
 
-> **状态：beta。** 服务器、安全模型和测试是最成熟的部分。客户端已在桌面浏览器和模拟的手机/平板尺寸下验证，尚未在真机上验证。正式依赖之前请先看[哪些已完成、哪些没有](docs/STATUS.md)。
+_图片来自实际应用界面，设备外框用于展示。项目、笔记和邮件均为虚构演示数据，
+Agent 回复由演示脚本生成，不代表真实模型输出或真机测试。_
 
-## 能做什么
+> **Beta。** 已在桌面浏览器和模拟手机／平板尺寸下验证，真机测试仍待完成。
+> 使用前请看[哪些已完成、哪些尚未完成](docs/STATUS.md)。
 
-**和 Agent 一起工作**
+## 从第一句提示，到下一步决定
 
-- 通过官方 CLI 使用 **Claude Code** 和 **Codex**（沿用你已有的登录），也可以接入 **Anthropic 原生 Messages API** 和 **OpenAI 兼容的 API 模型**（DeepSeek、OpenAI、你自己机器上的模型服务），密钥加密保存在服务器上。
-- 文字、思考过程、工具调用和代码差异实时流式显示。运行属于服务器：锁屏、断网、换设备都不影响，回来时对话从断点补齐。
-- **决定权在你手里。** Agent 想做的每个有副作用的操作都要经过服务器上的同一个权限引擎；有风险的操作会等你批准——收件箱和推送通知会提醒你，在对话里作出决定，任何一台设备都可以。
-- Agent 忙的时候可以排队发消息、中途插话、停止，也可以接着跑被重启打断的任务。
-- 同一个项目可以用多个 Agent，带着摘要把对话交接给另一个模型，并查看每个会话的 Token 用量和费用。
+<table>
+<tr>
+<td width="50%">
 
-- 会话分组、从消息处分支、编辑提示词另开分支，以及隔离的 CLI 账户配置。可查看上下文、当前支持的快速选项，并先预览真实的文本文件检查点再恢复。
-- 为图片添加批注、语音听写、朗读回答、查看后台任务；仅从你明确启用的目录导入外部 CLI 会话。
+### 带着项目上下文对话
 
-**管理项目**
+![项目对话界面，包含会话侧栏与文件编辑器](docs/assets/screenshots/workspace.png)
 
-- 项目就是服务器上的文件夹：浏览和编辑文件、看差异、暂存、提交、建分支、推送拉取、使用 Git worktree。
-- 通过服务器上已登录的 GitHub CLI 查看 PR 和 CI 状态，并在有保护的前提下合并。
-- 项目目录里的真实终端，放下手机后继续运行；也可以打开你通过 SSH 配置好的其他机器上的终端。
+查看工具调用和待审批操作，整理会话、从提示词另开分支。
+换一台设备，继续查看服务器上的任务。
 
-**记忆与自动化**
+[看看工作空间 →](docs/guides/showcase.zh-CN.md#项目就在手边)
 
-- **共享记忆**：Markdown 笔记，分项目级和全局级，所有 Agent 用同一套工具搜索和写入，你也可以查看、修改、删除。Agent 只能看到自己项目的笔记和全局笔记。
-- **自动化**：定时提醒，或定时无人值守地启动一次 Agent 运行（需要审批的操作会被拒绝并上报，绝不悄悄执行）。
-- **收件箱与 Web Push**：哪些在等你、哪些失败了、哪些完成了。
+</td>
+<td width="50%">
 
-- 可选**邮箱**连接自己的 Gmail 或 Outlook，支持文件夹、搜索、阅读、附件、加密草稿和确认后发信。邮件摘要需要明确同意，并配置本地模型。
-- 可配置 SMTP、Bark 通知；Agent 可以提出提醒计划，经过审批后执行。
+### 为任务选择合适的 Agent
 
-**围绕会话的工具**
+![模型设置，展示 Anthropic、OpenAI 兼容与本地服务的示例模型目录](docs/assets/screenshots/models.png)
 
-- 管理按项目隔离的**技能、斜杠命令与 MCP 连接**，外部 MCP 调用经过同一套工具权限流程。
-- 在隔离环境构建**静态小应用**并预览；可选的 Agent 浏览器通过沙箱和受限网络访问运行。
-- 主动配对自己的 Windows 设备，再审批截图、点击和输入操作。默认不配置任何设备、账户或外部服务。
+沿用 Claude Code、Codex 的 CLI 登录，或接入 Anthropic 原生 API、
+OpenAI 兼容模型。在同一个界面选择自己配置好的 Agent 和模型。
 
-**为触摸而做**
+[接入你的模型 →](docs/guides/showcase.zh-CN.md#多个模型在一起工作)
 
-- 可安装的 PWA，手机、平板、桌面三种布局，深色与浅色，中英文界面。可选的[桌面外壳](desktop/README.md)连接你现有的安装。
+</td>
+</tr>
+<tr>
+<td>
 
-**可扩展**
+### 不必每次重新交代
 
-- 插件系统：插件运行在沙箱进程里，只拥有你授予的权限，界面与你的登录会话隔离。可以用它接入不属于开源版的私人工具。
-- 新的 Agent 通过统一的适配器接口接入。
+![共享记忆界面，按项目和全局范围查找笔记](docs/assets/screenshots/memory.png)
 
-旧版 `agent-studio` 命令、`AGENT_STUDIO_*` 环境变量、安装目录和包命名空间保留兼容；产品名称统一为 Cloud Harness。
+把决定、偏好和项目事实记成可读的 Markdown 笔记。
+Agent 在你的权限范围内共享当前项目与全局记忆。
+
+[了解共享记忆 →](docs/guides/showcase.zh-CN.md#看得见也能修改的记忆)
+
+</td>
+<td>
+
+### 给下一位 Agent 留下交接
+
+![Agent 交接后的关联会话，继续前一段工作](docs/assets/screenshots/collaboration.png)
+
+带上前一段对话的摘要和留言，交给另一个 Agent 继续。
+也可以让多个 Agent 同时分析任务，再选择一个汇总比较。
+
+[了解 AI 协作 →](docs/guides/showcase.zh-CN.md#让-agent-接得上彼此的工作)
+
+</td>
+</tr>
+<tr>
+<td>
+
+### 常用工具随手可用
+
+![工具库中的技能、可复用命令和 MCP 连接](docs/assets/screenshots/tools.png)
+
+把技能、斜杠命令和 MCP 连接带进对话。
+浏览文件、查看 Git 差异、打开终端，也能预览项目里的静态小应用。
+
+[看看工具库 →](docs/guides/showcase.zh-CN.md#把常用工具带进工作流)
+
+</td>
+<td>
+
+### 邮件也放在手边
+
+![演示邮箱，包含虚构邮件与本地草稿](docs/assets/screenshots/mail.png)
+
+配置自己的 Gmail 或 Outlook 凭据，阅读和搜索邮件、保存加密草稿，
+确认发件账号与收件人后再发出。
+
+[设置邮箱 →](docs/guides/showcase.zh-CN.md#发信前再确认一步)
+
+</td>
+</tr>
+<tr>
+<td>
+
+### 看清谁在做什么
+
+![任务动态界面，显示多个演示 Agent 的运行状态](docs/assets/screenshots/activity.png)
+
+集中查看运行中的会话；收件箱汇总待审批、失败和已完成的任务。
+按需配置通知与计划，在需要你时回来处理。
+
+[查看任务动态 →](docs/guides/showcase.zh-CN.md#需要你时一眼看见)
+
+</td>
+<td>
+
+### 用自己的域名访问
+
+![域名设置页，包含 HTTPS 接入步骤与配置预览](docs/assets/screenshots/domain.png)
+
+从**设置 → 域名与访问**进入，准备 HTTPS 地址、复制反向代理或隧道配置，
+再按指引完成域名解析和服务器设置。
+
+[连接自己的域名 →](docs/deployment/remote-access.md)
+
+</td>
+</tr>
+</table>
+
+[完整截图导览](docs/guides/showcase.zh-CN.md)还包含主界面、多 Agent 任务，
+以及每项功能从哪里进入、如何使用。
+
+<details>
+<summary><strong>更多工作方式</strong></summary>
+
+- **对话管理：** 会话分组、分支、编辑后重发、隔离的 CLI 账号、明确选择后导入历史，
+  以及上下文用量与支持的快速选项。符合条件的文本文件检查点可先预览再恢复。
+- **文件与 Git：** 浏览编辑、查看差异、暂存提交、分支、worktree、推送拉取；
+  使用服务器上的 GitHub CLI 查看 PR 和 CI。
+- **图片与语音：** 图片批注、听写草稿、主动朗读回答；具体支持与处理方式取决于浏览器和配置的服务。
+- **自动化：** 提醒、稍后发送、定时 Agent 任务。无人值守时需要审批的操作会被拒绝并上报。
+- **可选集成：** 隔离的 Agent 浏览器、配对后需审批的 Windows 操作，以及[桌面外壳](desktop/README.md)。
+- **按习惯使用：** 中英文、深浅主题、可安装的 PWA，以及通过插件 SDK 接入的沙箱扩展。
+
+[所有指南](docs/guides/README.md) · [架构说明](docs/architecture/ARCHITECTURE.md)
+
+</details>
+
+旧版 `agent-studio` 命令、`AGENT_STUDIO_*` 环境变量、安装目录和包命名空间保留兼容；
+产品名称统一为 Cloud Harness。
 
 ## 快速开始
 

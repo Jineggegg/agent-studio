@@ -6,6 +6,25 @@ All notable changes to this project are recorded here. The format follows
 
 ## [Unreleased]
 
+## [2.0.0-beta.5] — 2026-10-23
+
+### Added
+
+- A bilingual visual product tour with real application screenshots, synthetic
+  example content and a phone, tablet and desktop composition. The capture
+  scripts create an isolated demo installation without personal accounts.
+- An owner-only **Settings → Domain & access** guide with validated domain
+  input, copyable Caddy or Cloudflare Tunnel configuration, and instructions for
+  DNS, HTTPS, the server's accepted origins and checking the resulting address.
+  DNS and service changes remain explicit operator steps.
+
+### Documentation
+
+- Illustrated entry points for multiple models, shared memory, handoff notes,
+  multi-agent work, mail, tools and project workflows.
+- Corrected older collaboration instructions to include the existing handoff
+  and multi-agent task screens.
+
 ## [2.0.0-beta.4] — 2026-10-23
 
 ### Added

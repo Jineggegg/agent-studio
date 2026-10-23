@@ -1,3 +1,4 @@
+import { domainEn } from '@/features/settings/domain/messages';
 import { usageGateMessagesEn } from '@/features/usage/messages';
 import { computerMessagesEn } from '@/features/computer/messages';
 import { browserEn } from '@/features/browser/messages';
@@ -20,6 +21,7 @@ import { reminderMessagesEn } from '@/features/automation/messages';
 import { conversationMessagesEn } from '@/features/workbench/sessions/messages';
 
 export const en = {
+  ...domainEn,
   ...libraryMessagesEn,
   ...miniAppMessagesEn,
   ...browserEn,

@@ -1,0 +1,176 @@
+.domain-page {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.domain-hero {
+  padding: var(--space-8);
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(130deg, var(--color-accent-soft), var(--color-surface));
+}
+.domain-hero__icon {
+  display: grid;
+  place-items: center;
+  width: var(--space-16);
+  height: var(--space-16);
+  margin-bottom: var(--space-5);
+  border-radius: var(--radius-lg);
+  color: var(--color-accent-text);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-1);
+}
+.domain-eyebrow {
+  color: var(--color-accent-text);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.12em;
+}
+.domain-hero h2 {
+  margin-block: var(--space-3);
+  font-size: var(--text-title-1);
+  line-height: var(--leading-title-1);
+  letter-spacing: -0.025em;
+}
+.domain-hero > p:not(.domain-eyebrow),
+.domain-steps p,
+.domain-card > p,
+.domain-status > p {
+  color: var(--color-text-secondary);
+  line-height: var(--leading-body);
+}
+.domain-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  color: var(--color-text-secondary);
+  font-size: var(--text-footnote);
+}
+.domain-benefits span,
+.domain-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.domain-status,
+.domain-card {
+  padding: var(--space-5);
+  min-width: 0;
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+.domain-status__head,
+.domain-code__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.domain-status h3,
+.domain-card h3 {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+}
+.domain-card > h3 {
+  margin-bottom: var(--space-4);
+}
+.domain-status__head {
+  margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+.domain-hint {
+  font-size: var(--text-footnote);
+  line-height: var(--leading-footnote);
+  margin-top: var(--space-3);
+}
+.domain-origins {
+  list-style: none;
+  padding: 0;
+  margin-top: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-footnote);
+  overflow-wrap: anywhere;
+}
+.domain-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+.domain-empty {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+.domain-steps {
+  margin: var(--space-6) 0 0;
+  padding-left: var(--space-5);
+}
+.domain-steps > li {
+  padding-left: var(--space-2);
+  margin-top: var(--space-6);
+}
+.domain-steps > li::marker {
+  color: var(--color-accent-text);
+  font-weight: var(--weight-semibold);
+}
+.domain-steps h4 {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-2);
+}
+.domain-code {
+  margin-top: var(--space-3);
+  border: 1px solid var(--color-separator);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  overflow: hidden;
+}
+.domain-code__bar {
+  min-height: var(--hit-min);
+  padding-inline: var(--space-3);
+  border-bottom: 1px solid var(--color-separator);
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+}
+.domain-code__bar > span {
+  overflow-wrap: anywhere;
+}
+.domain-code__bar > .ui-button {
+  flex-shrink: 0;
+}
+.domain-code pre {
+  margin: 0;
+  padding: var(--space-4);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-footnote);
+  line-height: var(--leading-body);
+  color: var(--color-text);
+}
+.domain-link {
+  min-height: var(--hit-min);
+  width: fit-content;
+  max-width: 100%;
+  margin-top: var(--space-2);
+  padding-block: var(--space-2);
+  color: var(--color-accent-text);
+  font-size: var(--text-callout);
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+.domain-link svg {
+  flex-shrink: 0;
+}
+:root[data-layout='phone'] .domain-hero {
+  padding: var(--space-5);
+}
+:root[data-layout='phone'] .domain-fields {
+  grid-template-columns: minmax(0, 1fr);
+}
+:root[data-layout='tablet'] .domain-fields {
+  grid-template-columns: minmax(0, 1fr);
+}

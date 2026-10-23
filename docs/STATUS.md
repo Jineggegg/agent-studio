@@ -4,7 +4,27 @@ A running record of what is done, what is in flight and what comes next, kept
 so that work can resume after an interruption. It is updated at every
 integration point; nothing is listed as done unless its tests pass.
 
-Last updated: 2026-10-23 (Cloud Harness 2.0.0-beta.4).
+Last updated: 2026-10-23 (Cloud Harness 2.0.0-beta.5).
+
+## Visual tour and domain setup
+
+- The English and Chinese READMEs now link to a screenshot-led product tour.
+  Actual application captures show synthetic projects, notes and mail, with
+  scripted agent replies. The multi-device artwork uses those captures inside
+  illustrated frames; it is not evidence of physical-device testing.
+- Owners have a **Settings → Domain & access** entry with strict hostname/port
+  validation, Caddy or Cloudflare Tunnel instructions and copyable configuration.
+  The page reads the server's accepted origins. DNS, HTTPS setup and service
+  changes remain manual, and external reachability is not inferred from that list.
+- Local checks pass: typecheck, lint, production build, 40 domain unit/component
+  cases, and seven Chromium scenarios covering the domain flow and settings on
+  phone, tablet and desktop. Two phone-only touch checks are skipped at larger
+  sizes. The screenshot runner uses an isolated temporary installation and a
+  closed mail fixture; it does not contact live model providers or mail accounts.
+- The source of the artwork and its reproduction instructions are in
+  [scripts/showcase](../scripts/showcase/README.md). No private code or assets
+  were introduced. GitHub CI remains the authority for the broader regression,
+  WebKit and installation checks.
 
 ## Cloud Harness expansion
 

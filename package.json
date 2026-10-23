@@ -1,6 +1,6 @@
 {
   "name": "cloud-harness",
-  "version": "2.0.0-beta.4",
+  "version": "2.0.0-beta.5",
   "private": true,
   "description": "Self-hosted workspace for AI coding agents, projects, tools and automation across phone, tablet and desktop.",
   "license": "MIT",

@@ -3,6 +3,10 @@
 Task-oriented guides for people who install, use and run Cloud Harness.
 Start with the first one; the others can be read in any order.
 
+Prefer a visual introduction? Start with the **[screenshot tour](showcase.md)**
+or **[中文截图导览](showcase.zh-CN.md)** for the workspace, multiple models,
+shared memory, agent handoffs, tools, mail and your own domain.
+
 ## Using the Studio
 
 | Guide                                                                      | What it covers                                                                                                                                                                                                                                                                 |
