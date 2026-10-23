@@ -138,6 +138,9 @@
 .domain-code__bar > span {
   overflow-wrap: anywhere;
 }
+.domain-code__bar > .ui-button {
+  flex-shrink: 0;
+}
 .domain-code pre {
   margin: 0;
   padding: var(--space-4);
