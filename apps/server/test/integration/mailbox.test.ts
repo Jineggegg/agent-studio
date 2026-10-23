@@ -98,6 +98,7 @@ describe('mailbox privacy and explicit sending', () => {
     const base = `/api/mailbox/accounts/${account.id}`;
     const calls: ['GET' | 'POST' | 'PUT' | 'DELETE', string, unknown?][] = [
       ['GET', '/api/mailbox/accounts'],
+      ['GET', '/api/mailbox/local-models'],
       ['GET', `${base}/folders`],
       ['GET', `${base}/messages`],
       ['GET', `${base}/messages/fake-message`],

@@ -433,6 +433,7 @@ export function createMailboxModule(options: { transport?: MailTransport } = {})
         method: 'GET',
         url: '/api/mailbox/local-models',
         access: 'user',
+        sessionOnly: true,
         handler: () => ({
           providers: localProviders().map((p) => ({
             id: p.id,

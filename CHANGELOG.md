@@ -39,7 +39,8 @@ All notable changes to this project are recorded here. The format follows
   a later request whose policy does not.
 - The installer refuses redirects to plain http, and Codex refuses extra
   environment variables with the `CLOUD_HARNESS_` prefix as it already did
-  with `AGENT_STUDIO_`.
+  with `AGENT_STUDIO_`. The installer now needs curl; the wget fallback
+  could not refuse such redirects.
 
 ## [2.0.0-beta.4] — 2026-10-23
 
