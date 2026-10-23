@@ -85,6 +85,35 @@ describe('mailbox privacy and explicit sending', () => {
       t.studio.context.secrets.describe(`mailbox:${owner.userId}:${result.body.id}:oauth`),
     ).toBeNull();
   });
+  it('is read and drafted only from a signed-in browser: an API token of any scope reaches no mail', async () => {
+    const { t, owner, transport } = await start();
+    const account = (await owner.post<MailAccount>('/api/mailbox/accounts', config)).body;
+    const robot = t.anonymous();
+    robot.bearer = (
+      await owner.post<{ token: string }>('/api/auth/tokens', {
+        name: 'script',
+        scopes: ['read', 'write', 'admin'],
+      })
+    ).body.token;
+    const base = `/api/mailbox/accounts/${account.id}`;
+    const calls: ['GET' | 'POST' | 'PUT' | 'DELETE', string, unknown?][] = [
+      ['GET', '/api/mailbox/accounts'],
+      ['GET', `${base}/folders`],
+      ['GET', `${base}/messages`],
+      ['GET', `${base}/messages/fake-message`],
+      ['GET', `${base}/messages/fake-message/attachments/fake-attachment`],
+      ['GET', `${base}/drafts`],
+      ['POST', `${base}/drafts`, { to: ['someone@example.invalid'], subject: 'Hi', body: 'Hello' }],
+      ['PUT', `${base}/drafts/${'0'.repeat(26)}`, { subject: 'Hi', body: 'Hello', revision: 1 }],
+      ['DELETE', `${base}/drafts/${'0'.repeat(26)}`],
+    ];
+    for (const [method, url, body] of calls) {
+      const refused = await robot.request(method, url, body);
+      expect(refused.status, `${method} ${url}`).toBe(403);
+      expect(refused.body, `${method} ${url}`).toMatchObject({ error: { code: 'session_required' } });
+    }
+    expect(transport).not.toHaveBeenCalled();
+  });
   it('renders inert text and forces attachment download instead of HTML execution', async () => {
     const { owner } = await start();
     const account = (await owner.post<MailAccount>('/api/mailbox/accounts', config)).body;

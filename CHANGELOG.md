@@ -25,6 +25,22 @@ All notable changes to this project are recorded here. The format follows
 - Corrected older collaboration instructions to include the existing handoff
   and multi-agent task screens.
 
+### Security
+
+- An API token can no longer choose Accept edits or Auto when it creates a
+  conversation, sends or schedules a message, creates or changes an
+  automation, starts a multi-agent task or hands off; before, only changing a
+  conversation's mode was checked. Plan and Ask stay open to tokens.
+- Mailbox accounts, messages, attachments and drafts are reachable only from a
+  signed-in browser; an API token with read scope could read every connected
+  mailbox.
+- Requests to configured endpoints no longer reuse pooled connections, so a
+  connection opened under a policy that allows private addresses cannot carry
+  a later request whose policy does not.
+- The installer refuses redirects to plain http, and Codex refuses extra
+  environment variables with the `CLOUD_HARNESS_` prefix as it already did
+  with `AGENT_STUDIO_`.
+
 ## [2.0.0-beta.4] — 2026-10-23
 
 ### Added

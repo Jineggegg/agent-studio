@@ -340,6 +340,52 @@ describe('approvals', () => {
     expect((await owner.patch(`/api/sessions/${session.id}`, { permissionMode: 'accept-edits' })).status).toBe(200);
   });
 
+  it('cannot choose a looser mode with an API token anywhere one is chosen: new session, message, scheduled message, automation, task or handoff', async () => {
+    const { owner, agent, project } = kit;
+    const robot = new TestClient(kit.t.studio);
+    robot.bearer = (await owner.post<{ token: string }>('/api/auth/tokens', { name: 'ci', scopes: ['read', 'write', 'admin'] })).body.token;
+    const session = await kit.session();
+    const refused = async (response: Promise<{ status: number; body: unknown }>, what: string) => {
+      const answer = await response;
+      expect(answer.status, `${what}: ${JSON.stringify(answer.body)}`).toBe(403);
+      expect(answer.body, what).toMatchObject({ error: { code: 'session_required' } });
+    };
+    const automation = (permissionMode: string) => ({
+      name: 'Nightly',
+      timeZone: 'UTC',
+      trigger: { type: 'weekdays', time: '08:00' },
+      action: { type: 'agent-run', agentId: agent.id, prompt: 'Tidy up.', session: { type: 'new' }, permissionMode },
+    });
+
+    for (const permissionMode of ['accept-edits', 'auto']) {
+      await refused(robot.post('/api/sessions', { projectId: project.id, agentId: agent.id, permissionMode }), `new session ${permissionMode}`);
+      await refused(robot.post(`/api/sessions/${session.id}/messages`, { requestId: nextRequestId(), text: 'go', permissionMode }), `message ${permissionMode}`);
+      await refused(robot.post('/api/deferred-messages', { sessionId: session.id, text: 'later', sendAt: Date.now() + 3_600_000, permissionMode }), `scheduled ${permissionMode}`);
+      await refused(robot.post(`/api/projects/${project.id}/automations`, automation(permissionMode)), `automation ${permissionMode}`);
+      await refused(robot.patch(`/api/projects/${project.id}/automations/${'0'.repeat(26)}`, { action: automation(permissionMode).action }), `automation change ${permissionMode}`);
+      await refused(
+        robot.post(`/api/projects/${project.id}/tasks`, {
+          requestId: nextRequestId(),
+          prompt: 'Compare.',
+          isolation: 'worktrees',
+          participants: [{ agentId: agent.id }, { agentId: agent.id, permissionMode }],
+        }),
+        `task ${permissionMode}`,
+      );
+      await refused(robot.post(`/api/sessions/${session.id}/handoff`, { requestId: nextRequestId(), agentId: 'another-agent', permissionMode }), `handoff ${permissionMode}`);
+    }
+    expect((await owner.get<Session>(`/api/sessions/${session.id}`)).body.permissionMode).toBe('ask');
+
+    // Asking at least as often stays open to tokens.
+    const planned = await robot.post<Session>('/api/sessions', { projectId: project.id, agentId: agent.id, permissionMode: 'plan' });
+    expect(planned.status).toBe(201);
+    expect(planned.body.permissionMode).toBe('plan');
+    const notRefusedForTheMode = async (response: Promise<{ status: number; body: unknown }>) =>
+      expect((await response).body).not.toMatchObject({ error: { code: 'session_required' } });
+    await notRefusedForTheMode(robot.patch(`/api/projects/${project.id}/automations/${'0'.repeat(26)}`, { action: automation('ask').action }));
+    await notRefusedForTheMode(robot.post(`/api/sessions/${session.id}/handoff`, { requestId: nextRequestId(), agentId: 'another-agent', permissionMode: 'plan' }));
+  });
+
   it('never lets a member allow a dangerous request: that takes the owner', async () => {
     const { owner, agent } = kit;
     const member = await kit.t.member('approver');

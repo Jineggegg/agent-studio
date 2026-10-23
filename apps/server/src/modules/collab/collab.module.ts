@@ -1,6 +1,7 @@
 import { COLLAB_LIMITS, createTaskRequestSchema, handoffRequestSchema, idSchema, listTasksQuerySchema } from '@agent-studio/protocol';
 import { z } from 'zod';
 import type { ModuleContext, StudioModule } from '../../kernel/module.js';
+import { requireBrowserToLoosen } from '../agents/token-modes.js';
 import { HandoffService } from './handoff.js';
 import { COLLAB_MIGRATIONS, CollabStore } from './store.js';
 import { TaskService } from './tasks.js';
@@ -97,6 +98,7 @@ export function createCollabModule(options: CollabModuleOptions = {}): StudioMod
         params: sessionParams,
         body: handoffRequestSchema,
         handler: async ({ user, params, body, reply }) => {
+          requireBrowserToLoosen(user, body.permissionMode);
           const response = await handoffs.handOff(user, params.sessionId, body);
           void reply.status(response.duplicate ? 200 : 201);
           return response;
@@ -125,6 +127,7 @@ export function createCollabModule(options: CollabModuleOptions = {}): StudioMod
         params: projectParams,
         body: createTaskRequestSchema,
         handler: async ({ user, params, body, reply }) => {
+          requireBrowserToLoosen(user, ...body.participants.map((participant) => participant.permissionMode));
           const response = await tasks.create(user, params.projectId, body);
           void reply.status(response.duplicate ? 200 : 201);
           return response;

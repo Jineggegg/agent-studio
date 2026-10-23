@@ -146,6 +146,7 @@ export function createMailboxModule(options: { transport?: MailTransport } = {})
         method: 'GET',
         url: '/api/mailbox/accounts',
         access: 'user',
+        sessionOnly: true,
         handler: ({ user }) => ({
           accounts: db
             .all<AccountRow>(
@@ -232,6 +233,7 @@ export function createMailboxModule(options: { transport?: MailTransport } = {})
         method: 'GET',
         url: '/api/mailbox/accounts/:accountId/folders',
         access: 'user',
+        sessionOnly: true,
         params: accountParams,
         rateLimit: { max: 30, windowMs: 60000 },
         handler: ({ user, params }) => provider(user, params.accountId).folders(),
@@ -240,6 +242,7 @@ export function createMailboxModule(options: { transport?: MailTransport } = {})
         method: 'GET',
         url: '/api/mailbox/accounts/:accountId/messages',
         access: 'user',
+        sessionOnly: true,
         params: accountParams,
         query: mailSearchSchema,
         rateLimit: { max: 30, windowMs: 60000 },
@@ -249,6 +252,7 @@ export function createMailboxModule(options: { transport?: MailTransport } = {})
         method: 'GET',
         url: '/api/mailbox/accounts/:accountId/messages/:messageId',
         access: 'user',
+        sessionOnly: true,
         params: messageParams,
         rateLimit: { max: 60, windowMs: 60000 },
         handler: ({ user, params }) => provider(user, params.accountId).message(params.messageId),
@@ -257,6 +261,7 @@ export function createMailboxModule(options: { transport?: MailTransport } = {})
         method: 'GET',
         url: '/api/mailbox/accounts/:accountId/messages/:messageId/attachments/:attachmentId',
         access: 'user',
+        sessionOnly: true,
         params: messageParams.extend({ attachmentId: mailRemoteIdSchema }),
         rateLimit: { max: 15, windowMs: 60000 },
         handler: async ({ user, params, reply }) => {
@@ -282,6 +287,7 @@ export function createMailboxModule(options: { transport?: MailTransport } = {})
         method: 'GET',
         url: '/api/mailbox/accounts/:accountId/drafts',
         access: 'user',
+        sessionOnly: true,
         params: accountParams,
         handler: ({ user, params }) => {
           account(user, params.accountId);
@@ -300,6 +306,7 @@ export function createMailboxModule(options: { transport?: MailTransport } = {})
         method: 'POST',
         url: '/api/mailbox/accounts/:accountId/drafts',
         access: 'user',
+        sessionOnly: true,
         params: accountParams,
         body: mailDraftInputSchema,
         bodyLimit: 150000,
@@ -339,6 +346,7 @@ export function createMailboxModule(options: { transport?: MailTransport } = {})
         method: 'PUT',
         url: '/api/mailbox/accounts/:accountId/drafts/:draftId',
         access: 'user',
+        sessionOnly: true,
         params: draftParams,
         body: mailDraftInputSchema.extend({ revision: z.number().int().positive() }),
         bodyLimit: 150000,
@@ -366,6 +374,7 @@ export function createMailboxModule(options: { transport?: MailTransport } = {})
         method: 'DELETE',
         url: '/api/mailbox/accounts/:accountId/drafts/:draftId',
         access: 'user',
+        sessionOnly: true,
         params: draftParams,
         handler: ({ user, params }) => {
           const row = draftRow(user, params.accountId, params.draftId);

@@ -116,8 +116,9 @@ if [ "$PLATFORM_OS" = linux ] && grep -qi microsoft /proc/version 2>/dev/null; t
 
 for tool in tar uname mkdir; do command -v "$tool" >/dev/null 2>&1 || fail "\`$tool\` is needed."; done
 if command -v curl >/dev/null 2>&1; then
-  fetch() { curl -fsSL --retry 3 --proto '=https,http' -o "$2" "$1"; }
-  fetch_text() { curl -fsSL --retry 3 "$1"; }
+  # Plain http only where an override names it outright; a redirect never downgrades to it.
+  fetch() { curl -fsSL --retry 3 --proto '=https,http' --proto-redir '=https' -o "$2" "$1"; }
+  fetch_text() { curl -fsSL --retry 3 --proto '=https,http' --proto-redir '=https' "$1"; }
 elif command -v wget >/dev/null 2>&1; then
   fetch() { wget -q -O "$2" "$1"; }
   fetch_text() { wget -q -O - "$1"; }

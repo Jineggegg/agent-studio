@@ -86,6 +86,16 @@ describe('guardedRequest', () => {
     expect((await readBody(response.body)).toString()).toBe('hello from the inside');
   });
 
+  it('checks every request on a connection of its own, never one a looser policy left open', async () => {
+    const allowed = await guardedRequest(`http://localhost:${port}/`, {
+      policy: { allowHttp: true, allowPrivateNetwork: true },
+    });
+    await readBody(allowed.body);
+    await expect(
+      guardedRequest(`http://localhost:${port}/`, { policy: { allowHttp: true } }),
+    ).rejects.toMatchObject({ code: 'address_not_allowed' });
+  });
+
   it('does not follow redirects', async () => {
     const response = await guardedRequest(`http://127.0.0.1:${port}/redirect`, {
       policy: { allowHttp: true, allowPrivateNetwork: true },
