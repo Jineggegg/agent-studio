@@ -99,6 +99,13 @@ What each mode is for:
   any other project a conversation set to Auto runs as Ask, and the button
   says so.
 
+Only a signed-in browser can choose Accept edits or Auto. An API token may
+choose Plan or Ask — for a new conversation, a message, a scheduled message,
+an automation, a multi-agent task or a handoff — and is refused
+(`session_required`) for the looser modes: whoever runs a script with a token
+should not be able to take the person who answers the questions out of the
+loop.
+
 ### Claude Code
 
 - The Studio starts the official `claude` CLI for each turn and routes every

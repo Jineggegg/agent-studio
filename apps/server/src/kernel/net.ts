@@ -154,6 +154,8 @@ export function guardedRequest(rawUrl: string, options: GuardedRequest = {}): Pr
         method: options.method ?? 'GET',
         headers: options.headers,
         lookup: guardedLookup(policy) as net.LookupFunction,
+        // A fresh connection each time: a pooled one was checked under another request's policy, or none.
+        agent: false,
         signal: options.signal,
       },
       (response) => {

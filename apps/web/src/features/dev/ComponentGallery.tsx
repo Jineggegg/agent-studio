@@ -761,7 +761,7 @@ export default function ComponentGallery() {
           </Row>
           <Row label="Avatar">
             <Avatar name="Ada" size={28} />
-            <Avatar name="小宋" />
+            <Avatar name="小林" />
             <Avatar name="grace" size={56} />
             <Avatar name="Linus" size={56} tint="green" />
           </Row>

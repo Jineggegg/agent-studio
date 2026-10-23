@@ -115,15 +115,11 @@ WSL=0
 if [ "$PLATFORM_OS" = linux ] && grep -qi microsoft /proc/version 2>/dev/null; then WSL=1; fi
 
 for tool in tar uname mkdir; do command -v "$tool" >/dev/null 2>&1 || fail "\`$tool\` is needed."; done
-if command -v curl >/dev/null 2>&1; then
-  fetch() { curl -fsSL --retry 3 --proto '=https,http' -o "$2" "$1"; }
-  fetch_text() { curl -fsSL --retry 3 "$1"; }
-elif command -v wget >/dev/null 2>&1; then
-  fetch() { wget -q -O "$2" "$1"; }
-  fetch_text() { wget -q -O - "$1"; }
-else
-  fail "curl or wget is needed."
-fi
+# curl only: wget has no way to refuse a redirect to plain http.
+command -v curl >/dev/null 2>&1 || fail "curl is needed."
+# Plain http only where an override names it outright; a redirect never downgrades to it.
+fetch() { curl -fsSL --retry 3 --proto '=https,http' --proto-redir '=https' -o "$2" "$1"; }
+fetch_text() { curl -fsSL --retry 3 --proto '=https,http' --proto-redir '=https' "$1"; }
 if command -v sha256sum >/dev/null 2>&1; then
   sha256() { sha256sum "$1" | cut -d' ' -f1; }
 elif command -v shasum >/dev/null 2>&1; then

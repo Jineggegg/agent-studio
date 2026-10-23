@@ -1,7 +1,6 @@
 import {
   type Agent,
   type AgentProjectSettings,
-  type PermissionMode,
   agentProjectSettingsSchema,
   approvalDecisionRequestSchema,
   continueRunRequestSchema,
@@ -27,6 +26,7 @@ import { requireBrowser } from '../../kernel/http.js';
 import type { Principal } from '../../kernel/principal.js';
 import type { ModuleContext } from '../../kernel/module.js';
 import { registerConversationRoutes } from './conversations.js';
+import { requireBrowserToLoosen } from './token-modes.js';
 import type { AgentAdapter } from './adapter.js';
 import type { AttachmentFiles } from './attachments.js';
 import type { RunService } from './runtime.js';
@@ -43,9 +43,6 @@ const approvalParams = z.object({ approvalId: idSchema });
 const ruleParams = z.object({ ruleId: idSchema });
 const projectParams = z.object({ projectId: idSchema });
 const agentParams = z.object({ agentId: z.string().min(1).max(80) });
-
-/** The modes an API token may put a session in: those that ask a person at least as often as before. */
-const TOKEN_PERMISSION_MODES: ReadonlySet<PermissionMode> = new Set(['ask', 'plan']);
 
 async function describeAgent(
   context: ModuleContext,
@@ -176,6 +173,7 @@ export function registerAgentRoutes(
     access: 'user',
     body: createSessionRequestSchema,
     handler: async ({ user, body, reply }) => {
+      requireBrowserToLoosen(user, body.permissionMode);
       const session = await sessions.create(user, body, runs.adapter(body.agentId));
       void reply.status(201);
       return session;
@@ -229,9 +227,7 @@ export function registerAgentRoutes(
     body: updateSessionRequestSchema,
     handler: ({ user, params, body }) => {
       const { row } = sessions.requireSession(user, params.sessionId, 'write');
-      // A token may make a session ask more, never less: loosening is for the person who answers the questions.
-      if (body.permissionMode !== undefined && !TOKEN_PERMISSION_MODES.has(body.permissionMode))
-        requireBrowser(user);
+      requireBrowserToLoosen(user, body.permissionMode);
       return sessions.update(user, params.sessionId, body, runs.adapter(row.agent_id));
     },
   });
@@ -322,6 +318,7 @@ export function registerAgentRoutes(
     params: sessionParams,
     body: sendMessageRequestSchema,
     handler: async ({ user, params, body, reply }) => {
+      requireBrowserToLoosen(user, body.permissionMode);
       const receipt = await runs.send(user, params.sessionId, body);
       void reply.status(receipt.duplicate ? 200 : 202);
       return receipt;

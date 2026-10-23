@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { ENV_PREFIX } from '../../kernel/config.js';
 import { type ProcessSupervisor, type Sandbox, credentialPaths } from '../../kernel/process.js';
 import type { BridgeConnection } from '../agents/adapter.js';
 import { configOverride, tomlArray, tomlBoolean, tomlInlineTable, tomlString } from './toml.js';
@@ -275,7 +276,7 @@ export class CodexLauncher {
       if (isModelCredentialVariable(name)) delete env[name];
     }
     for (const [name, value] of Object.entries(extra)) {
-      if (name.startsWith('AGENT_STUDIO_'))
+      if (name.startsWith(ENV_PREFIX) || name.startsWith('CLOUD_HARNESS_'))
         throw new Error(`${name} must not be given to a child process.`);
       env[name] = value;
     }

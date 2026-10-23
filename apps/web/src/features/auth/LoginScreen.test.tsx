@@ -71,7 +71,7 @@ describe('the sign-in form', () => {
   it('never submits on the Enter that confirms an input-method candidate', async () => {
     const user = userEvent.setup();
     renderInApp(<LoginScreen />);
-    await fill(user, '小宋', 'secret password');
+    await fill(user, '小林', 'secret password');
     const field = screen.getByLabelText('Username');
     fireEvent.compositionStart(field);
     fireEvent.keyDown(field, { key: 'Enter', isComposing: true, keyCode: 229 });

@@ -6,6 +6,8 @@ does not ship an OAuth application or a hosted sign-in callback: bring your own
 access token and, optionally, refresh credentials. Saving only stores encrypted
 credentials; it does not contact the provider. Credentials are never returned
 to the browser after saving. Each account and local draft belongs to one user.
+Mail is read and drafted only from a signed-in browser: an API token, whatever
+its scopes, is refused (`session_required`) by every mailbox route.
 
 Choose an account and folder, search, then open a message in the safe text view.
 Remote images and active content are not loaded. Attachments up to 5 MB are

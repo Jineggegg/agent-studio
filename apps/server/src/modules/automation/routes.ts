@@ -9,6 +9,7 @@ import {
 } from '@agent-studio/protocol';
 import { z } from 'zod';
 import type { ModuleContext } from '../../kernel/module.js';
+import { requireBrowserToLoosen } from '../agents/token-modes.js';
 import type { DeferredMessages } from './deferred.js';
 import type { AutomationService } from './service.js';
 
@@ -57,6 +58,7 @@ export function registerAutomationRoutes(context: ModuleContext, deps: { automat
     body: createAutomationRequestSchema,
     bodyLimit: 128 * 1024,
     handler: async ({ user, params, body, reply }) => {
+      requireBrowserToLoosen(user, body.action.type === 'agent-run' ? body.action.permissionMode : undefined);
       const created = await automations.create(user, params.projectId, body);
       void reply.status(201);
       return created;
@@ -78,7 +80,10 @@ export function registerAutomationRoutes(context: ModuleContext, deps: { automat
     params: automationParams,
     body: updateAutomationRequestSchema,
     bodyLimit: 128 * 1024,
-    handler: ({ user, params, body }) => automations.update(user, params.projectId, params.automationId, body),
+    handler: ({ user, params, body }) => {
+      requireBrowserToLoosen(user, body.action?.type === 'agent-run' ? body.action.permissionMode : undefined);
+      return automations.update(user, params.projectId, params.automationId, body);
+    },
   });
 
   http.route({
@@ -125,6 +130,7 @@ export function registerAutomationRoutes(context: ModuleContext, deps: { automat
     access: 'user',
     body: createDeferredMessageRequestSchema,
     handler: async ({ user, body, reply }) => {
+      requireBrowserToLoosen(user, body.permissionMode);
       const created = await deferred.create(user, body);
       void reply.status(201);
       return created;
